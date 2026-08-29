@@ -1,0 +1,771 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Undo2,
+  Redo2,
+  RotateCcw,
+  Check,
+  FastForward,
+  Layers,
+  FileText,
+  AlertTriangle,
+  Pill,
+  Clock,
+  Sparkles,
+} from 'lucide-react';
+import { PageResult, LineItem, WordToken, LowConfidenceWordItem } from '../types/ocr';
+import { getConfidenceColor } from '../lib/colorUtils';
+import {
+  searchMedicalLexicon,
+  AutocompleteSuggestion,
+  MedicalCategory,
+} from '../lib/medicalLexicon';
+
+export interface InlineEditorProps {
+  page: PageResult;
+  onPageUpdate?: (updatedPage: PageResult) => void;
+  selectedLineId?: string | null;
+  selectedWordId?: string | null;
+  onSelectLine?: (lineId: string) => void;
+  onSelectWord?: (wordId: string, parentLineId?: string) => void;
+  onHoverLine?: (lineId: string | null) => void;
+  onHoverWord?: (wordId: string | null) => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onRevertAll?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onLineChange?: (lineId: string, newText: string) => void;
+  onWordChange?: (lineId: string, wordId: string, newText: string) => void;
+  className?: string;
+}
+
+export const InlineEditor: React.FC<InlineEditorProps> = ({
+  page,
+  onPageUpdate,
+  selectedLineId,
+  selectedWordId,
+  onSelectLine,
+  onSelectWord,
+  onHoverLine,
+  onHoverWord,
+  onUndo,
+  onRedo,
+  onRevertAll,
+  canUndo = false,
+  canRedo = false,
+  onLineChange,
+  onWordChange,
+  className = '',
+}) => {
+  const [activeTab, setActiveTab] = useState<'structured' | 'raw' | 'speed_review'>('structured');
+  const [confidenceThreshold] = useState(0.70);
+
+  // Active word editing state in structured mode
+  const [editingWordId, setEditingWordId] = useState<string | null>(null);
+  const [editingWordText, setEditingWordText] = useState<string>('');
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number>(0);
+  const [showPopover, setShowPopover] = useState<boolean>(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const wordInputRef = useRef<HTMLInputElement>(null);
+
+  // Speed Review state
+  const [speedQueue, setSpeedQueue] = useState<LowConfidenceWordItem[]>([]);
+  const [speedIndex, setSpeedIndex] = useState(0);
+  const [speedInput, setSpeedInput] = useState('');
+  const [speedSuggestions, setSpeedSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const speedInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync low-confidence words for Speed Review
+  useEffect(() => {
+    const queue: LowConfidenceWordItem[] = [];
+    page.lines.forEach((line: LineItem) => {
+      line.words?.forEach((word: WordToken) => {
+        if (word.confidence < confidenceThreshold) {
+          queue.push({
+            page_index: page.page_number - 1,
+            line_id: line.line_id,
+            word_id: word.word_id,
+            text: word.text,
+            original_text: word.original_text || word.text,
+            confidence: word.confidence,
+            bbox: word.bbox,
+            page_image_url: page.image_url,
+            alternatives: word.alternatives,
+          });
+        }
+      });
+    });
+    setSpeedQueue(queue);
+    if (speedIndex >= queue.length) setSpeedIndex(0);
+  }, [page, confidenceThreshold, speedIndex]);
+
+  // Update speed review active word & auto-suggestions
+  useEffect(() => {
+    if (activeTab === 'speed_review' && speedQueue[speedIndex]) {
+      const activeWord = speedQueue[speedIndex];
+      setSpeedInput(activeWord.text);
+      onSelectLine?.(activeWord.line_id);
+      onSelectWord?.(activeWord.word_id, activeWord.line_id);
+
+      // Search medical lexicon for top suggestions
+      const results = searchMedicalLexicon({
+        query: activeWord.text,
+        maxResults: 5,
+        enableFuzzy: true,
+      });
+      setSpeedSuggestions(results);
+
+      setTimeout(() => speedInputRef.current?.focus(), 50);
+    }
+  }, [activeTab, speedIndex, speedQueue, onSelectLine, onSelectWord]);
+
+  // Update autocomplete suggestions when editing a word in structured mode
+  useEffect(() => {
+    if (editingWordId && editingWordText.trim().length > 0) {
+      const results = searchMedicalLexicon({
+        query: editingWordText,
+        maxResults: 6,
+        enableFuzzy: true,
+      });
+      setSuggestions(results);
+      setSelectedSuggestionIndex(0);
+      setShowPopover(results.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowPopover(false);
+    }
+  }, [editingWordId, editingWordText]);
+
+  const handleLineTextChange = (lineId: string, newText: string) => {
+    if (onLineChange) {
+      onLineChange(lineId, newText);
+      return;
+    }
+    if (onPageUpdate) {
+      const updatedLines = page.lines.map((line: LineItem) => {
+        if (line.line_id !== lineId) return line;
+        return {
+          ...line,
+          text: newText,
+          is_edited: newText !== (line.original_text || line.text),
+        };
+      });
+      onPageUpdate({
+        ...page,
+        lines: updatedLines,
+        full_text: updatedLines.map((l: LineItem) => l.text).join('\n'),
+      });
+    }
+  };
+
+  const handleWordTextChange = useCallback(
+    (lineId: string, wordId: string, newText: string) => {
+      if (onWordChange) {
+        onWordChange(lineId, wordId, newText);
+        return;
+      }
+      if (onPageUpdate) {
+        const updatedLines = page.lines.map((line: LineItem) => {
+          if (line.line_id !== lineId) return line;
+          const updatedWords = (line.words || []).map((w: WordToken) => {
+            if (w.word_id !== wordId) return w;
+            return {
+              ...w,
+              text: newText,
+              is_edited: newText !== (w.original_text || w.text),
+            };
+          });
+          const reconstructed = updatedWords.map((w: WordToken) => w.text).join(' ');
+          return {
+            ...line,
+            words: updatedWords,
+            text: reconstructed,
+            is_edited: true,
+          };
+        });
+        onPageUpdate({
+          ...page,
+          lines: updatedLines,
+          full_text: updatedLines.map((l: LineItem) => l.text).join('\n'),
+        });
+      }
+    },
+    [onWordChange, onPageUpdate, page]
+  );
+
+  const handleApplySuggestion = (suggestion: AutocompleteSuggestion) => {
+    if (editingLineId && editingWordId) {
+      handleWordTextChange(editingLineId, editingWordId, suggestion.entry.term);
+      setEditingWordText(suggestion.entry.term);
+      setShowPopover(false);
+      setEditingWordId(null);
+    }
+  };
+
+  const handleSpeedSubmit = (customText?: string) => {
+    if (!speedQueue[speedIndex]) return;
+    const current = speedQueue[speedIndex];
+    const textToApply = customText !== undefined ? customText : speedInput;
+    handleWordTextChange(current.line_id, current.word_id, textToApply);
+
+    if (speedIndex < speedQueue.length - 1) {
+      setSpeedIndex((prev) => prev + 1);
+    } else {
+      setActiveTab('structured');
+    }
+  };
+
+  const handleSpeedSkip = () => {
+    if (speedIndex < speedQueue.length - 1) {
+      setSpeedIndex((prev) => prev + 1);
+    } else {
+      setActiveTab('structured');
+    }
+  };
+
+  const handleSpeedPrev = () => {
+    if (speedIndex > 0) {
+      setSpeedIndex((prev) => prev - 1);
+    }
+  };
+
+  const renderCategoryBadge = (category: MedicalCategory) => {
+    switch (category) {
+      case 'medication':
+        return (
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+            Medication
+          </span>
+        );
+      case 'dosage':
+        return (
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+            Dosage
+          </span>
+        );
+      case 'sig_frequency':
+      case 'sig_timing':
+        return (
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+            Sig Code
+          </span>
+        );
+      case 'sig_route':
+      case 'dosage_form':
+        return (
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+            Route / Form
+          </span>
+        );
+      case 'instruction':
+      default:
+        return (
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-500/30">
+            Instruction
+          </span>
+        );
+    }
+  };
+
+  const totalWords = page.lines.reduce((acc, l) => acc + (l.words?.length || 0), 0);
+  const lowConfCount = speedQueue.length;
+  const editedCount = page.lines.filter((l) => l.is_edited).length;
+
+  return (
+    <div
+      data-testid="inline-editor-container"
+      className={`flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden ${className}`}
+    >
+      {/* Editor Header Toolbar */}
+      <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/50">
+        <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
+          <button
+            type="button"
+            data-testid="tab-structured"
+            onClick={() => {
+              setActiveTab('structured');
+              setEditingWordId(null);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'structured'
+                ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Lines ({page.lines.length})</span>
+          </button>
+          <button
+            type="button"
+            data-testid="tab-raw"
+            onClick={() => {
+              setActiveTab('raw');
+              setEditingWordId(null);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'raw'
+                ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-500" />
+            <span>Plain Text</span>
+          </button>
+          <button
+            type="button"
+            data-testid="tab-speed-review"
+            onClick={() => {
+              setActiveTab('speed_review');
+              setEditingWordId(null);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'speed_review'
+                ? 'bg-amber-500 text-white shadow-sm'
+                : lowConfCount > 0
+                ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-950/40'
+                : 'text-slate-400 opacity-60'
+            }`}
+          >
+            <FastForward className="w-3.5 h-3.5" />
+            <span>Speed Review ({lowConfCount})</span>
+          </button>
+        </div>
+
+        {/* Undo / Redo / Revert controls */}
+        <div className="flex items-center gap-1">
+          {onUndo && (
+            <button
+              type="button"
+              data-testid="btn-undo"
+              onClick={onUndo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+          )}
+          {onRedo && (
+            <button
+              type="button"
+              data-testid="btn-redo"
+              onClick={onRedo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          )}
+          {onRevertAll && (
+            <button
+              type="button"
+              data-testid="btn-revert-all"
+              onClick={onRevertAll}
+              disabled={editedCount === 0}
+              title="Revert all edits"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Metrics Summary Strip */}
+      <div
+        data-testid="editor-metrics-strip"
+        className="flex items-center justify-between px-4 py-2 bg-slate-100/60 dark:bg-slate-950/40 border-b border-slate-200/70 dark:border-slate-800/70 text-xs text-slate-600 dark:text-slate-400"
+      >
+        <div className="flex items-center gap-4">
+          <span>
+            Confidence:{' '}
+            <strong
+              className={
+                page.mean_confidence >= 0.90
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : page.mean_confidence >= 0.70
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-rose-600 dark:text-rose-400'
+              }
+            >
+              {(page.mean_confidence * 100).toFixed(1)}%
+            </strong>
+          </span>
+          <span>
+            Words: <strong>{totalWords}</strong>
+          </span>
+          <span>
+            Lines: <strong>{page.lines.length}</strong>
+          </span>
+        </div>
+        {editedCount > 0 && (
+          <span data-testid="edited-count-badge" className="text-indigo-600 dark:text-indigo-400 font-medium">
+            {editedCount} line(s) modified
+          </span>
+        )}
+      </div>
+
+      {/* Tab Content Container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+        {/* Structured Line-by-Line Mode */}
+        {activeTab === 'structured' && (
+          <div data-testid="structured-lines-list" className="space-y-3">
+            {page.lines.map((line: LineItem, idx: number) => {
+              const isSelected = selectedLineId === line.line_id;
+              const colorStyle = getConfidenceColor(line.confidence);
+
+              return (
+                <div
+                  key={line.line_id}
+                  data-testid={`line-row-${line.line_id}`}
+                  onClick={() => onSelectLine?.(line.line_id)}
+                  onMouseEnter={() => onHoverLine?.(line.line_id)}
+                  onMouseLeave={() => onHoverLine?.(null)}
+                  className={`p-3.5 rounded-xl border transition-all duration-150 relative ${
+                    isSelected
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
+                        L{idx + 1}
+                      </span>
+                      <span
+                        className={`text-xs font-mono font-medium px-2 py-0.5 rounded border ${colorStyle.badgeBg} ${colorStyle.badgeBorder} ${colorStyle.tailwindText}`}
+                      >
+                        {(line.confidence * 100).toFixed(0)}%
+                      </span>
+                      {line.is_edited && (
+                        <span
+                          data-testid={`edited-badge-${line.line_id}`}
+                          className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800"
+                        >
+                          Edited
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <input
+                    type="text"
+                    data-testid={`line-input-${line.line_id}`}
+                    value={line.text}
+                    onChange={(e) => handleLineTextChange(line.line_id, e.target.value)}
+                    className="w-full text-sm font-medium px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+
+                  {/* Word-level breakdown chips */}
+                  {line.words && line.words.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      {line.words.map((word: WordToken) => {
+                        const isWordSelected = selectedWordId === word.word_id;
+                        const isEditingThisWord = editingWordId === word.word_id;
+
+                        return (
+                          <div key={word.word_id} className="relative inline-block">
+                            {isEditingThisWord ? (
+                              <input
+                                ref={wordInputRef}
+                                type="text"
+                                data-testid={`word-edit-input-${word.word_id}`}
+                                value={editingWordText}
+                                onChange={(e) => setEditingWordText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    if (suggestions.length > 0) {
+                                      setSelectedSuggestionIndex((prev) => (prev + 1) % suggestions.length);
+                                    }
+                                  } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    if (suggestions.length > 0) {
+                                      setSelectedSuggestionIndex((prev) =>
+                                        prev === 0 ? suggestions.length - 1 : prev - 1
+                                      );
+                                    }
+                                  } else if (e.key === 'Enter' || e.key === 'Tab') {
+                                    e.preventDefault();
+                                    if (showPopover && suggestions[selectedSuggestionIndex]) {
+                                      handleApplySuggestion(suggestions[selectedSuggestionIndex]);
+                                    } else {
+                                      handleWordTextChange(line.line_id, word.word_id, editingWordText);
+                                      setEditingWordId(null);
+                                      setShowPopover(false);
+                                    }
+                                  } else if (e.key === 'Escape') {
+                                    setShowPopover(false);
+                                    setEditingWordId(null);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => {
+                                    handleWordTextChange(line.line_id, word.word_id, editingWordText);
+                                    setEditingWordId(null);
+                                    setShowPopover(false);
+                                  }, 200);
+                                }}
+                                autoFocus
+                                className="px-2 py-0.5 text-xs font-mono font-bold rounded-md bg-indigo-600 text-white border-2 border-indigo-400 outline-none w-28"
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                data-testid={`word-chip-${word.word_id}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectWord?.(word.word_id, line.line_id);
+                                  setEditingWordId(word.word_id);
+                                  setEditingLineId(line.line_id);
+                                  setEditingWordText(word.text);
+                                }}
+                                onMouseEnter={() => onHoverWord?.(word.word_id)}
+                                onMouseLeave={() => onHoverWord?.(null)}
+                                className={`cursor-pointer px-2 py-0.5 rounded-md text-xs font-mono transition-all text-left ${
+                                  isWordSelected
+                                    ? 'bg-indigo-600 text-white font-bold'
+                                    : word.confidence < 0.70
+                                    ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                }`}
+                              >
+                                <span>{word.text}</span>
+                              </button>
+                            )}
+
+                            {/* Floating Autocomplete Popover */}
+                            {isEditingThisWord && showPopover && suggestions.length > 0 && (
+                              <div
+                                ref={popoverRef}
+                                data-testid="medical-autocomplete-popover"
+                                className="absolute top-full left-0 mt-1 z-50 w-72 max-h-64 overflow-y-auto bg-slate-950/95 backdrop-blur border border-indigo-500/50 rounded-xl shadow-2xl p-1 space-y-1 text-xs animate-in fade-in zoom-in-95"
+                              >
+                                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between border-b border-slate-800 pb-1">
+                                  <span className="flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3 text-indigo-400" /> Medical Suggestions
+                                  </span>
+                                  <span className="font-mono text-slate-500">↑↓ Nav • ↵ Select</span>
+                                </div>
+                                {suggestions.map((s, sIdx) => {
+                                  const isHighlighted = selectedSuggestionIndex === sIdx;
+                                  return (
+                                    <div
+                                      key={s.entry.term}
+                                      data-testid={`autocomplete-item-${sIdx}`}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handleApplySuggestion(s);
+                                      }}
+                                      className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                                        isHighlighted
+                                          ? 'bg-indigo-600 text-white'
+                                          : 'hover:bg-slate-800/80 text-slate-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <span className="font-bold text-sm">{s.entry.term}</span>
+                                        {renderCategoryBadge(s.entry.category)}
+                                      </div>
+                                      <p className="text-[11px] text-slate-300 line-clamp-1">
+                                        {s.entry.description}
+                                      </p>
+                                      {s.entry.isLasa && (
+                                        <div className="flex items-center gap-1 text-[10px] text-amber-400 mt-1">
+                                          <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                                          <span className="truncate">
+                                            LASA Caution: {s.entry.lasaWarning || `Confusable with ${s.entry.lasaConfusionWith}`}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Plain Text Mode */}
+        {activeTab === 'raw' && (
+          <textarea
+            data-testid="raw-textarea"
+            value={page.full_text}
+            onChange={(e) => {
+              if (onPageUpdate) {
+                const lines = e.target.value.split('\n');
+                const updatedLines = page.lines.map((l: LineItem, i: number) => ({
+                  ...l,
+                  text: lines[i] !== undefined ? lines[i] : l.text,
+                  is_edited: true,
+                }));
+                onPageUpdate({ ...page, full_text: e.target.value, lines: updatedLines });
+              }
+            }}
+            rows={16}
+            className="w-full h-full p-4 font-mono text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
+          />
+        )}
+
+        {/* Speed Review Mode */}
+        {activeTab === 'speed_review' && (
+          <div data-testid="speed-review-panel" className="flex flex-col items-center justify-center p-6 space-y-6">
+            {speedQueue.length === 0 ? (
+              <div className="text-center py-12 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto">
+                  <Check className="w-6 h-6" />
+                </div>
+                <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100">All Words Verified!</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  No uncertain words found below {(confidenceThreshold * 100).toFixed(0)}% confidence.
+                </p>
+                <button
+                  type="button"
+                  data-testid="btn-return-lines"
+                  onClick={() => setActiveTab('structured')}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors"
+                >
+                  Return to Line Editor
+                </button>
+              </div>
+            ) : (
+              <div className="w-full max-w-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md space-y-5">
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span>
+                    Reviewing Uncertain Word <strong>{speedIndex + 1}</strong> of <strong>{speedQueue.length}</strong>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full font-mono font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-[11px]">
+                    {(speedQueue[speedIndex].confidence * 100).toFixed(1)}% Conf
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-1">
+                  <span className="text-xs text-slate-400 block">Model OCR Prediction:</span>
+                  <span className="font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">
+                    &ldquo;{speedQueue[speedIndex].original_text}&rdquo;
+                  </span>
+                </div>
+
+                {/* Direct Medical Quick-Select Suggestions (1-5) */}
+                {speedSuggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                      <Pill className="w-3.5 h-3.5 text-indigo-500" /> Quick-Pick Top Suggestions (Keys 1-5):
+                    </span>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {speedSuggestions.map((s, idx) => (
+                        <button
+                          key={s.entry.term}
+                          type="button"
+                          data-testid={`speed-suggestion-${idx + 1}`}
+                          onClick={() => handleSpeedSubmit(s.entry.term)}
+                          className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/40 text-left transition-all group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs flex items-center justify-center border border-indigo-300 dark:border-indigo-800">
+                              {idx + 1}
+                            </span>
+                            <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                              {s.entry.term}
+                            </span>
+                            {renderCategoryBadge(s.entry.category)}
+                          </div>
+                          <span className="text-xs text-slate-400 group-hover:text-slate-200 max-w-[180px] truncate">
+                            {s.entry.description}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="speed-review-input" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                    Your Correction:
+                  </label>
+                  <input
+                    id="speed-review-input"
+                    ref={speedInputRef}
+                    data-testid="speed-review-input"
+                    type="text"
+                    value={speedInput}
+                    onChange={(e) => setSpeedInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key >= '1' && e.key <= '5') {
+                        const num = parseInt(e.key, 10);
+                        if (speedSuggestions[num - 1]) {
+                          e.preventDefault();
+                          handleSpeedSubmit(speedSuggestions[num - 1].entry.term);
+                          return;
+                        }
+                      }
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSpeedSubmit();
+                      } else if (e.key === 'Tab') {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                          handleSpeedPrev();
+                        } else {
+                          handleSpeedSkip();
+                        }
+                      } else if (e.key === 'Escape') {
+                        setActiveTab('structured');
+                      }
+                    }}
+                    className="w-full text-base font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      data-testid="btn-speed-prev"
+                      onClick={handleSpeedPrev}
+                      disabled={speedIndex === 0}
+                      className="px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="btn-speed-skip"
+                      onClick={handleSpeedSkip}
+                      className="px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Skip (Tab)
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="btn-speed-accept"
+                    onClick={() => handleSpeedSubmit()}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md transition-colors"
+                  >
+                    Accept & Next (Enter)
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

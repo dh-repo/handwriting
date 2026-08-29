@@ -1,0 +1,662 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-08-26T20:25:00Z",
+  "fixtures": {
+    "sample_clean_handwriting.png": {
+      "filename": "sample_clean_handwriting.png",
+      "format": "PNG",
+      "width": 1200,
+      "height": 800,
+      "pages": 1,
+      "category": "clean",
+      "skew_angle": 0.0,
+      "ground_truth_text": "The quick brown fox jumps over the lazy dog\nHandwriting recognition test sample\nClean cursive text line three",
+      "expected_line_count": 3,
+      "expected_word_count": 18,
+      "lines": [
+        {
+          "line_id": "p1_l1",
+          "line_index": 0,
+          "text": "The quick brown fox jumps over the lazy dog",
+          "confidence": 0.982,
+          "bbox": [
+            0.1625,
+            0.075,
+            0.2562,
+            0.8075
+          ],
+          "words": [
+            {
+              "word_id": "p1_l1_w1",
+              "word_index": 0,
+              "text": "The",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.0783,
+                0.2562,
+                0.1442
+              ]
+            },
+            {
+              "word_id": "p1_l1_w2",
+              "word_index": 1,
+              "text": "quick",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.1433,
+                0.2562,
+                0.2492
+              ]
+            },
+            {
+              "word_id": "p1_l1_w3",
+              "word_index": 2,
+              "text": "brown",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.2483,
+                0.2562,
+                0.3567
+              ]
+            },
+            {
+              "word_id": "p1_l1_w4",
+              "word_index": 3,
+              "text": "fox",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.3558,
+                0.2562,
+                0.4158
+              ]
+            },
+            {
+              "word_id": "p1_l1_w5",
+              "word_index": 4,
+              "text": "jumps",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.415,
+                0.2562,
+                0.5333
+              ]
+            },
+            {
+              "word_id": "p1_l1_w6",
+              "word_index": 5,
+              "text": "over",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.5325,
+                0.2562,
+                0.6067
+              ]
+            },
+            {
+              "word_id": "p1_l1_w7",
+              "word_index": 6,
+              "text": "the",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.6058,
+                0.2562,
+                0.6633
+              ]
+            },
+            {
+              "word_id": "p1_l1_w8",
+              "word_index": 7,
+              "text": "lazy",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.6625,
+                0.2562,
+                0.7475
+              ]
+            },
+            {
+              "word_id": "p1_l1_w9",
+              "word_index": 8,
+              "text": "dog",
+              "confidence": 0.985,
+              "bbox": [
+                0.1625,
+                0.7467,
+                0.2562,
+                0.815
+              ]
+            }
+          ]
+        },
+        {
+          "line_id": "p1_l2",
+          "line_index": 1,
+          "text": "Handwriting recognition test sample",
+          "confidence": 0.982,
+          "bbox": [
+            0.3875,
+            0.075,
+            0.4775,
+            0.6858
+          ],
+          "words": [
+            {
+              "word_id": "p1_l2_w1",
+              "word_index": 0,
+              "text": "Handwriting",
+              "confidence": 0.985,
+              "bbox": [
+                0.3875,
+                0.0783,
+                0.4775,
+                0.3008
+              ]
+            },
+            {
+              "word_id": "p1_l2_w2",
+              "word_index": 1,
+              "text": "recognition",
+              "confidence": 0.985,
+              "bbox": [
+                0.3875,
+                0.3,
+                0.4775,
+                0.4933
+              ]
+            },
+            {
+              "word_id": "p1_l2_w3",
+              "word_index": 2,
+              "text": "test",
+              "confidence": 0.985,
+              "bbox": [
+                0.3875,
+                0.4925,
+                0.4775,
+                0.5608
+              ]
+            },
+            {
+              "word_id": "p1_l2_w4",
+              "word_index": 3,
+              "text": "sample",
+              "confidence": 0.985,
+              "bbox": [
+                0.3875,
+                0.56,
+                0.4775,
+                0.6825
+              ]
+            }
+          ]
+        },
+        {
+          "line_id": "p1_l3",
+          "line_index": 2,
+          "text": "Clean cursive text line three",
+          "confidence": 0.982,
+          "bbox": [
+            0.6125,
+            0.075,
+            0.6887,
+            0.5308
+          ],
+          "words": [
+            {
+              "word_id": "p1_l3_w1",
+              "word_index": 0,
+              "text": "Clean",
+              "confidence": 0.985,
+              "bbox": [
+                0.6125,
+                0.0783,
+                0.6887,
+                0.1825
+              ]
+            },
+            {
+              "word_id": "p1_l3_w2",
+              "word_index": 1,
+              "text": "cursive",
+              "confidence": 0.985,
+              "bbox": [
+                0.6125,
+                0.1817,
+                0.6887,
+                0.305
+              ]
+            },
+            {
+              "word_id": "p1_l3_w3",
+              "word_index": 2,
+              "text": "text",
+              "confidence": 0.985,
+              "bbox": [
+                0.6125,
+                0.3042,
+                0.6887,
+                0.3733
+              ]
+            },
+            {
+              "word_id": "p1_l3_w4",
+              "word_index": 3,
+              "text": "line",
+              "confidence": 0.985,
+              "bbox": [
+                0.6125,
+                0.3725,
+                0.6887,
+                0.4442
+              ]
+            },
+            {
+              "word_id": "p1_l3_w5",
+              "word_index": 4,
+              "text": "three",
+              "confidence": 0.985,
+              "bbox": [
+                0.6125,
+                0.4433,
+                0.6887,
+                0.5292
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "sample_messy_prescription.png": {
+      "filename": "sample_messy_prescription.png",
+      "format": "PNG",
+      "width": 1200,
+      "height": 1600,
+      "pages": 1,
+      "category": "messy",
+      "skew_angle": -3.2,
+      "ground_truth_text": "Rx: Amoxicillin 500mg\nSig: 1 tab PO TID x 10 days\nRefills: 2\nDr. J. Doe MD",
+      "expected_line_count": 4,
+      "expected_word_count": 17,
+      "lines": [
+        {
+          "line_id": "p1_l1",
+          "line_index": 0,
+          "text": "Rx: Amoxicillin 500mg",
+          "confidence": 0.942,
+          "bbox": [
+            0.1525,
+            0.0917,
+            0.1975,
+            0.4658
+          ],
+          "words": [
+            {
+              "word_id": "p1_l1_w1",
+              "word_index": 0,
+              "text": "Rx:",
+              "confidence": 0.933,
+              "bbox": [
+                0.1569,
+                0.095,
+                0.1844,
+                0.155
+              ]
+            },
+            {
+              "word_id": "p1_l1_w2",
+              "word_index": 1,
+              "text": "Amoxicillin",
+              "confidence": 0.925,
+              "bbox": [
+                0.16,
+                0.155,
+                0.1931,
+                0.3425
+              ]
+            },
+            {
+              "word_id": "p1_l1_w3",
+              "word_index": 2,
+              "text": "500mg",
+              "confidence": 0.922,
+              "bbox": [
+                0.155,
+                0.345,
+                0.1875,
+                0.4625
+              ]
+            }
+          ]
+        },
+        {
+          "line_id": "p1_l2",
+          "line_index": 1,
+          "text": "Sig: 1 tab PO TID x 10 days",
+          "confidence": 0.934,
+          "bbox": [
+            0.2531,
+            0.0917,
+            0.3013,
+            0.545
+          ],
+          "words": [
+            {
+              "word_id": "p1_l2_w1",
+              "word_index": 0,
+              "text": "Sig:",
+              "confidence": 0.945,
+              "bbox": [
+                0.26,
+                0.095,
+                0.2975,
+                0.1708
+              ]
+            },
+            {
+              "word_id": "p1_l2_w2",
+              "word_index": 1,
+              "text": "1",
+              "confidence": 0.969,
+              "bbox": [
+                0.2575,
+                0.1733,
+                0.2825,
+                0.2017
+              ]
+            },
+            {
+              "word_id": "p1_l2_w3",
+              "word_index": 2,
+              "text": "tab",
+              "confidence": 0.962,
+              "bbox": [
+                0.2562,
+                0.2017,
+                0.2863,
+                0.2583
+              ]
+            },
+            {
+              "word_id": "p1_l2_w4",
+              "word_index": 3,
+              "text": "PO",
+              "confidence": 0.929,
+              "bbox": [
+                0.2575,
+                0.26,
+                0.2844,
+                0.3142
+              ]
+            },
+            {
+              "word_id": "p1_l2_w5",
+              "word_index": 4,
+              "text": "TID",
+              "confidence": 0.926,
+              "bbox": [
+                0.2556,
+                0.3158,
+                0.2812,
+                0.3767
+              ]
+            },
+            {
+              "word_id": "p1_l2_w6",
+              "word_index": 5,
+              "text": "x",
+              "confidence": 0.971,
+              "bbox": [
+                0.2581,
+                0.3767,
+                0.2838,
+                0.4058
+              ]
+            },
+            {
+              "word_id": "p1_l2_w7",
+              "word_index": 6,
+              "text": "10",
+              "confidence": 0.968,
+              "bbox": [
+                0.2575,
+                0.4092,
+                0.2831,
+                0.4558
+              ]
+            },
+            {
+              "word_id": "p1_l2_w8",
+              "word_index": 7,
+              "text": "days",
+              "confidence": 0.927,
+              "bbox": [
+                0.26,
+                0.4583,
+                0.2988,
+                0.5417
+              ]
+            }
+          ]
+        },
+        {
+          "line_id": "p1_l3",
+          "line_index": 2,
+          "text": "Refills: 2",
+          "confidence": 0.973,
+          "bbox": [
+            0.3544,
+            0.0917,
+            0.3975,
+            0.2475
+          ],
+          "words": [
+            {
+              "word_id": "p1_l3_w1",
+              "word_index": 0,
+              "text": "Refills:",
+              "confidence": 0.962,
+              "bbox": [
+                0.3569,
+                0.095,
+                0.3944,
+                0.2125
+              ]
+            },
+            {
+              "word_id": "p1_l3_w2",
+              "word_index": 1,
+              "text": "2",
+              "confidence": 0.966,
+              "bbox": [
+                0.3569,
+                0.2125,
+                0.3825,
+                0.2442
+              ]
+            }
+          ]
+        },
+        {
+          "line_id": "p1_l4",
+          "line_index": 3,
+          "text": "Dr. J. Doe MD",
+          "confidence": 0.938,
+          "bbox": [
+            0.4537,
+            0.0917,
+            0.4975,
+            0.3183
+          ],
+          "words": [
+            {
+              "word_id": "p1_l4_w1",
+              "word_index": 0,
+              "text": "Dr.",
+              "confidence": 0.958,
+              "bbox": [
+                0.4594,
+                0.095,
+                0.485,
+                0.15
+              ]
+            },
+            {
+              "word_id": "p1_l4_w2",
+              "word_index": 1,
+              "text": "J.",
+              "confidence": 0.942,
+              "bbox": [
+                0.4562,
+                0.1517,
+                0.4881,
+                0.1942
+              ]
+            },
+            {
+              "word_id": "p1_l4_w3",
+              "word_index": 2,
+              "text": "Doe",
+              "confidence": 0.962,
+              "bbox": [
+                0.4575,
+                0.195,
+                0.4838,
+                0.2542
+              ]
+            },
+            {
+              "word_id": "p1_l4_w4",
+              "word_index": 3,
+              "text": "MD",
+              "confidence": 0.952,
+              "bbox": [
+                0.4562,
+                0.2542,
+                0.4819,
+                0.315
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "sample_skewed_document.png": {
+      "filename": "sample_skewed_document.png",
+      "format": "PNG",
+      "width": 1346,
+      "height": 1042,
+      "pages": 1,
+      "category": "skewed",
+      "skew_angle": 12.5,
+      "ground_truth_text": "Skewed document line 1\nSkewed document line 2",
+      "expected_line_count": 2,
+      "expected_word_count": 8
+    },
+    "sample_low_contrast_faded.png": {
+      "filename": "sample_low_contrast_faded.png",
+      "format": "PNG",
+      "width": 1200,
+      "height": 800,
+      "pages": 1,
+      "category": "low_contrast",
+      "skew_angle": 0.0,
+      "ground_truth_text": "Faded ballpoint cursive line one\nLow contrast degraded historical manuscript\nSauvola binarization verification test",
+      "expected_line_count": 3,
+      "expected_word_count": 14
+    },
+    "sample_multipage_consultation.pdf": {
+      "filename": "sample_multipage_consultation.pdf",
+      "format": "PDF",
+      "pages": 3,
+      "category": "multipage",
+      "page_details": [
+        {
+          "page_number": 1,
+          "width": 1200,
+          "height": 1600,
+          "expected_line_count": 5,
+          "text": "Patient Consultation Notes\nDate: 2026-08-26\nChief Complaint: Persistent cough and fatigue\nAssessment: Acute bronchitis, mild fever\nPlan: Rest, fluids, and targeted antibiotic"
+        },
+        {
+          "page_number": 2,
+          "width": 1600,
+          "height": 1200,
+          "expected_line_count": 4,
+          "text": "Medication Schedule & Dosage Chart\n1. Azithromycin 250mg PO QD x 5 days\n2. Guaifenesin 400mg every 4 hours PRN\n3. Albuterol inhaler 2 puffs q4h PRN wheezing"
+        },
+        {
+          "page_number": 3,
+          "width": 1200,
+          "height": 1600,
+          "expected_line_count": 3,
+          "text": "Follow-up & Discharge Instructions\nFollow up in clinic in 2 weeks if symptoms persist\nSigned: Dr. Smith MD"
+        }
+      ],
+      "ground_truth_text": "Patient Consultation Notes\nDate: 2026-08-26\nChief Complaint: Persistent cough and fatigue\nAssessment: Acute bronchitis, mild fever\nPlan: Rest, fluids, and targeted antibiotic\n\n--- PAGE BREAK ---\n\nMedication Schedule & Dosage Chart\n1. Azithromycin 250mg PO QD x 5 days\n2. Guaifenesin 400mg every 4 hours PRN\n3. Albuterol inhaler 2 puffs q4h PRN wheezing\n\n--- PAGE BREAK ---\n\nFollow-up & Discharge Instructions\nFollow up in clinic in 2 weeks if symptoms persist\nSigned: Dr. Smith MD"
+    },
+    "corrupted/sample_zero_byte.png": {
+      "format": "corrupted",
+      "expected_error": "InvalidImageError",
+      "expected_status_code": 422,
+      "description": "Zero byte empty file"
+    },
+    "corrupted/sample_truncated_header.jpg": {
+      "format": "corrupted",
+      "expected_error": "UnidentifiedImageError",
+      "expected_status_code": 422,
+      "description": "Truncated 12-byte JPEG header"
+    },
+    "corrupted/sample_corrupted_pdf.pdf": {
+      "format": "corrupted",
+      "expected_error": "CorruptedPDFError",
+      "expected_status_code": 422,
+      "description": "PDF with damaged cross-reference stream"
+    },
+    "corrupted/sample_extreme_1x1.png": {
+      "format": "PNG",
+      "width": 1,
+      "height": 1,
+      "pages": 1,
+      "category": "boundary",
+      "expected_line_count": 0,
+      "expected_word_count": 0,
+      "ground_truth_text": "",
+      "description": "Minimal boundary 1x1 image"
+    },
+    "corrupted/sample_extreme_aspect.png": {
+      "format": "PNG",
+      "width": 5000,
+      "height": 10,
+      "pages": 1,
+      "category": "boundary",
+      "expected_line_count": 0,
+      "ground_truth_text": "",
+      "description": "Extreme aspect ratio 500:1 strip"
+    },
+    "corrupted/sample_disguised_text.png": {
+      "format": "corrupted",
+      "expected_error": "InvalidImageSignatureError",
+      "expected_status_code": 422,
+      "description": "Plain ASCII text disguised as PNG"
+    },
+    "corrupted/sample_cmyk.jpg": {
+      "format": "JPEG",
+      "width": 600,
+      "height": 400,
+      "color_mode": "CMYK",
+      "pages": 1,
+      "category": "color_space",
+      "ground_truth_text": "CMYK Color Space Document",
+      "expected_line_count": 1,
+      "description": "4-channel CMYK JPEG image requiring RGB conversion"
+    }
+  }
+}

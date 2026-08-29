@@ -1,0 +1,178 @@
+{
+  "sample_id": "sample_multipage",
+  "total_pages": 3,
+  "pages": [
+    {
+      "page_number": 1,
+      "title": "Clinical Intake Questionnaire",
+      "lines": [
+        {
+          "line_index": 0,
+          "text": "Chief Complaint: Sudden onset acute migraine with aura",
+          "bbox": [
+            0.16364,
+            0.125,
+            0.21818,
+            0.975
+          ]
+        },
+        {
+          "line_index": 1,
+          "text": "Past Medical History: Controlled hypertension on Lisinopril",
+          "bbox": [
+            0.28182,
+            0.125,
+            0.33636,
+            0.975
+          ]
+        },
+        {
+          "line_index": 2,
+          "text": "No known drug allergies reported by patient today",
+          "bbox": [
+            0.4,
+            0.125,
+            0.45455,
+            0.975
+          ]
+        },
+        {
+          "line_index": 3,
+          "text": "Vital Signs: BP 128/82, HR 72, SpO2 99% on room air",
+          "bbox": [
+            0.51818,
+            0.125,
+            0.57273,
+            0.975
+          ]
+        },
+        {
+          "line_index": 4,
+          "text": "Plan: Administer non-steroidal anti-inflammatory therapy",
+          "bbox": [
+            0.63636,
+            0.125,
+            0.69091,
+            0.975
+          ]
+        }
+      ]
+    },
+    {
+      "page_number": 2,
+      "title": "Medical Prescription Slip",
+      "lines": [
+        {
+          "text": "Amoxicillin 500mg capsules",
+          "bbox": [
+            0.37909,
+            0.095,
+            0.40818,
+            0.68375
+          ]
+        },
+        {
+          "text": "Sig: Take 1 cap po tid x 10 days",
+          "bbox": [
+            0.43909,
+            0.0975,
+            0.46909,
+            0.78375
+          ]
+        },
+        {
+          "text": "Disp: #30    Refills: 0",
+          "bbox": [
+            0.49455,
+            0.10125,
+            0.52818,
+            0.565
+          ]
+        },
+        {
+          "text": "Ibuprofen 600mg tablets",
+          "bbox": [
+            0.55545,
+            0.10125,
+            0.58636,
+            0.59375
+          ]
+        },
+        {
+          "text": "Sig: Take 1 tab po q6h prn pain / fever",
+          "bbox": [
+            0.61273,
+            0.09875,
+            0.64727,
+            0.91625
+          ]
+        },
+        {
+          "text": "Disp: #20    Refills: 1",
+          "bbox": [
+            0.67455,
+            0.1,
+            0.70636,
+            0.56875
+          ]
+        }
+      ]
+    },
+    {
+      "page_number": 3,
+      "title": "Discharge Instructions",
+      "lines": [
+        {
+          "line_index": 0,
+          "text": "Rest in bed for next 48 hours and avoid heavy lifting",
+          "bbox": [
+            0.16364,
+            0.075,
+            0.21818,
+            0.925
+          ]
+        },
+        {
+          "line_index": 1,
+          "text": "Stay well hydrated with minimum 2 liters of water daily",
+          "bbox": [
+            0.28182,
+            0.075,
+            0.33636,
+            0.925
+          ]
+        },
+        {
+          "line_index": 2,
+          "text": "Take prescribed medications with food to prevent nausea",
+          "bbox": [
+            0.4,
+            0.075,
+            0.45455,
+            0.925
+          ]
+        },
+        {
+          "line_index": 3,
+          "text": "Contact emergency department if fever exceeds 101.5 F",
+          "bbox": [
+            0.51818,
+            0.075,
+            0.57273,
+            0.925
+          ]
+        },
+        {
+          "line_index": 4,
+          "text": "Return for wound check and suture removal in 10 days",
+          "bbox": [
+            0.63636,
+            0.075,
+            0.69091,
+            0.925
+          ]
+        }
+      ]
+    }
+  ]
+}

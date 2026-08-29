@@ -1,0 +1,66 @@
+{
+  "sample_id": "sample_prescription",
+  "width": 800,
+  "height": 1100,
+  "clinic": "Metropolitan Family Practice",
+  "doctor": "Dr. Sarah Jenkins, MD",
+  "patient": "Johnathan Miller",
+  "date": "08/25/2026",
+  "full_text": "Amoxicillin 500mg capsules\nSig: Take 1 cap po tid x 10 days\nDisp: #30    Refills: 0\nIbuprofen 600mg tablets\nSig: Take 1 tab po q6h prn pain / fever\nDisp: #20    Refills: 1",
+  "lines": [
+    {
+      "text": "Amoxicillin 500mg capsules",
+      "bbox": [
+        0.37909,
+        0.095,
+        0.40818,
+        0.68375
+      ]
+    },
+    {
+      "text": "Sig: Take 1 cap po tid x 10 days",
+      "bbox": [
+        0.43909,
+        0.0975,
+        0.46909,
+        0.78375
+      ]
+    },
+    {
+      "text": "Disp: #30    Refills: 0",
+      "bbox": [
+        0.49455,
+        0.10125,
+        0.52818,
+        0.565
+      ]
+    },
+    {
+      "text": "Ibuprofen 600mg tablets",
+      "bbox": [
+        0.55545,
+        0.10125,
+        0.58636,
+        0.59375
+      ]
+    },
+    {
+      "text": "Sig: Take 1 tab po q6h prn pain / fever",
+      "bbox": [
+        0.61273,
+        0.09875,
+        0.64727,
+        0.91625
+      ]
+    },
+    {
+      "text": "Disp: #20    Refills: 1",
+      "bbox": [
+        0.67455,
+        0.1,
+        0.70636,
+        0.56875
+      ]
+    }
+  ]
+}

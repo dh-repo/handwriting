@@ -1,0 +1,53 @@
+# Environment & Dependencies
+.venv/
+env/
+venv/
+node_modules/
+frontend/node_modules/
+.pnp
+.pnp.js
+
+# Build Artifacts & Next.js
+.next/
+frontend/.next/
+out/
+frontend/out/
+build/
+dist/
+*.tsbuildinfo
+
+# Large Datasets and Model Weights (298,000 images & 6.7GB checkpoints)
+data/
+checkpoints/
+*.pt
+*.bin
+*.safetensors
+evaluation_multisource_report.json
+test_audit_results.json
+test_report.json
+test_results.json
+.agents/
+
+# PyTorch, Python & Cache
+__pycache__/
+frontend/**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Vercel & Cloud
+.vercel/
+frontend/.vercel/
+
+# OS & Editor Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,3098 @@
+{
+  "summary": {
+    "total": 355,
+    "passed": 355,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 19.537,
+    "pass_rate_percent": 100.0,
+    "exit_code": 0
+  },
+  "environment": {
+    "os": "macOS-27.0-arm64-arm-64bit",
+    "cpu_count": 28,
+    "python_version": "3.12.13",
+    "pytorch_version": "2.13.0",
+    "mps_available": true
+  },
+  "tiers": {
+    "tier1": {
+      "passed": 127,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0,
+      "duration": 2.498865825473331
+    },
+    "tier2": {
+      "passed": 121,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0,
+      "duration": 0.317661750363186
+    },
+    "tier3": {
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0,
+      "duration": 2.1887638327898458
+    },
+    "tier4": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0,
+      "duration": 0.7109948759898543
+    },
+    "tier5": {
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0,
+      "duration": 0.19397008325904608
+    },
+    "other": {
+      "passed": 51,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0,
+      "duration": 1.195182292838581
+    }
+  },
+  "features": {
+    "F1": {
+      "tier1_passed": 6,
+      "tier1_total": 6,
+      "tier2_passed": 6,
+      "tier2_total": 6,
+      "other_passed": 8,
+      "status": "PASSED"
+    },
+    "F2": {
+      "tier1_passed": 6,
+      "tier1_total": 6,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F3": {
+      "tier1_passed": 6,
+      "tier1_total": 6,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F4": {
+      "tier1_passed": 6,
+      "tier1_total": 6,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F5": {
+      "tier1_passed": 6,
+      "tier1_total": 6,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F6": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 3,
+      "status": "PASSED"
+    },
+    "F7": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F8": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 2,
+      "status": "PASSED"
+    },
+    "F9": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F10": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    },
+    "F11": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F12": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 2,
+      "status": "PASSED"
+    },
+    "F13": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 3,
+      "status": "PASSED"
+    },
+    "F14": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    },
+    "F15": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    },
+    "F16": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 2,
+      "status": "PASSED"
+    },
+    "F17": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F18": {
+      "tier1_passed": 6,
+      "tier1_total": 6,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F19": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 1,
+      "status": "PASSED"
+    },
+    "F20": {
+      "tier1_passed": 6,
+      "tier1_total": 6,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    },
+    "F21": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    },
+    "F22": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    },
+    "F23": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    },
+    "F24": {
+      "tier1_passed": 5,
+      "tier1_total": 5,
+      "tier2_passed": 5,
+      "tier2_total": 5,
+      "other_passed": 0,
+      "status": "PASSED"
+    }
+  },
+  "tests": [
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape0]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.07,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape1]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0026,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape2]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0011,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape3]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0051,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape4]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0009,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape5]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0023,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape6]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_pipeline_extreme_aspect_ratios[shape7]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_api_extreme_aspect_ratios_png_upload[shape0]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0228,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_api_extreme_aspect_ratios_png_upload[shape1]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0917,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestExtremeAspectRatiosEmpirical::test_api_extreme_aspect_ratios_png_upload[shape2]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0128,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[empty.pdf--Empty 0-byte payload]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[truncated_header.pdf-%PDF-1.7-Truncated header without trailer]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[garbage_bytes.pdf-\\x8d\\xb0o\\xdc\\xd4 >g>FH\\xbe\\x9b\\xc6\\xc9\\x89\\xd2\\xe1_M\\xbd\\xcaA\\xe6\\x13\\x945\\xbf^\\x1f\\x98\\xa74\\xfb1(\\xe6\\xfb\\xd9\\xfa\\xac\\x87\\xbd\\x9fq\\xf1|\\xe9w\\xfb\\xc6\\xc0\\xcdUp\\x01\\x82Q\\x16\\xc3k\\xfa]\\xd8\\xa4\\xe6i#e\\xf8J\\xabu\\xb6\\xfe\\x16\\x8a\\xad\\xa7\\xe4\\xf2\\x13\\xd6UY\\xf1P!R\\xed\\xa2\\xb3\\xff\\xb9P\\x03\\xddz\\xd6\\xc2;~\\xff\\xef+\\x9b>?\\x18e\\x0eYRXT\\xaaG\\x90\\xed\\x97.\\xadc\\xce\\x18\\x07\\xda\\x94\\xe0V\\x0f\\x8cna\\x14\\xfb\\xac}k\\xf6\\xecqk\\xbc\\xcb\\x05i\\xff\\x8bqu^\\xf3\\x148\\x86p\\xdd>r+\\xd5f\\xb1f7D\\xdd\\x9f\\xfe\\n`\\xcd`\\x04\\xf4$c\\xd7o\\x0e\\x83T\\xe5\\xed7\\x17\\xd4\\xb0\\x06\\xe3r\\xea\\x9fsb\\xbcc\\xce\\xab\\xfe\\x02\\x98l\\xbc'\\x8d\\x1b\\x8fWir\\x11\\x8d\\x15\\xd6\\x19\\xaa\\xf6A\\xda\\xd9\\x93'\\xf4;\\xe6F\\xafgZX\\xbfql$\\xed\\x16\\xed=R\\xdb\\xd6\\xfb\\xfcc*\\x93}+\\xb6\\x94\\x1f\\xa5\\xbb\\xe9eC\\x88\\xcb\\xdc\\xe2f\\xf1\\x83\\x1cu\\x9b\\x8e\\x84\\x9f4\\x82vw.\\xacr(\\x0bXY\\xc2=\\xb7\\xc6~\\x97\\xd4\\xa3\\x97,m\\x94I\\xe7\\xbf,3t\\xbf\\xd7\\x17C\\x97\\xfa\\xaa;9?p\\xb8\\xa0h{\\xf5\\xa3\\xa4\\xb5H@\\xc3tW\\x15\\x82I \\x0c\\xe1S\\xdf\\x13ro\\x19\\x05\\x1a\\xbc\\x05C?d\"\\xaba\\xd6\\xf1\\xca\\xd2\\x837\\xa5\\xce\\xbd\\x00\\x93\\xf6%\\x0f\\xee\\xd3\\xd9GgM\\xf0\\x11\\xe2+\\x18\\x08':\\x93\\x8d\\xa3=\\x87I\\xf5|\\xf7\\xac?S\\xbf\\xf6\\x9dz_7\\x83\\x932\\xab\\x06\\x00T\\xc7\\xaf\\x060\\x92\\x9b\\x8e\\xe5\\x0e\\x1a\\x07T4\\x02D\\x15\\xd51l}\\xe7\\x92\\xff\\x18U\\xb4]\\xa6\\xa8\\xa9\\xfb\\xccaR\\x0f/\\xbd\\x01E\\xff\\x9a\\ghE\\x95q[\\x08\\xc6\\x8cnUuI\\xbfkdJ\\xf9\\xa6\\xc8\\xcdXQ\\xc3\\xf9\\xa2\\xd0\\xaa\\x96<W\\x1c\\xed\\xd0\\xd0\\xd67\\chL\\x83H\\Q\\xd5\\xbf\\x03m\\xe6\\xbb<?\\x9c\\x00A\\x15,OZn5\\xaa\\xa2\\xc0\\x00\\xce\\xa2\\xd7\\x8aw\\xd9\\x1f\\xf9'\\xde\\x16\\xa4\\x07\\x90\\xca!M}\\x97\\xc7%\\xd3\\x9a\\xb2\\x81\\x04;\\xdeU\\xa5*\\x06ym\\x06\\xa0mK\\xfc\\x01\\xad\\\\x9dN\\xa5\\x18\\xa3\\xaaw-C+\\x87\\x920\\xe61\\xf4\\xd0Y\\xea\\x9c\\xf7\\x92\\xee\\xbcX\\xf3\\xadzR\\xd7\\xef\\xc0\\xd0\\xb5\\x87\\x85GR\\xf72lR.Y\\xc4Qv\\x03\\xd2C \\x97\\xbc\\xcen\\xbf/H\\xd7\\xec\\xf4+;8\\x11\\xb3\\x05\\xe0\\x8b\\x14\\xcf\\x1f\\x80L_\\x9d\\xa8\\xfd\\x1a\\x84\\x05\\xb2+\\xbd\\xfb\\x8cJ\\r$\\xa5\\xf75$\\xaf\\x07\\x95J\\xce\\xa0\\xf7\\xf2\\xde\\xc2\\x0b\\xe5\\xe3n\\xdelp\\xc6\\xa5\\xff\\xcb\\xa7f\\xef;\\xc7\\xda\\x1a;Q\\xcav\\xa3\\x0c\\xc3\\tY\\xb1\\x7f\\xed\"P\\x133\\rG\\xf8V\\xa3 (\\x14J .Mt\\xb7)\\x93tw\\xd6N\\x14oMi'\\x84'\\x9f\\x81\\xd0F\\xb07\\x8a\\x16Y(z\\xd5k&\\x91\\xe4\\x87\\xe8\\xf0y>K\\xd4\\x03J_wKX\\xcf\\x0c*\\xca\\x07@-\\xa7\\x11\\xb6\\xa7w\\x8d\\x87$\\x90pLAe\\xb5\\xe9\\xc0>\\nA\\x18\\x90\\xa9\\x18@E\\xe3\\xd2\\x15D\\x14\\xd0\\xd1\\x96f\\x91K8\\r\\x18\\x90A?\\xa4\\x91z\\xaa\\xc7\\x18P\\xdd\\xedkC\\x18\\xc1\\x15/\\xbbJ\\xec\\xc0\\xf1\\x94\\xcb\\x8a\\x97<|k\\xa0\\x87\\xfdF\\x08H(\\xec4d6\\xd1yJ\\x90\\xaf\\xdfNq\\xb7\\xa4L\\xe5\\x1eV\\x0f\\x14\\xf0\\xc4\\x93\\x92:#\\x98\\xf8\\xbeYi\\\\xaa\\x9d\\xbcd\\x16\\xbd\\xe1\\x19ak\\x08\\xe9d\\xa1\\xb4b+\\xc87\\x18\\xdeIt\\x1b\\xb2\\x01{\\xbb\\xe4\\x90\\x11n\\xfc\\xe4Z\"}\\xc8\\x04\\x179\\xff\\\\x9a\\xb4`5\\xfa\\xa8]\\xc3\\xfa3\\xef\\xbe %\\x90\\x88\\xfb\\xad\\x8f#\\xc2\\x93\\xb1(\\xc9(\\xab\\xa5\\xbe\\x8f\\xcb<\\xce\\x108\\xa8\\xcc\\xf7\\xeb9Y\\x16-.\\xa0\\xeen\\xeeY;6\\x0b\\xc6q\\x99,9\\xe5*\\xf8\\x10\\x98\\xfc@\\x8f\\xe1\\xd3\\x0c\\xc7\\xdd\\nC\\x8c\\xe2\\x19#X\\x81\\x9c]?aAL8\\xe8\\x12\\xa7\\x84\\x07\\xe0\\x8d\\x10\\xa7\\xee\\n\\xfeym\\xcb&\\xbf\\xdd\\x8b^\\xf3\\x93R\\x03\\x8b4x\\xf4\\x82.Y~\\x13h_\\xb6D4\\xe4\\xc3\\xc1|\\xd4#~\\xe2.\\xbf\\x0eeNiQ\\t!-%\\xb3L\\x9d\\xc9\\x8d}>H\\xf3\\xff\\xc9\\xee\\xdf\\x8d\\xcau\\xab\\x92\\xb5\\xe0\\xd7b@\\xd6ib(\\xc0\\x8f\\xec_\\xea\\xdd\\xb8\\x8b\\xb6\\x15\\x0f\\xd7\\xfdQ 9\\xb7\\xd0\\xe5fJ\\xa7\\x90Q9\\xbf\\xc6f\\x03\\xa5\\xea>\\x86\\x9b\\x1c\\xa4\\x14\\xe2\\x99\\xd5x\\x85Ao\\x96\\xe1\\x0b\\xde\\xe4\\x9b9\\xf7AnE\\xdf\\x17\\xedN\\xeb\\x1b\\r\\x1c\\xf4c\\xb3q%*\\x0579\\xb7w\\xa7qQ\"H\\xe8\\x02\\xac\\xec\\x9d\\x88>E\\xe4\\xb64NxV\\xcdx\\x05\\xbb\\x8a[\\xc2\\x80'YG\\xa4\\x90u\\x06\\x80\\x1a//N\\xb9\\x071\\x13\\xf2\\xfco\\xed>\\x14V\\x0e\\xb6M\\xd3\\xff\\xc3\\x0b\\n\\x03\\x9b\\x1d8\\xe4\\x15\\xdc2\\x16\\x172\\x91\\xc5\\x14\\xb0\\xe4i\\xdd\\x9d\\x8f\\xdb\\xb7E\\xf4y&\\x15-\\xe6\\xb8\\xb9\\x06\\x9f\\xe8\\x16$\\xd6GE\\x1eJ\\xeb0`2\\xc0\\xee$\\xf21\\xe2p\\tk'q\\x06\\xdf\\xbf\\xfb\\x88\\xc0$k\\xe9mf\\xb0>[=*\\xdaT\\x1e x\\xd9>=\\xf9\\x10.\\xab\\xb4+f~\\x97&\\xc6+#\\xd4wn\\xee\\xc5\\xe1\\x97`#e\\xb5\\xf8D\\x9e\\x7fBB\\xce\\x08\\x9c\\xe7O\\xdf\\x1b\\xcd\\xdai\\xdf\\x8a>\\xd1\\xc6\\x9f\\x94\\xf0\\x04/\\xfe$\\xf9a\\xb72\\xef\\xb2\\x1d'$\\xa1\\xe6Y\\x0e\\x8a\\xcbL\\xc6\\xe9\\xa4\\xe76\\xcf\\x16\\xed\\xe5\\x80\\xd8\\xb6\\x99\\\\x1e\\x8e\\td\\xd6\\x9f\\x88~\\x92\\xaaP\\x84\\xdaM\\x99\\x01cW{\\x1d\\xe0\\xfe\\x00d\\x93\\x12\\xd1b\\xe3\\xea\\xcc6\\xd7\\x8ej\\xf0\\xc7\\xa9\\xc6\\xf6#\\x18r^\\xc4\\xb7\\xf6\\x15q\\xcd\\x90-B$\\xfaRX\\xec\\x0c\\xeb]mFSe\\xf1\\x9c\\x9fF\\xc0\\x0e\\xa4+\\xc4KS\\xec6\\x1f\\xb2t\\x82\\xba\\xde\\xf6\\xbf@\\x08\\x9e/\\xa1\\xe9\\x88R\\xe8x\\x18\\xf7\\xbd\\x11r\\xc2\\xe3c\\xb1\\x18\\xc2oiO\\xa5l[fS\\xdb*\\xd7\\r\\xa5p8\\x822\\xde(\\xc7\\x86\\xcb\\xb5\\xf9\\xa4>'\\xe1\\x9c\\xfd\\x9f\\x1df\\x8f\\x94\\xb6\\x80*T\\xd6\\xd6\\xde\\xe1~]\\x17\\xe6\\xf0\\xea\\x0b\\x9eU\\x15\\x823?\\x19S~\\xdd\\xb6sd\\x9fa\\rK\\x0c\\xf0\\xb7ddMOob{\\xa9\\xc3\\xa7}6Rp \\xc8\\xb1\\xe1>B\\xec@\\x92\\xd9P\\x91u\\xe8\\x9e\\xdaN\\xea\\x11\\x0b\\x94\\xb1\\x89\\xdf_\\x9dC\\x03\\x16L^\\xa3\\x04\\xd4\\x0f#\\xa4\\xbc\\xe3A\\xd7(\\x11\\xae\\xea\\xed)\\xe3Pr'\\x1aC\\x01B\\x98&H*\\xea\\xb1D\\t\\xf9\\xaf\\x9a\\xf7\\xf2\\x9cu\\xdbLN\\xf4\\xe9\\t\\xc7\\x9e\\xa0\\x13\\xe2\\x16\\xbc\\x07\\x12>\\xa9\\x14\\xdei\\x9e\\x83<Hq\\x04\\xec\\xa6\\x18#\\x10\\x15U%\\xef\\x06R\\xeb\\xef\\xf9\\x17\\xa0n\\xc9\\x9at\"^5\\xaeL\\xd0\\xe1\\xe5\\xe7\\xd6\\xdd,\\xd4\\xb6I\\x1dg\\xab\\xbc#\\xa8\\xd9\\x89pi\\x165\\xd1\\x8b\\x8a\\xe1b\\xcf\\xbah\\x08Y\\xce\\xc3F\\x97\\xbeP\\xc8\\xe1\\x845\\x1c\\x12\\x1b\\xa6J\\x1c\\x1d\\xacq\\xa9\\xc1\\x08\\x95\\x92\\xe1\\:*\\x10f\\xd6OIfr\\xcc\\x85}&\\x9dg?7\\x86\\xc5\"\\xa0}P<\\xd8\\xaf\\xc1\\x04\\x9bwA\\xd7)\\xf2\\xc1\\xb9 \\x9e\\x978\\xb9\\xb62C*\\xcd\\xe6s)\\xb7\\x125Tk7\\xeb\\xde\\x0ew\\xed\\x0f\\xf4\\xad6\\x8c\\x8a\\xb5\\xc2\\xff(\\x07\\xab\\xde,\\x11\\xe3\\xfb\\xdbk-\\xceg:\\xbdE\\x92\\xcd\\x82X\"\\xabbB\\x7fj\\xe1\\xc6,t\\t\\r\\x96\\xd6[+8w\"\\x12\\xfbr\\x1fC\\xcb\\x12U\\xfe\\xc6NW\\xfb\\xea\\xf2\\x00i6\\x1a\\x1b\\t\\x8c\\x8d\\xaa\\xb5C\\x03\\xea\\xf6\\x0b\\xca\\xd0\\x19O\\x83\\x14\\xa2\\x8e\\x8e\\xe4\\x9b\\xf5\\xffI\\xf4&c\\xdc\\x80\\xfc\\xb6\\xea\\x83H\\x03\\x02\\x16\\x12\\xbf\\xeb\\xc7U\\xfb\\x04](,%\\x8c\\xe1i\\x8f\\x97\\xd5\\xce\\xce\\xf0\\xe5\\x7f#\\xe2\\xc9\\xe7\\xfe\\xa8$\\xe9y\\x99\\x0ec\\xfd\\rL\\xd6!\\x067\\xa4Q\\x8a\\x99\\x00I\\xbb\\xce@y\\x16\\x83[\\xa2;\\xe8\\xceF\\xba\\x1e4\\xf9\\x86\\xc5\\x9a0\\xb9zU\\x8f\\xc9t2\\xda\\x9b)7\\xbb\\xce\\xa5\\x91\\x06\\xd9\\xce\\xa0\\xc5N\\xb9\\xf5\\x07;x\\xde2\\xd6\\x94G-\\xbd\\x91\\x8d\\xfb\\xb9H\\xd3\\x18\\xbc\\x82\\x16b\\xeb\\xf6\\x9cd\\x18\\x05x#\\xbb)\\x89jo1\\xb0\\x99\\\\x87`<zf\\xbcB\\x1b-\\xb2I{F\\xa1(\\xaa\\xc3\\x05\\xc9\\xf0\\x13\\xb1-Random binary noise]",
+      "tier": "other",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0233,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[fake_pdf_elf.pdf-\\x7fELF\\x02\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00-ELF binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[fake_pdf_macho.pdf-\\xfe\\xed\\xfa\\xce\\x00\\x00\\x00\\x00-Mach-O binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[fake_pdf_pe.pdf-MZ\\x90\\x00\\x03\\x00\\x00\\x00-PE binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[corrupted_xref.pdf-%PDF-1.4\\nxref\\n0 1\\n0000000000 65535 f \\ntrailer\\n<< /Size 1 >>\\nstartxref\\n99999\\n%%EOF-Broken xref table]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[malformed_stream.pdf-%PDF-1.4\\n1 0 obj\\n<< /Length 100 >>\\nstream\\nTRUNCATED_STREAM\\nendobj\\n%%EOF-Truncated stream object]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[html_as_pdf.pdf-<!DOCTYPE html><html><body><h1>Exploit</h1></body></html>-HTML payload disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_pdf_loader_direct_rejection[shell_script.pdf-#!/bin/bash\\necho 'attacking system'\\nrm -rf /-Shell script disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[empty.pdf--Empty 0-byte payload]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0145,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[truncated_header.pdf-%PDF-1.7-Truncated header without trailer]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.014,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[garbage_bytes.pdf-\\x8d\\xb0o\\xdc\\xd4 >g>FH\\xbe\\x9b\\xc6\\xc9\\x89\\xd2\\xe1_M\\xbd\\xcaA\\xe6\\x13\\x945\\xbf^\\x1f\\x98\\xa74\\xfb1(\\xe6\\xfb\\xd9\\xfa\\xac\\x87\\xbd\\x9fq\\xf1|\\xe9w\\xfb\\xc6\\xc0\\xcdUp\\x01\\x82Q\\x16\\xc3k\\xfa]\\xd8\\xa4\\xe6i#e\\xf8J\\xabu\\xb6\\xfe\\x16\\x8a\\xad\\xa7\\xe4\\xf2\\x13\\xd6UY\\xf1P!R\\xed\\xa2\\xb3\\xff\\xb9P\\x03\\xddz\\xd6\\xc2;~\\xff\\xef+\\x9b>?\\x18e\\x0eYRXT\\xaaG\\x90\\xed\\x97.\\xadc\\xce\\x18\\x07\\xda\\x94\\xe0V\\x0f\\x8cna\\x14\\xfb\\xac}k\\xf6\\xecqk\\xbc\\xcb\\x05i\\xff\\x8bqu^\\xf3\\x148\\x86p\\xdd>r+\\xd5f\\xb1f7D\\xdd\\x9f\\xfe\\n`\\xcd`\\x04\\xf4$c\\xd7o\\x0e\\x83T\\xe5\\xed7\\x17\\xd4\\xb0\\x06\\xe3r\\xea\\x9fsb\\xbcc\\xce\\xab\\xfe\\x02\\x98l\\xbc'\\x8d\\x1b\\x8fWir\\x11\\x8d\\x15\\xd6\\x19\\xaa\\xf6A\\xda\\xd9\\x93'\\xf4;\\xe6F\\xafgZX\\xbfql$\\xed\\x16\\xed=R\\xdb\\xd6\\xfb\\xfcc*\\x93}+\\xb6\\x94\\x1f\\xa5\\xbb\\xe9eC\\x88\\xcb\\xdc\\xe2f\\xf1\\x83\\x1cu\\x9b\\x8e\\x84\\x9f4\\x82vw.\\xacr(\\x0bXY\\xc2=\\xb7\\xc6~\\x97\\xd4\\xa3\\x97,m\\x94I\\xe7\\xbf,3t\\xbf\\xd7\\x17C\\x97\\xfa\\xaa;9?p\\xb8\\xa0h{\\xf5\\xa3\\xa4\\xb5H@\\xc3tW\\x15\\x82I \\x0c\\xe1S\\xdf\\x13ro\\x19\\x05\\x1a\\xbc\\x05C?d\"\\xaba\\xd6\\xf1\\xca\\xd2\\x837\\xa5\\xce\\xbd\\x00\\x93\\xf6%\\x0f\\xee\\xd3\\xd9GgM\\xf0\\x11\\xe2+\\x18\\x08':\\x93\\x8d\\xa3=\\x87I\\xf5|\\xf7\\xac?S\\xbf\\xf6\\x9dz_7\\x83\\x932\\xab\\x06\\x00T\\xc7\\xaf\\x060\\x92\\x9b\\x8e\\xe5\\x0e\\x1a\\x07T4\\x02D\\x15\\xd51l}\\xe7\\x92\\xff\\x18U\\xb4]\\xa6\\xa8\\xa9\\xfb\\xccaR\\x0f/\\xbd\\x01E\\xff\\x9a\\ghE\\x95q[\\x08\\xc6\\x8cnUuI\\xbfkdJ\\xf9\\xa6\\xc8\\xcdXQ\\xc3\\xf9\\xa2\\xd0\\xaa\\x96<W\\x1c\\xed\\xd0\\xd0\\xd67\\chL\\x83H\\Q\\xd5\\xbf\\x03m\\xe6\\xbb<?\\x9c\\x00A\\x15,OZn5\\xaa\\xa2\\xc0\\x00\\xce\\xa2\\xd7\\x8aw\\xd9\\x1f\\xf9'\\xde\\x16\\xa4\\x07\\x90\\xca!M}\\x97\\xc7%\\xd3\\x9a\\xb2\\x81\\x04;\\xdeU\\xa5*\\x06ym\\x06\\xa0mK\\xfc\\x01\\xad\\\\x9dN\\xa5\\x18\\xa3\\xaaw-C+\\x87\\x920\\xe61\\xf4\\xd0Y\\xea\\x9c\\xf7\\x92\\xee\\xbcX\\xf3\\xadzR\\xd7\\xef\\xc0\\xd0\\xb5\\x87\\x85GR\\xf72lR.Y\\xc4Qv\\x03\\xd2C \\x97\\xbc\\xcen\\xbf/H\\xd7\\xec\\xf4+;8\\x11\\xb3\\x05\\xe0\\x8b\\x14\\xcf\\x1f\\x80L_\\x9d\\xa8\\xfd\\x1a\\x84\\x05\\xb2+\\xbd\\xfb\\x8cJ\\r$\\xa5\\xf75$\\xaf\\x07\\x95J\\xce\\xa0\\xf7\\xf2\\xde\\xc2\\x0b\\xe5\\xe3n\\xdelp\\xc6\\xa5\\xff\\xcb\\xa7f\\xef;\\xc7\\xda\\x1a;Q\\xcav\\xa3\\x0c\\xc3\\tY\\xb1\\x7f\\xed\"P\\x133\\rG\\xf8V\\xa3 (\\x14J .Mt\\xb7)\\x93tw\\xd6N\\x14oMi'\\x84'\\x9f\\x81\\xd0F\\xb07\\x8a\\x16Y(z\\xd5k&\\x91\\xe4\\x87\\xe8\\xf0y>K\\xd4\\x03J_wKX\\xcf\\x0c*\\xca\\x07@-\\xa7\\x11\\xb6\\xa7w\\x8d\\x87$\\x90pLAe\\xb5\\xe9\\xc0>\\nA\\x18\\x90\\xa9\\x18@E\\xe3\\xd2\\x15D\\x14\\xd0\\xd1\\x96f\\x91K8\\r\\x18\\x90A?\\xa4\\x91z\\xaa\\xc7\\x18P\\xdd\\xedkC\\x18\\xc1\\x15/\\xbbJ\\xec\\xc0\\xf1\\x94\\xcb\\x8a\\x97<|k\\xa0\\x87\\xfdF\\x08H(\\xec4d6\\xd1yJ\\x90\\xaf\\xdfNq\\xb7\\xa4L\\xe5\\x1eV\\x0f\\x14\\xf0\\xc4\\x93\\x92:#\\x98\\xf8\\xbeYi\\\\xaa\\x9d\\xbcd\\x16\\xbd\\xe1\\x19ak\\x08\\xe9d\\xa1\\xb4b+\\xc87\\x18\\xdeIt\\x1b\\xb2\\x01{\\xbb\\xe4\\x90\\x11n\\xfc\\xe4Z\"}\\xc8\\x04\\x179\\xff\\\\x9a\\xb4`5\\xfa\\xa8]\\xc3\\xfa3\\xef\\xbe %\\x90\\x88\\xfb\\xad\\x8f#\\xc2\\x93\\xb1(\\xc9(\\xab\\xa5\\xbe\\x8f\\xcb<\\xce\\x108\\xa8\\xcc\\xf7\\xeb9Y\\x16-.\\xa0\\xeen\\xeeY;6\\x0b\\xc6q\\x99,9\\xe5*\\xf8\\x10\\x98\\xfc@\\x8f\\xe1\\xd3\\x0c\\xc7\\xdd\\nC\\x8c\\xe2\\x19#X\\x81\\x9c]?aAL8\\xe8\\x12\\xa7\\x84\\x07\\xe0\\x8d\\x10\\xa7\\xee\\n\\xfeym\\xcb&\\xbf\\xdd\\x8b^\\xf3\\x93R\\x03\\x8b4x\\xf4\\x82.Y~\\x13h_\\xb6D4\\xe4\\xc3\\xc1|\\xd4#~\\xe2.\\xbf\\x0eeNiQ\\t!-%\\xb3L\\x9d\\xc9\\x8d}>H\\xf3\\xff\\xc9\\xee\\xdf\\x8d\\xcau\\xab\\x92\\xb5\\xe0\\xd7b@\\xd6ib(\\xc0\\x8f\\xec_\\xea\\xdd\\xb8\\x8b\\xb6\\x15\\x0f\\xd7\\xfdQ 9\\xb7\\xd0\\xe5fJ\\xa7\\x90Q9\\xbf\\xc6f\\x03\\xa5\\xea>\\x86\\x9b\\x1c\\xa4\\x14\\xe2\\x99\\xd5x\\x85Ao\\x96\\xe1\\x0b\\xde\\xe4\\x9b9\\xf7AnE\\xdf\\x17\\xedN\\xeb\\x1b\\r\\x1c\\xf4c\\xb3q%*\\x0579\\xb7w\\xa7qQ\"H\\xe8\\x02\\xac\\xec\\x9d\\x88>E\\xe4\\xb64NxV\\xcdx\\x05\\xbb\\x8a[\\xc2\\x80'YG\\xa4\\x90u\\x06\\x80\\x1a//N\\xb9\\x071\\x13\\xf2\\xfco\\xed>\\x14V\\x0e\\xb6M\\xd3\\xff\\xc3\\x0b\\n\\x03\\x9b\\x1d8\\xe4\\x15\\xdc2\\x16\\x172\\x91\\xc5\\x14\\xb0\\xe4i\\xdd\\x9d\\x8f\\xdb\\xb7E\\xf4y&\\x15-\\xe6\\xb8\\xb9\\x06\\x9f\\xe8\\x16$\\xd6GE\\x1eJ\\xeb0`2\\xc0\\xee$\\xf21\\xe2p\\tk'q\\x06\\xdf\\xbf\\xfb\\x88\\xc0$k\\xe9mf\\xb0>[=*\\xdaT\\x1e x\\xd9>=\\xf9\\x10.\\xab\\xb4+f~\\x97&\\xc6+#\\xd4wn\\xee\\xc5\\xe1\\x97`#e\\xb5\\xf8D\\x9e\\x7fBB\\xce\\x08\\x9c\\xe7O\\xdf\\x1b\\xcd\\xdai\\xdf\\x8a>\\xd1\\xc6\\x9f\\x94\\xf0\\x04/\\xfe$\\xf9a\\xb72\\xef\\xb2\\x1d'$\\xa1\\xe6Y\\x0e\\x8a\\xcbL\\xc6\\xe9\\xa4\\xe76\\xcf\\x16\\xed\\xe5\\x80\\xd8\\xb6\\x99\\\\x1e\\x8e\\td\\xd6\\x9f\\x88~\\x92\\xaaP\\x84\\xdaM\\x99\\x01cW{\\x1d\\xe0\\xfe\\x00d\\x93\\x12\\xd1b\\xe3\\xea\\xcc6\\xd7\\x8ej\\xf0\\xc7\\xa9\\xc6\\xf6#\\x18r^\\xc4\\xb7\\xf6\\x15q\\xcd\\x90-B$\\xfaRX\\xec\\x0c\\xeb]mFSe\\xf1\\x9c\\x9fF\\xc0\\x0e\\xa4+\\xc4KS\\xec6\\x1f\\xb2t\\x82\\xba\\xde\\xf6\\xbf@\\x08\\x9e/\\xa1\\xe9\\x88R\\xe8x\\x18\\xf7\\xbd\\x11r\\xc2\\xe3c\\xb1\\x18\\xc2oiO\\xa5l[fS\\xdb*\\xd7\\r\\xa5p8\\x822\\xde(\\xc7\\x86\\xcb\\xb5\\xf9\\xa4>'\\xe1\\x9c\\xfd\\x9f\\x1df\\x8f\\x94\\xb6\\x80*T\\xd6\\xd6\\xde\\xe1~]\\x17\\xe6\\xf0\\xea\\x0b\\x9eU\\x15\\x823?\\x19S~\\xdd\\xb6sd\\x9fa\\rK\\x0c\\xf0\\xb7ddMOob{\\xa9\\xc3\\xa7}6Rp \\xc8\\xb1\\xe1>B\\xec@\\x92\\xd9P\\x91u\\xe8\\x9e\\xdaN\\xea\\x11\\x0b\\x94\\xb1\\x89\\xdf_\\x9dC\\x03\\x16L^\\xa3\\x04\\xd4\\x0f#\\xa4\\xbc\\xe3A\\xd7(\\x11\\xae\\xea\\xed)\\xe3Pr'\\x1aC\\x01B\\x98&H*\\xea\\xb1D\\t\\xf9\\xaf\\x9a\\xf7\\xf2\\x9cu\\xdbLN\\xf4\\xe9\\t\\xc7\\x9e\\xa0\\x13\\xe2\\x16\\xbc\\x07\\x12>\\xa9\\x14\\xdei\\x9e\\x83<Hq\\x04\\xec\\xa6\\x18#\\x10\\x15U%\\xef\\x06R\\xeb\\xef\\xf9\\x17\\xa0n\\xc9\\x9at\"^5\\xaeL\\xd0\\xe1\\xe5\\xe7\\xd6\\xdd,\\xd4\\xb6I\\x1dg\\xab\\xbc#\\xa8\\xd9\\x89pi\\x165\\xd1\\x8b\\x8a\\xe1b\\xcf\\xbah\\x08Y\\xce\\xc3F\\x97\\xbeP\\xc8\\xe1\\x845\\x1c\\x12\\x1b\\xa6J\\x1c\\x1d\\xacq\\xa9\\xc1\\x08\\x95\\x92\\xe1\\:*\\x10f\\xd6OIfr\\xcc\\x85}&\\x9dg?7\\x86\\xc5\"\\xa0}P<\\xd8\\xaf\\xc1\\x04\\x9bwA\\xd7)\\xf2\\xc1\\xb9 \\x9e\\x978\\xb9\\xb62C*\\xcd\\xe6s)\\xb7\\x125Tk7\\xeb\\xde\\x0ew\\xed\\x0f\\xf4\\xad6\\x8c\\x8a\\xb5\\xc2\\xff(\\x07\\xab\\xde,\\x11\\xe3\\xfb\\xdbk-\\xceg:\\xbdE\\x92\\xcd\\x82X\"\\xabbB\\x7fj\\xe1\\xc6,t\\t\\r\\x96\\xd6[+8w\"\\x12\\xfbr\\x1fC\\xcb\\x12U\\xfe\\xc6NW\\xfb\\xea\\xf2\\x00i6\\x1a\\x1b\\t\\x8c\\x8d\\xaa\\xb5C\\x03\\xea\\xf6\\x0b\\xca\\xd0\\x19O\\x83\\x14\\xa2\\x8e\\x8e\\xe4\\x9b\\xf5\\xffI\\xf4&c\\xdc\\x80\\xfc\\xb6\\xea\\x83H\\x03\\x02\\x16\\x12\\xbf\\xeb\\xc7U\\xfb\\x04](,%\\x8c\\xe1i\\x8f\\x97\\xd5\\xce\\xce\\xf0\\xe5\\x7f#\\xe2\\xc9\\xe7\\xfe\\xa8$\\xe9y\\x99\\x0ec\\xfd\\rL\\xd6!\\x067\\xa4Q\\x8a\\x99\\x00I\\xbb\\xce@y\\x16\\x83[\\xa2;\\xe8\\xceF\\xba\\x1e4\\xf9\\x86\\xc5\\x9a0\\xb9zU\\x8f\\xc9t2\\xda\\x9b)7\\xbb\\xce\\xa5\\x91\\x06\\xd9\\xce\\xa0\\xc5N\\xb9\\xf5\\x07;x\\xde2\\xd6\\x94G-\\xbd\\x91\\x8d\\xfb\\xb9H\\xd3\\x18\\xbc\\x82\\x16b\\xeb\\xf6\\x9cd\\x18\\x05x#\\xbb)\\x89jo1\\xb0\\x99\\\\x87`<zf\\xbcB\\x1b-\\xb2I{F\\xa1(\\xaa\\xc3\\x05\\xc9\\xf0\\x13\\xb1-Random binary noise]",
+      "tier": "other",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0137,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[fake_pdf_elf.pdf-\\x7fELF\\x02\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00-ELF binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0974,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[fake_pdf_macho.pdf-\\xfe\\xed\\xfa\\xce\\x00\\x00\\x00\\x00-Mach-O binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.014,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[fake_pdf_pe.pdf-MZ\\x90\\x00\\x03\\x00\\x00\\x00-PE binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0141,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[corrupted_xref.pdf-%PDF-1.4\\nxref\\n0 1\\n0000000000 65535 f \\ntrailer\\n<< /Size 1 >>\\nstartxref\\n99999\\n%%EOF-Broken xref table]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0142,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[malformed_stream.pdf-%PDF-1.4\\n1 0 obj\\n<< /Length 100 >>\\nstream\\nTRUNCATED_STREAM\\nendobj\\n%%EOF-Truncated stream object]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0142,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[html_as_pdf.pdf-<!DOCTYPE html><html><body><h1>Exploit</h1></body></html>-HTML payload disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0961,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_recognize_corrupted_pdf_rejection[shell_script.pdf-#!/bin/bash\\necho 'attacking system'\\nrm -rf /-Shell script disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0133,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[empty.pdf--Empty 0-byte payload]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0057,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[truncated_header.pdf-%PDF-1.7-Truncated header without trailer]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0173,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[garbage_bytes.pdf-\\x8d\\xb0o\\xdc\\xd4 >g>FH\\xbe\\x9b\\xc6\\xc9\\x89\\xd2\\xe1_M\\xbd\\xcaA\\xe6\\x13\\x945\\xbf^\\x1f\\x98\\xa74\\xfb1(\\xe6\\xfb\\xd9\\xfa\\xac\\x87\\xbd\\x9fq\\xf1|\\xe9w\\xfb\\xc6\\xc0\\xcdUp\\x01\\x82Q\\x16\\xc3k\\xfa]\\xd8\\xa4\\xe6i#e\\xf8J\\xabu\\xb6\\xfe\\x16\\x8a\\xad\\xa7\\xe4\\xf2\\x13\\xd6UY\\xf1P!R\\xed\\xa2\\xb3\\xff\\xb9P\\x03\\xddz\\xd6\\xc2;~\\xff\\xef+\\x9b>?\\x18e\\x0eYRXT\\xaaG\\x90\\xed\\x97.\\xadc\\xce\\x18\\x07\\xda\\x94\\xe0V\\x0f\\x8cna\\x14\\xfb\\xac}k\\xf6\\xecqk\\xbc\\xcb\\x05i\\xff\\x8bqu^\\xf3\\x148\\x86p\\xdd>r+\\xd5f\\xb1f7D\\xdd\\x9f\\xfe\\n`\\xcd`\\x04\\xf4$c\\xd7o\\x0e\\x83T\\xe5\\xed7\\x17\\xd4\\xb0\\x06\\xe3r\\xea\\x9fsb\\xbcc\\xce\\xab\\xfe\\x02\\x98l\\xbc'\\x8d\\x1b\\x8fWir\\x11\\x8d\\x15\\xd6\\x19\\xaa\\xf6A\\xda\\xd9\\x93'\\xf4;\\xe6F\\xafgZX\\xbfql$\\xed\\x16\\xed=R\\xdb\\xd6\\xfb\\xfcc*\\x93}+\\xb6\\x94\\x1f\\xa5\\xbb\\xe9eC\\x88\\xcb\\xdc\\xe2f\\xf1\\x83\\x1cu\\x9b\\x8e\\x84\\x9f4\\x82vw.\\xacr(\\x0bXY\\xc2=\\xb7\\xc6~\\x97\\xd4\\xa3\\x97,m\\x94I\\xe7\\xbf,3t\\xbf\\xd7\\x17C\\x97\\xfa\\xaa;9?p\\xb8\\xa0h{\\xf5\\xa3\\xa4\\xb5H@\\xc3tW\\x15\\x82I \\x0c\\xe1S\\xdf\\x13ro\\x19\\x05\\x1a\\xbc\\x05C?d\"\\xaba\\xd6\\xf1\\xca\\xd2\\x837\\xa5\\xce\\xbd\\x00\\x93\\xf6%\\x0f\\xee\\xd3\\xd9GgM\\xf0\\x11\\xe2+\\x18\\x08':\\x93\\x8d\\xa3=\\x87I\\xf5|\\xf7\\xac?S\\xbf\\xf6\\x9dz_7\\x83\\x932\\xab\\x06\\x00T\\xc7\\xaf\\x060\\x92\\x9b\\x8e\\xe5\\x0e\\x1a\\x07T4\\x02D\\x15\\xd51l}\\xe7\\x92\\xff\\x18U\\xb4]\\xa6\\xa8\\xa9\\xfb\\xccaR\\x0f/\\xbd\\x01E\\xff\\x9a\\ghE\\x95q[\\x08\\xc6\\x8cnUuI\\xbfkdJ\\xf9\\xa6\\xc8\\xcdXQ\\xc3\\xf9\\xa2\\xd0\\xaa\\x96<W\\x1c\\xed\\xd0\\xd0\\xd67\\chL\\x83H\\Q\\xd5\\xbf\\x03m\\xe6\\xbb<?\\x9c\\x00A\\x15,OZn5\\xaa\\xa2\\xc0\\x00\\xce\\xa2\\xd7\\x8aw\\xd9\\x1f\\xf9'\\xde\\x16\\xa4\\x07\\x90\\xca!M}\\x97\\xc7%\\xd3\\x9a\\xb2\\x81\\x04;\\xdeU\\xa5*\\x06ym\\x06\\xa0mK\\xfc\\x01\\xad\\\\x9dN\\xa5\\x18\\xa3\\xaaw-C+\\x87\\x920\\xe61\\xf4\\xd0Y\\xea\\x9c\\xf7\\x92\\xee\\xbcX\\xf3\\xadzR\\xd7\\xef\\xc0\\xd0\\xb5\\x87\\x85GR\\xf72lR.Y\\xc4Qv\\x03\\xd2C \\x97\\xbc\\xcen\\xbf/H\\xd7\\xec\\xf4+;8\\x11\\xb3\\x05\\xe0\\x8b\\x14\\xcf\\x1f\\x80L_\\x9d\\xa8\\xfd\\x1a\\x84\\x05\\xb2+\\xbd\\xfb\\x8cJ\\r$\\xa5\\xf75$\\xaf\\x07\\x95J\\xce\\xa0\\xf7\\xf2\\xde\\xc2\\x0b\\xe5\\xe3n\\xdelp\\xc6\\xa5\\xff\\xcb\\xa7f\\xef;\\xc7\\xda\\x1a;Q\\xcav\\xa3\\x0c\\xc3\\tY\\xb1\\x7f\\xed\"P\\x133\\rG\\xf8V\\xa3 (\\x14J .Mt\\xb7)\\x93tw\\xd6N\\x14oMi'\\x84'\\x9f\\x81\\xd0F\\xb07\\x8a\\x16Y(z\\xd5k&\\x91\\xe4\\x87\\xe8\\xf0y>K\\xd4\\x03J_wKX\\xcf\\x0c*\\xca\\x07@-\\xa7\\x11\\xb6\\xa7w\\x8d\\x87$\\x90pLAe\\xb5\\xe9\\xc0>\\nA\\x18\\x90\\xa9\\x18@E\\xe3\\xd2\\x15D\\x14\\xd0\\xd1\\x96f\\x91K8\\r\\x18\\x90A?\\xa4\\x91z\\xaa\\xc7\\x18P\\xdd\\xedkC\\x18\\xc1\\x15/\\xbbJ\\xec\\xc0\\xf1\\x94\\xcb\\x8a\\x97<|k\\xa0\\x87\\xfdF\\x08H(\\xec4d6\\xd1yJ\\x90\\xaf\\xdfNq\\xb7\\xa4L\\xe5\\x1eV\\x0f\\x14\\xf0\\xc4\\x93\\x92:#\\x98\\xf8\\xbeYi\\\\xaa\\x9d\\xbcd\\x16\\xbd\\xe1\\x19ak\\x08\\xe9d\\xa1\\xb4b+\\xc87\\x18\\xdeIt\\x1b\\xb2\\x01{\\xbb\\xe4\\x90\\x11n\\xfc\\xe4Z\"}\\xc8\\x04\\x179\\xff\\\\x9a\\xb4`5\\xfa\\xa8]\\xc3\\xfa3\\xef\\xbe %\\x90\\x88\\xfb\\xad\\x8f#\\xc2\\x93\\xb1(\\xc9(\\xab\\xa5\\xbe\\x8f\\xcb<\\xce\\x108\\xa8\\xcc\\xf7\\xeb9Y\\x16-.\\xa0\\xeen\\xeeY;6\\x0b\\xc6q\\x99,9\\xe5*\\xf8\\x10\\x98\\xfc@\\x8f\\xe1\\xd3\\x0c\\xc7\\xdd\\nC\\x8c\\xe2\\x19#X\\x81\\x9c]?aAL8\\xe8\\x12\\xa7\\x84\\x07\\xe0\\x8d\\x10\\xa7\\xee\\n\\xfeym\\xcb&\\xbf\\xdd\\x8b^\\xf3\\x93R\\x03\\x8b4x\\xf4\\x82.Y~\\x13h_\\xb6D4\\xe4\\xc3\\xc1|\\xd4#~\\xe2.\\xbf\\x0eeNiQ\\t!-%\\xb3L\\x9d\\xc9\\x8d}>H\\xf3\\xff\\xc9\\xee\\xdf\\x8d\\xcau\\xab\\x92\\xb5\\xe0\\xd7b@\\xd6ib(\\xc0\\x8f\\xec_\\xea\\xdd\\xb8\\x8b\\xb6\\x15\\x0f\\xd7\\xfdQ 9\\xb7\\xd0\\xe5fJ\\xa7\\x90Q9\\xbf\\xc6f\\x03\\xa5\\xea>\\x86\\x9b\\x1c\\xa4\\x14\\xe2\\x99\\xd5x\\x85Ao\\x96\\xe1\\x0b\\xde\\xe4\\x9b9\\xf7AnE\\xdf\\x17\\xedN\\xeb\\x1b\\r\\x1c\\xf4c\\xb3q%*\\x0579\\xb7w\\xa7qQ\"H\\xe8\\x02\\xac\\xec\\x9d\\x88>E\\xe4\\xb64NxV\\xcdx\\x05\\xbb\\x8a[\\xc2\\x80'YG\\xa4\\x90u\\x06\\x80\\x1a//N\\xb9\\x071\\x13\\xf2\\xfco\\xed>\\x14V\\x0e\\xb6M\\xd3\\xff\\xc3\\x0b\\n\\x03\\x9b\\x1d8\\xe4\\x15\\xdc2\\x16\\x172\\x91\\xc5\\x14\\xb0\\xe4i\\xdd\\x9d\\x8f\\xdb\\xb7E\\xf4y&\\x15-\\xe6\\xb8\\xb9\\x06\\x9f\\xe8\\x16$\\xd6GE\\x1eJ\\xeb0`2\\xc0\\xee$\\xf21\\xe2p\\tk'q\\x06\\xdf\\xbf\\xfb\\x88\\xc0$k\\xe9mf\\xb0>[=*\\xdaT\\x1e x\\xd9>=\\xf9\\x10.\\xab\\xb4+f~\\x97&\\xc6+#\\xd4wn\\xee\\xc5\\xe1\\x97`#e\\xb5\\xf8D\\x9e\\x7fBB\\xce\\x08\\x9c\\xe7O\\xdf\\x1b\\xcd\\xdai\\xdf\\x8a>\\xd1\\xc6\\x9f\\x94\\xf0\\x04/\\xfe$\\xf9a\\xb72\\xef\\xb2\\x1d'$\\xa1\\xe6Y\\x0e\\x8a\\xcbL\\xc6\\xe9\\xa4\\xe76\\xcf\\x16\\xed\\xe5\\x80\\xd8\\xb6\\x99\\\\x1e\\x8e\\td\\xd6\\x9f\\x88~\\x92\\xaaP\\x84\\xdaM\\x99\\x01cW{\\x1d\\xe0\\xfe\\x00d\\x93\\x12\\xd1b\\xe3\\xea\\xcc6\\xd7\\x8ej\\xf0\\xc7\\xa9\\xc6\\xf6#\\x18r^\\xc4\\xb7\\xf6\\x15q\\xcd\\x90-B$\\xfaRX\\xec\\x0c\\xeb]mFSe\\xf1\\x9c\\x9fF\\xc0\\x0e\\xa4+\\xc4KS\\xec6\\x1f\\xb2t\\x82\\xba\\xde\\xf6\\xbf@\\x08\\x9e/\\xa1\\xe9\\x88R\\xe8x\\x18\\xf7\\xbd\\x11r\\xc2\\xe3c\\xb1\\x18\\xc2oiO\\xa5l[fS\\xdb*\\xd7\\r\\xa5p8\\x822\\xde(\\xc7\\x86\\xcb\\xb5\\xf9\\xa4>'\\xe1\\x9c\\xfd\\x9f\\x1df\\x8f\\x94\\xb6\\x80*T\\xd6\\xd6\\xde\\xe1~]\\x17\\xe6\\xf0\\xea\\x0b\\x9eU\\x15\\x823?\\x19S~\\xdd\\xb6sd\\x9fa\\rK\\x0c\\xf0\\xb7ddMOob{\\xa9\\xc3\\xa7}6Rp \\xc8\\xb1\\xe1>B\\xec@\\x92\\xd9P\\x91u\\xe8\\x9e\\xdaN\\xea\\x11\\x0b\\x94\\xb1\\x89\\xdf_\\x9dC\\x03\\x16L^\\xa3\\x04\\xd4\\x0f#\\xa4\\xbc\\xe3A\\xd7(\\x11\\xae\\xea\\xed)\\xe3Pr'\\x1aC\\x01B\\x98&H*\\xea\\xb1D\\t\\xf9\\xaf\\x9a\\xf7\\xf2\\x9cu\\xdbLN\\xf4\\xe9\\t\\xc7\\x9e\\xa0\\x13\\xe2\\x16\\xbc\\x07\\x12>\\xa9\\x14\\xdei\\x9e\\x83<Hq\\x04\\xec\\xa6\\x18#\\x10\\x15U%\\xef\\x06R\\xeb\\xef\\xf9\\x17\\xa0n\\xc9\\x9at\"^5\\xaeL\\xd0\\xe1\\xe5\\xe7\\xd6\\xdd,\\xd4\\xb6I\\x1dg\\xab\\xbc#\\xa8\\xd9\\x89pi\\x165\\xd1\\x8b\\x8a\\xe1b\\xcf\\xbah\\x08Y\\xce\\xc3F\\x97\\xbeP\\xc8\\xe1\\x845\\x1c\\x12\\x1b\\xa6J\\x1c\\x1d\\xacq\\xa9\\xc1\\x08\\x95\\x92\\xe1\\:*\\x10f\\xd6OIfr\\xcc\\x85}&\\x9dg?7\\x86\\xc5\"\\xa0}P<\\xd8\\xaf\\xc1\\x04\\x9bwA\\xd7)\\xf2\\xc1\\xb9 \\x9e\\x978\\xb9\\xb62C*\\xcd\\xe6s)\\xb7\\x125Tk7\\xeb\\xde\\x0ew\\xed\\x0f\\xf4\\xad6\\x8c\\x8a\\xb5\\xc2\\xff(\\x07\\xab\\xde,\\x11\\xe3\\xfb\\xdbk-\\xceg:\\xbdE\\x92\\xcd\\x82X\"\\xabbB\\x7fj\\xe1\\xc6,t\\t\\r\\x96\\xd6[+8w\"\\x12\\xfbr\\x1fC\\xcb\\x12U\\xfe\\xc6NW\\xfb\\xea\\xf2\\x00i6\\x1a\\x1b\\t\\x8c\\x8d\\xaa\\xb5C\\x03\\xea\\xf6\\x0b\\xca\\xd0\\x19O\\x83\\x14\\xa2\\x8e\\x8e\\xe4\\x9b\\xf5\\xffI\\xf4&c\\xdc\\x80\\xfc\\xb6\\xea\\x83H\\x03\\x02\\x16\\x12\\xbf\\xeb\\xc7U\\xfb\\x04](,%\\x8c\\xe1i\\x8f\\x97\\xd5\\xce\\xce\\xf0\\xe5\\x7f#\\xe2\\xc9\\xe7\\xfe\\xa8$\\xe9y\\x99\\x0ec\\xfd\\rL\\xd6!\\x067\\xa4Q\\x8a\\x99\\x00I\\xbb\\xce@y\\x16\\x83[\\xa2;\\xe8\\xceF\\xba\\x1e4\\xf9\\x86\\xc5\\x9a0\\xb9zU\\x8f\\xc9t2\\xda\\x9b)7\\xbb\\xce\\xa5\\x91\\x06\\xd9\\xce\\xa0\\xc5N\\xb9\\xf5\\x07;x\\xde2\\xd6\\x94G-\\xbd\\x91\\x8d\\xfb\\xb9H\\xd3\\x18\\xbc\\x82\\x16b\\xeb\\xf6\\x9cd\\x18\\x05x#\\xbb)\\x89jo1\\xb0\\x99\\\\x87`<zf\\xbcB\\x1b-\\xb2I{F\\xa1(\\xaa\\xc3\\x05\\xc9\\xf0\\x13\\xb1-Random binary noise]",
+      "tier": "other",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0189,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[fake_pdf_elf.pdf-\\x7fELF\\x02\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00-ELF binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.1115,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[fake_pdf_macho.pdf-\\xfe\\xed\\xfa\\xce\\x00\\x00\\x00\\x00-Mach-O binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0175,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[fake_pdf_pe.pdf-MZ\\x90\\x00\\x03\\x00\\x00\\x00-PE binary disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0183,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[corrupted_xref.pdf-%PDF-1.4\\nxref\\n0 1\\n0000000000 65535 f \\ntrailer\\n<< /Size 1 >>\\nstartxref\\n99999\\n%%EOF-Broken xref table]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.1221,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[malformed_stream.pdf-%PDF-1.4\\n1 0 obj\\n<< /Length 100 >>\\nstream\\nTRUNCATED_STREAM\\nendobj\\n%%EOF-Truncated stream object]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0191,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[html_as_pdf.pdf-<!DOCTYPE html><html><body><h1>Exploit</h1></body></html>-HTML payload disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0181,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestCorruptedPdfStreamsEmpirical::test_api_jobs_corrupted_pdf_rejection_or_failure_state[shell_script.pdf-#!/bin/bash\\necho 'attacking system'\\nrm -rf /-Shell script disguised as PDF]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.019,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestConcurrentBurstsEmpirical::test_100_concurrent_recognize_requests",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.034,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestConcurrentBurstsEmpirical::test_100_concurrent_jobs_submission_and_polling",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.1536,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestConcurrentBurstsEmpirical::test_100_concurrent_sse_event_connections",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0236,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestConcurrentBurstsEmpirical::test_mixed_adversarial_concurrent_burst_50_valid_50_hostile",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0303,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestSecurityAndLeakageAuditEmpirical::test_clean_error_responses[/v1/nonexistent_route-get-None]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0047,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestSecurityAndLeakageAuditEmpirical::test_clean_error_responses[/v1/jobs/../../../../etc/passwd-get-None]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0045,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestSecurityAndLeakageAuditEmpirical::test_clean_error_responses[/v1/jobs/' UNION SELECT * FROM users---get-None]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0053,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestSecurityAndLeakageAuditEmpirical::test_clean_error_responses[/v1/recognize-post-json_payload3]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0132,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestSecurityAndLeakageAuditEmpirical::test_clean_error_responses[/v1/recognize-post-json_payload4]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0136,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_empirical_m5_stress.py::TestSecurityAndLeakageAuditEmpirical::test_clean_error_responses[/v1/recognize-delete-None]",
+      "tier": "other",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0044,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F1MultiFormatIngestion::test_f1_01_ingest_png_rgb",
+      "tier": "tier1",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0036,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F1MultiFormatIngestion::test_f1_02_ingest_jpeg_grayscale_and_rgb",
+      "tier": "tier1",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0014,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F1MultiFormatIngestion::test_f1_03_ingest_tiff_multipage",
+      "tier": "tier1",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0016,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F1MultiFormatIngestion::test_f1_04_ingest_bmp_and_webp",
+      "tier": "tier1",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0035,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F1MultiFormatIngestion::test_f1_05_ingest_multipage_pdf_pypdfium2",
+      "tier": "tier1",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.1339,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F1MultiFormatIngestion::test_f1_06_ingest_in_memory_bytes_buffer",
+      "tier": "tier1",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0056,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F2ImageDeskew::test_f2_01_deskew_positive_rotation_angle",
+      "tier": "tier1",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0084,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F2ImageDeskew::test_f2_02_deskew_negative_rotation_angle",
+      "tier": "tier1",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0069,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F2ImageDeskew::test_f2_03_deskew_already_aligned_document",
+      "tier": "tier1",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0064,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F2ImageDeskew::test_f2_04_deskew_bounding_box_expansion",
+      "tier": "tier1",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0153,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F2ImageDeskew::test_f2_05_deskew_preserves_channel_layout_and_type",
+      "tier": "tier1",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0112,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F2ImageDeskew::test_f2_06_deskew_returns_correct_confidence_and_structure",
+      "tier": "tier1",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.014,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F3ContrastEnhancement::test_f3_01_clahe_dynamic_range_expansion",
+      "tier": "tier1",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F3ContrastEnhancement::test_f3_02_diagonal_shadow_gradient_flattening",
+      "tier": "tier1",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.005,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F3ContrastEnhancement::test_f3_03_morphological_top_hat_filtering",
+      "tier": "tier1",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0017,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F3ContrastEnhancement::test_f3_04_rgb_luminance_enhancement_preserves_hue",
+      "tier": "tier1",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0012,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F3ContrastEnhancement::test_f3_05_high_contrast_crisp_image_stability",
+      "tier": "tier1",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0102,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F3ContrastEnhancement::test_f3_06_normalize_image_preserves_aspect_ratio_with_padding",
+      "tier": "tier1",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0008,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F4AdaptiveBinarization::test_f4_01_sauvola_faint_pencil_extraction",
+      "tier": "tier1",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0163,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F4AdaptiveBinarization::test_f4_02_otsu_bimodal_global_thresholding",
+      "tier": "tier1",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0077,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F4AdaptiveBinarization::test_f4_03_sauvola_vs_otsu_local_gradient",
+      "tier": "tier1",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0017,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F4AdaptiveBinarization::test_f4_04_binary_mask_polarity_standardization",
+      "tier": "tier1",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0093,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F4AdaptiveBinarization::test_f4_05_binarize_output_format_and_memory_layout",
+      "tier": "tier1",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F4AdaptiveBinarization::test_f4_06_otsu_threshold_value_calculation",
+      "tier": "tier1",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F5LineAndWordSegmentation::test_f5_01_hpp_multi_line_extraction",
+      "tier": "tier1",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0208,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F5LineAndWordSegmentation::test_f5_02_seam_carving_overlapping_ascenders_descenders",
+      "tier": "tier1",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.1329,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F5LineAndWordSegmentation::test_f5_03_normalized_bounding_box_geometry",
+      "tier": "tier1",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0204,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F5LineAndWordSegmentation::test_f5_04_word_token_segmentation_within_lines",
+      "tier": "tier1",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0234,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F5LineAndWordSegmentation::test_f5_05_single_line_document_extraction",
+      "tier": "tier1",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0019,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F5LineAndWordSegmentation::test_f5_06_line_segmenter_with_empty_or_zero_margin",
+      "tier": "tier1",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F6MultiSourceDatasetIngestion::test_f6_01_multiprocess_parallel_generation_quota",
+      "tier": "tier1",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 1.176,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F6MultiSourceDatasetIngestion::test_f6_02_public_corpora_ingestion_normalization",
+      "tier": "tier1",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F6MultiSourceDatasetIngestion::test_f6_03_offline_fallback_generator_scaling",
+      "tier": "tier1",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0195,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F6MultiSourceDatasetIngestion::test_f6_04_dataset_summary_metadata_validation",
+      "tier": "tier1",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F6MultiSourceDatasetIngestion::test_f6_05_sample_image_file_existence_and_integrity",
+      "tier": "tier1",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F7PharmaceuticalVocabularies::test_f7_01_rxnorm_medications_database_scale",
+      "tier": "tier1",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0024,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F7PharmaceuticalVocabularies::test_f7_02_latin_sig_codes_abbreviations_and_grammar",
+      "tier": "tier1",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F7PharmaceuticalVocabularies::test_f7_03_dosage_strength_and_unit_combinatorics",
+      "tier": "tier1",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F7PharmaceuticalVocabularies::test_f7_04_clinical_templates_and_doctor_profiles",
+      "tier": "tier1",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.1415,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F7PharmaceuticalVocabularies::test_f7_05_lasa_lookalike_drug_pairs_coverage",
+      "tier": "tier1",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F8PhysicalAugmentationEngine::test_f8_01_3d_normal_map_crumpled_paper_shading",
+      "tier": "tier1",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0035,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F8PhysicalAugmentationEngine::test_f8_02_directional_shadow_gradient_and_vignetting",
+      "tier": "tier1",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0009,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F8PhysicalAugmentationEngine::test_f8_03_ink_bleeding_and_capillary_feathering",
+      "tier": "tier1",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F8PhysicalAugmentationEngine::test_f8_04_stroke_tremor_and_multifrequency_sine_baseline",
+      "tier": "tier1",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F8PhysicalAugmentationEngine::test_f8_05_doctor_cursive_signature_synthesis",
+      "tier": "tier1",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0149,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F9WriterIndependentPartitioning::test_f9_01_zero_writer_overlap_between_splits",
+      "tier": "tier1",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F9WriterIndependentPartitioning::test_f9_02_stratified_split_ratios_80_10_10",
+      "tier": "tier1",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F9WriterIndependentPartitioning::test_f9_03_jsonl_manifest_schema_conformance",
+      "tier": "tier1",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F9WriterIndependentPartitioning::test_f9_04_category_representation_across_splits",
+      "tier": "tier1",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F9WriterIndependentPartitioning::test_f9_05_deterministic_partitioning_reproducibility",
+      "tier": "tier1",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F10TrOCRLargeMPSArchitecture::test_f10_01_trocr_large_architecture_parameter_count",
+      "tier": "tier1",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F10TrOCRLargeMPSArchitecture::test_f10_02_fp16_mixed_precision_autocast_mps",
+      "tier": "tier1",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.028,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F10TrOCRLargeMPSArchitecture::test_f10_03_gradient_checkpointing_activation_memory",
+      "tier": "tier1",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F10TrOCRLargeMPSArchitecture::test_f10_04_dynamic_sequence_padding_and_label_masking",
+      "tier": "tier1",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F10TrOCRLargeMPSArchitecture::test_f10_05_unified_memory_cache_management_and_flush",
+      "tier": "tier1",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F11Stage1CursiveAdaptation::test_f11_01_stage1_dataset_loader_and_sampling",
+      "tier": "tier1",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.3324,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F11Stage1CursiveAdaptation::test_f11_02_stage1_hyperparameter_configuration",
+      "tier": "tier1",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F11Stage1CursiveAdaptation::test_f11_03_stage1_forward_backward_loss_reduction",
+      "tier": "tier1",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0647,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F11Stage1CursiveAdaptation::test_f11_04_stage1_checkpoint_serialization",
+      "tier": "tier1",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0677,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F11Stage1CursiveAdaptation::test_f11_05_stage1_cosine_learning_rate_schedule",
+      "tier": "tier1",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F12Stage2DoctorSpecialization::test_f12_01_stage2_initialization_from_stage1_checkpoint",
+      "tier": "tier1",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0012,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F12Stage2DoctorSpecialization::test_f12_02_stage2_domain_specific_data_filtering",
+      "tier": "tier1",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F12Stage2DoctorSpecialization::test_f12_03_stage2_reduced_learning_rate_and_warmup",
+      "tier": "tier1",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F12Stage2DoctorSpecialization::test_f12_04_stage2_encoder_layer_freezing_option",
+      "tier": "tier1",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F12Stage2DoctorSpecialization::test_f12_05_stage2_clinical_specialization_loss_convergence",
+      "tier": "tier1",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0643,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F13CheckpointSerializationLossTelemetry::test_f13_01_atomic_checkpoint_file_generation",
+      "tier": "tier1",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F13CheckpointSerializationLossTelemetry::test_f13_02_losses_csv_telemetry_logging",
+      "tier": "tier1",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F13CheckpointSerializationLossTelemetry::test_f13_03_dual_axis_loss_and_cer_curve_rendering",
+      "tier": "tier1",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0568,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F13CheckpointSerializationLossTelemetry::test_f13_04_resume_training_from_interrupted_epoch",
+      "tier": "tier1",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F13CheckpointSerializationLossTelemetry::test_f13_05_checkpoint_metadata_payload_validation",
+      "tier": "tier1",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F14CERWEREvaluationBenchmark::test_f14_01_cer_character_error_rate_calculation",
+      "tier": "tier1",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F14CERWEREvaluationBenchmark::test_f14_02_wer_word_error_rate_calculation",
+      "tier": "tier1",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F14CERWEREvaluationBenchmark::test_f14_03_edit_operations_breakdown_s_d_i_h",
+      "tier": "tier1",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F14CERWEREvaluationBenchmark::test_f14_04_latency_percentile_profiling_p50_p99",
+      "tier": "tier1",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0005,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F14CERWEREvaluationBenchmark::test_f14_05_ablation_benchmark_rescorer_gain",
+      "tier": "tier1",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F15RxNormPrefixTrieIndexing::test_f15_01_trie_construction_and_insertion",
+      "tier": "tier1",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F15RxNormPrefixTrieIndexing::test_f15_02_exact_and_prefix_search_lookup",
+      "tier": "tier1",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F15RxNormPrefixTrieIndexing::test_f15_03_case_insensitive_and_punctuation_handling",
+      "tier": "tier1",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F15RxNormPrefixTrieIndexing::test_f15_04_frequency_and_prior_weighting",
+      "tier": "tier1",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F15RxNormPrefixTrieIndexing::test_f15_05_empty_and_unknown_prefix_fallback",
+      "tier": "tier1",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F16AutoregressiveBeamRescoring::test_f16_01_beam_candidate_logprob_ranking",
+      "tier": "tier1",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F16AutoregressiveBeamRescoring::test_f16_02_ocr_visual_confusion_penalty_matrix",
+      "tier": "tier1",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F16AutoregressiveBeamRescoring::test_f16_03_rescorer_interface_contract_conformance",
+      "tier": "tier1",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F16AutoregressiveBeamRescoring::test_f16_04_alpha_beta_gamma_weight_modulation",
+      "tier": "tier1",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F16AutoregressiveBeamRescoring::test_f16_05_sub_millisecond_rescore_latency",
+      "tier": "tier1",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F17ClinicalContextDosageDisambiguation::test_f17_01_lasa_pair_amoxicillin_vs_ampicillin_disambiguation",
+      "tier": "tier1",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F17ClinicalContextDosageDisambiguation::test_f17_02_lasa_pair_hydroxyzine_vs_hydralazine",
+      "tier": "tier1",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F17ClinicalContextDosageDisambiguation::test_f17_03_lasa_pair_celebrex_vs_celexa",
+      "tier": "tier1",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F17ClinicalContextDosageDisambiguation::test_f17_04_dosage_unit_and_route_compatibility_filtering",
+      "tier": "tier1",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F17ClinicalContextDosageDisambiguation::test_f17_05_compound_sig_instruction_parsing",
+      "tier": "tier1",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F18FastAPISynchronousInference::test_f18_01_recognize_multipart_image_upload",
+      "tier": "tier1",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0021,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F18FastAPISynchronousInference::test_f18_02_recognize_base64_payload",
+      "tier": "tier1",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0018,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F18FastAPISynchronousInference::test_f18_03_health_check_endpoint",
+      "tier": "tier1",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0017,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F18FastAPISynchronousInference::test_f18_04_processing_time_telemetry_reporting",
+      "tier": "tier1",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0019,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F18FastAPISynchronousInference::test_f18_05_unsupported_media_type_handling",
+      "tier": "tier1",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0013,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F18FastAPISynchronousInference::test_f18_06_model_options_query_parameters",
+      "tier": "tier1",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0023,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F19AsyncJobSubmissionSSEStreaming::test_f19_01_submit_async_job_returns_job_id",
+      "tier": "tier1",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0014,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F19AsyncJobSubmissionSSEStreaming::test_f19_02_poll_job_status_lifecycle",
+      "tier": "tier1",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0024,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F19AsyncJobSubmissionSSEStreaming::test_f19_03_sse_stream_events_format",
+      "tier": "tier1",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0266,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F19AsyncJobSubmissionSSEStreaming::test_f19_04_nonexistent_job_returns_404",
+      "tier": "tier1",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0012,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F19AsyncJobSubmissionSSEStreaming::test_f19_05_async_job_concurrency_non_blocking",
+      "tier": "tier1",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0022,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F20StructuredJSONTranscriptionSchema::test_f20_01_pydantic_schema_validation_hierarchy",
+      "tier": "tier1",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F20StructuredJSONTranscriptionSchema::test_f20_02_normalized_coordinate_invariants",
+      "tier": "tier1",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F20StructuredJSONTranscriptionSchema::test_f20_03_mean_confidence_aggregate_computation",
+      "tier": "tier1",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F20StructuredJSONTranscriptionSchema::test_f20_04_full_text_newline_assembly",
+      "tier": "tier1",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F20StructuredJSONTranscriptionSchema::test_f20_05_word_bounding_boxes_contained_in_line",
+      "tier": "tier1",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F20StructuredJSONTranscriptionSchema::test_f20_06_empty_document_valid_schema_instantiation",
+      "tier": "tier1",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F21InteractiveSVGDocumentViewer::test_f21_01_svg_viewbox_coordinate_transform",
+      "tier": "tier1",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F21InteractiveSVGDocumentViewer::test_f21_02_three_tier_confidence_color_mapping",
+      "tier": "tier1",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F21InteractiveSVGDocumentViewer::test_f21_03_zoom_scale_clamping",
+      "tier": "tier1",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F21InteractiveSVGDocumentViewer::test_f21_04_bounding_box_hover_and_selection_state",
+      "tier": "tier1",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F21InteractiveSVGDocumentViewer::test_f21_05_multipage_page_switcher_state",
+      "tier": "tier1",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F22LineEditorMedicalAutoSuggestions::test_f22_01_inline_text_edit_mutation_and_is_edited_flag",
+      "tier": "tier1",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F22LineEditorMedicalAutoSuggestions::test_f22_02_rxnorm_autocomplete_suggestions",
+      "tier": "tier1",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F22LineEditorMedicalAutoSuggestions::test_f22_03_speed_review_queue_filtering",
+      "tier": "tier1",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F22LineEditorMedicalAutoSuggestions::test_f22_04_undo_redo_history_stack",
+      "tier": "tier1",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F22LineEditorMedicalAutoSuggestions::test_f22_05_diff_calculation_original_vs_edited",
+      "tier": "tier1",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F23SecureMultiFormatExport::test_f23_01_export_formatted_json",
+      "tier": "tier1",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F23SecureMultiFormatExport::test_f23_02_export_plain_text_with_page_breaks",
+      "tier": "tier1",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F23SecureMultiFormatExport::test_f23_03_cwe1236_csv_formula_injection_defense",
+      "tier": "tier1",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F23SecureMultiFormatExport::test_f23_04_csv_rfc4180_quote_escaping",
+      "tier": "tier1",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F23SecureMultiFormatExport::test_f23_05_clipboard_export_formatting",
+      "tier": "tier1",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F24NextJSVercelProductionBuild::test_f24_01_nextjs_package_json_and_dependencies",
+      "tier": "tier1",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F24NextJSVercelProductionBuild::test_f24_02_nextjs_config_ts_and_env_variables",
+      "tier": "tier1",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F24NextJSVercelProductionBuild::test_f24_03_serverless_payload_limit_enforcement",
+      "tier": "tier1",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F24NextJSVercelProductionBuild::test_f24_04_ssr_window_and_canvas_reference_guards",
+      "tier": "tier1",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier1_features.py::TestTier1F24NextJSVercelProductionBuild::test_f24_05_production_build_artifacts_and_entrypoints",
+      "tier": "tier1",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F1MultiFormatIngestion::test_f1_b01_zero_byte_empty_file",
+      "tier": "tier2",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F1MultiFormatIngestion::test_f1_b02_corrupted_header_random_binary_garbage",
+      "tier": "tier2",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F1MultiFormatIngestion::test_f1_b03_truncated_pdf_missing_eof_marker",
+      "tier": "tier2",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F1MultiFormatIngestion::test_f1_b04_disguised_text_file_with_image_extension",
+      "tier": "tier2",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F1MultiFormatIngestion::test_f1_b05_cmyk_color_profile_conversion",
+      "tier": "tier2",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F1MultiFormatIngestion::test_f1_b06_zero_dimension_numpy_array",
+      "tier": "tier2",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F2ImageDeskew::test_f2_b01_zero_variance_solid_white_canvas",
+      "tier": "tier2",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0007,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F2ImageDeskew::test_f2_b02_pure_gaussian_noise_image",
+      "tier": "tier2",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0204,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F2ImageDeskew::test_f2_b03_extreme_skew_angles",
+      "tier": "tier2",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0015,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F2ImageDeskew::test_f2_b04_micro_dimension_patch_4x4",
+      "tier": "tier2",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F2ImageDeskew::test_f2_b05_solid_black_document",
+      "tier": "tier2",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0007,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F3ContrastEnhancement::test_f3_b01_extreme_clahe_clip_limits",
+      "tier": "tier2",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0029,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F3ContrastEnhancement::test_f3_b02_tile_grid_larger_than_image_dimensions",
+      "tier": "tier2",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F3ContrastEnhancement::test_f3_b03_float_nan_and_inf_pixel_handling",
+      "tier": "tier2",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F3ContrastEnhancement::test_f3_b04_all_black_illumination_flattening",
+      "tier": "tier2",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0015,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F3ContrastEnhancement::test_f3_b05_normalize_image_zero_dimensions",
+      "tier": "tier2",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F4AdaptiveBinarization::test_f4_b01_heavy_salt_and_pepper_noise_60pct",
+      "tier": "tier2",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0014,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F4AdaptiveBinarization::test_f4_b02_window_size_larger_than_image",
+      "tier": "tier2",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F4AdaptiveBinarization::test_f4_b03_single_pixel_canvas_binarization",
+      "tier": "tier2",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F4AdaptiveBinarization::test_f4_b04_boolean_input_mask_handling",
+      "tier": "tier2",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F4AdaptiveBinarization::test_f4_b05_faint_pencil_strokes_near_white",
+      "tier": "tier2",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F5LineAndWordSegmentation::test_f5_b01_blank_document_zero_lines",
+      "tier": "tier2",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F5LineAndWordSegmentation::test_f5_b02_solid_black_document_segmentation",
+      "tier": "tier2",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F5LineAndWordSegmentation::test_f5_b03_extreme_aspect_ratio_100_to_1",
+      "tier": "tier2",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0005,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F5LineAndWordSegmentation::test_f5_b04_single_pixel_noise_speckles",
+      "tier": "tier2",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F5LineAndWordSegmentation::test_f5_b05_overlapping_cursive_lines_seam_carving",
+      "tier": "tier2",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0121,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F6MultiSourceDatasetIngestion::test_f6_b01_corrupted_jsonl_line_handling",
+      "tier": "tier2",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F6MultiSourceDatasetIngestion::test_f6_b02_missing_image_path_in_manifest",
+      "tier": "tier2",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F6MultiSourceDatasetIngestion::test_f6_b03_empty_manifest_file",
+      "tier": "tier2",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F6MultiSourceDatasetIngestion::test_f6_b04_singleton_writer_partitioning",
+      "tier": "tier2",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F6MultiSourceDatasetIngestion::test_f6_b05_extreme_text_length_samples",
+      "tier": "tier2",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F7PharmaceuticalVocabularies::test_f7_b01_single_character_latin_sigs",
+      "tier": "tier2",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F7PharmaceuticalVocabularies::test_f7_b02_mixed_case_and_punctuated_sigs",
+      "tier": "tier2",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F7PharmaceuticalVocabularies::test_f7_b03_extreme_dosage_strengths",
+      "tier": "tier2",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F7PharmaceuticalVocabularies::test_f7_b04_compound_multiline_sig_instructions",
+      "tier": "tier2",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F7PharmaceuticalVocabularies::test_f7_b05_lasa_pair_exact_spelling_contrast",
+      "tier": "tier2",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F8PhysicalAugmentationEngine::test_f8_b01_extreme_crumple_frequency_shading",
+      "tier": "tier2",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F8PhysicalAugmentationEngine::test_f8_b02_zero_variance_background_fallbacks",
+      "tier": "tier2",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F8PhysicalAugmentationEngine::test_f8_b03_extreme_stroke_tremor_amplitude",
+      "tier": "tier2",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F8PhysicalAugmentationEngine::test_f8_b04_heavy_ink_bleed_dilation",
+      "tier": "tier2",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F8PhysicalAugmentationEngine::test_f8_b05_extreme_slant_angles",
+      "tier": "tier2",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0153,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F9WriterIndependentPartitioning::test_f9_b01_single_writer_dataset_partition_safety",
+      "tier": "tier2",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F9WriterIndependentPartitioning::test_f9_b02_large_writer_pool_disjoint_assertion",
+      "tier": "tier2",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F9WriterIndependentPartitioning::test_f9_b03_empty_samples_list",
+      "tier": "tier2",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F9WriterIndependentPartitioning::test_f9_b04_split_ratios_sum_to_one",
+      "tier": "tier2",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F9WriterIndependentPartitioning::test_f9_b05_manifest_metadata_preservation",
+      "tier": "tier2",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F10TrOCRLargeMPSArchitecture::test_f10_b01_micro_batch_size_1",
+      "tier": "tier2",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0036,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F10TrOCRLargeMPSArchitecture::test_f10_b02_variable_width_padding_masking",
+      "tier": "tier2",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F10TrOCRLargeMPSArchitecture::test_f10_b03_mps_device_availability_check",
+      "tier": "tier2",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F10TrOCRLargeMPSArchitecture::test_f10_b04_fp16_half_precision_tensor_allocation",
+      "tier": "tier2",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F10TrOCRLargeMPSArchitecture::test_f10_b05_empty_cache_execution",
+      "tier": "tier2",
+      "feature": "F10",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F11Stage1CursiveAdaptation::test_f11_b01_single_epoch_training_cycle",
+      "tier": "tier2",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0745,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F11Stage1CursiveAdaptation::test_f11_b02_zero_loss_floor_clamp",
+      "tier": "tier2",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F11Stage1CursiveAdaptation::test_f11_b03_learning_rate_warmup_step_zero",
+      "tier": "tier2",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F11Stage1CursiveAdaptation::test_f11_b04_checkpoint_directory_creation",
+      "tier": "tier2",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.072,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F11Stage1CursiveAdaptation::test_f11_b05_training_loss_csv_header_integrity",
+      "tier": "tier2",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0735,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F12Stage2DoctorSpecialization::test_f12_b01_corrupted_stage1_checkpoint_loading",
+      "tier": "tier2",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F12Stage2DoctorSpecialization::test_f12_b02_empty_clinical_dataset_filter",
+      "tier": "tier2",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F12Stage2DoctorSpecialization::test_f12_b03_learning_rate_underflow_guard",
+      "tier": "tier2",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F12Stage2DoctorSpecialization::test_f12_b04_all_layers_frozen_safety",
+      "tier": "tier2",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F12Stage2DoctorSpecialization::test_f12_b05_specialization_epoch_continuity",
+      "tier": "tier2",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F13CheckpointSerializationLossTelemetry::test_f13_b01_truncated_checkpoint_file_detection",
+      "tier": "tier2",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0005,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F13CheckpointSerializationLossTelemetry::test_f13_b02_losses_csv_empty_rows",
+      "tier": "tier2",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F13CheckpointSerializationLossTelemetry::test_f13_b03_checkpoint_write_permission_error",
+      "tier": "tier2",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F13CheckpointSerializationLossTelemetry::test_f13_b04_metric_telemetry_nan_inf_guards",
+      "tier": "tier2",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F13CheckpointSerializationLossTelemetry::test_f13_b05_atomic_rename_checkpoint_safety",
+      "tier": "tier2",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F14CERWEREvaluationBenchmark::test_f14_b01_empty_hypothesis_and_reference",
+      "tier": "tier2",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F14CERWEREvaluationBenchmark::test_f14_b02_empty_hypothesis_with_non_empty_reference",
+      "tier": "tier2",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F14CERWEREvaluationBenchmark::test_f14_b03_disjoint_strings_cer",
+      "tier": "tier2",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F14CERWEREvaluationBenchmark::test_f14_b04_unicode_diacritics_and_symbols_cer",
+      "tier": "tier2",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F14CERWEREvaluationBenchmark::test_f14_b05_single_character_wer",
+      "tier": "tier2",
+      "feature": "F14",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F15RxNormPrefixTrieIndexing::test_f15_b01_empty_query_string_lookup",
+      "tier": "tier2",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F15RxNormPrefixTrieIndexing::test_f15_b02_non_alphabetic_character_queries",
+      "tier": "tier2",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F15RxNormPrefixTrieIndexing::test_f15_b03_extremely_long_query_string",
+      "tier": "tier2",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F15RxNormPrefixTrieIndexing::test_f15_b04_unicode_symbols_in_drug_lookup",
+      "tier": "tier2",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F15RxNormPrefixTrieIndexing::test_f15_b05_case_folding_robustness",
+      "tier": "tier2",
+      "feature": "F15",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F16AutoregressiveBeamRescoring::test_f16_b01_beam_width_1_greedy_fallback",
+      "tier": "tier2",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F16AutoregressiveBeamRescoring::test_f16_b02_all_candidate_beams_identical",
+      "tier": "tier2",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F16AutoregressiveBeamRescoring::test_f16_b03_very_low_log_probabilities",
+      "tier": "tier2",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F16AutoregressiveBeamRescoring::test_f16_b04_zero_character_beam_candidate",
+      "tier": "tier2",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F16AutoregressiveBeamRescoring::test_f16_b05_visual_confusion_symmetric_lookup",
+      "tier": "tier2",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F17ClinicalContextDosageDisambiguation::test_f17_b01_unrealistic_dosage_rejection",
+      "tier": "tier2",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F17ClinicalContextDosageDisambiguation::test_f17_b02_missing_dosage_context",
+      "tier": "tier2",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F17ClinicalContextDosageDisambiguation::test_f17_b03_conflicting_route_and_form",
+      "tier": "tier2",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F17ClinicalContextDosageDisambiguation::test_f17_b04_unknown_drug_name_fallback",
+      "tier": "tier2",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F17ClinicalContextDosageDisambiguation::test_f17_b05_complex_pediatric_weight_based_dosage",
+      "tier": "tier2",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F18FastAPISynchronousInference::test_f18_b01_missing_multipart_file_payload",
+      "tier": "tier2",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0014,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F18FastAPISynchronousInference::test_f18_b02_zero_byte_file_upload_rejection",
+      "tier": "tier2",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0012,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F18FastAPISynchronousInference::test_f18_b03_corrupted_file_upload_rejection",
+      "tier": "tier2",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0017,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F18FastAPISynchronousInference::test_f18_b04_unsupported_http_method_405",
+      "tier": "tier2",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F18FastAPISynchronousInference::test_f18_b05_nonexistent_endpoint_404",
+      "tier": "tier2",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0011,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F19AsyncJobSubmissionSSEStreaming::test_f19_b01_nonexistent_job_status_404",
+      "tier": "tier2",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0011,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F19AsyncJobSubmissionSSEStreaming::test_f19_b02_sse_stream_on_nonexistent_job",
+      "tier": "tier2",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0013,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F19AsyncJobSubmissionSSEStreaming::test_f19_b03_rapid_consecutive_status_polling",
+      "tier": "tier2",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0076,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F19AsyncJobSubmissionSSEStreaming::test_f19_b04_zero_byte_async_job_upload",
+      "tier": "tier2",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0011,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F19AsyncJobSubmissionSSEStreaming::test_f19_b05_job_status_monotonic_progress",
+      "tier": "tier2",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0034,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F20StructuredJSONTranscriptionSchema::test_f20_b01_nan_and_inf_coordinate_rejection",
+      "tier": "tier2",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F20StructuredJSONTranscriptionSchema::test_f20_b02_inverted_bounding_box_rejection",
+      "tier": "tier2",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F20StructuredJSONTranscriptionSchema::test_f20_b03_out_of_bounds_coordinates_rejection",
+      "tier": "tier2",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F20StructuredJSONTranscriptionSchema::test_f20_b04_confidence_outside_unit_interval_rejection",
+      "tier": "tier2",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F20StructuredJSONTranscriptionSchema::test_f20_b05_wrong_number_of_bbox_coordinates",
+      "tier": "tier2",
+      "feature": "F20",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F21InteractiveSVGDocumentViewer::test_f21_b01_zero_bounding_boxes_in_page",
+      "tier": "tier2",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F21InteractiveSVGDocumentViewer::test_f21_b02_extreme_zoom_scale_values",
+      "tier": "tier2",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F21InteractiveSVGDocumentViewer::test_f21_b03_out_of_bounds_bbox_clamping_to_viewport",
+      "tier": "tier2",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F21InteractiveSVGDocumentViewer::test_f21_b04_page_index_bounds_checking",
+      "tier": "tier2",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F21InteractiveSVGDocumentViewer::test_f21_b05_negative_viewport_dimensions",
+      "tier": "tier2",
+      "feature": "F21",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F22LineEditorMedicalAutoSuggestions::test_f22_b01_clearing_entire_line_text",
+      "tier": "tier2",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F22LineEditorMedicalAutoSuggestions::test_f22_b02_extremely_long_pasted_text",
+      "tier": "tier2",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F22LineEditorMedicalAutoSuggestions::test_f22_b03_empty_speed_review_queue",
+      "tier": "tier2",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F22LineEditorMedicalAutoSuggestions::test_f22_b04_undo_on_empty_history",
+      "tier": "tier2",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F22LineEditorMedicalAutoSuggestions::test_f22_b05_all_tokens_low_confidence_queue_saturation",
+      "tier": "tier2",
+      "feature": "F22",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F23SecureMultiFormatExport::test_f23_b01_csv_formula_injection_various_symbols",
+      "tier": "tier2",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F23SecureMultiFormatExport::test_f23_b02_empty_document_export_json_and_txt",
+      "tier": "tier2",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F23SecureMultiFormatExport::test_f23_b03_download_filename_path_traversal_sanitization",
+      "tier": "tier2",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F23SecureMultiFormatExport::test_f23_b04_massive_multipage_export_performance",
+      "tier": "tier2",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F23SecureMultiFormatExport::test_f23_b05_special_characters_in_export_strings",
+      "tier": "tier2",
+      "feature": "F23",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F24NextJSVercelProductionBuild::test_f24_b01_api_recognize_oversized_payload_vercel_limit",
+      "tier": "tier2",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F24NextJSVercelProductionBuild::test_f24_b02_api_recognize_empty_request_body",
+      "tier": "tier2",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F24NextJSVercelProductionBuild::test_f24_b03_ssr_window_and_canvas_reference_safety",
+      "tier": "tier2",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F24NextJSVercelProductionBuild::test_f24_b04_downstream_backend_timeout_handling",
+      "tier": "tier2",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier2_boundary.py::TestTier2F24NextJSVercelProductionBuild::test_f24_b05_missing_backend_env_variable_safety",
+      "tier": "tier2",
+      "feature": "F24",
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p01_f1_f5_ingestion_to_segmentation",
+      "tier": "tier3",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 1.3357,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p02_f2_f4_deskew_to_sauvola",
+      "tier": "tier3",
+      "feature": "F2",
+      "outcome": "passed",
+      "duration": 0.0201,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p03_f3_f5_clahe_to_seam_carving",
+      "tier": "tier3",
+      "feature": "F3",
+      "outcome": "passed",
+      "duration": 0.0305,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p04_f4_f12_sauvola_to_fastapi_recognize",
+      "tier": "tier3",
+      "feature": "F4",
+      "outcome": "passed",
+      "duration": 0.0026,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p05_f5_f13_segmenter_to_json_schema",
+      "tier": "tier3",
+      "feature": "F5",
+      "outcome": "passed",
+      "duration": 0.0214,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p06_f6_f7_synthetic_gen_to_dataset_loader",
+      "tier": "tier3",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.4674,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p07_f6_f8_synthetic_gen_to_mps_training",
+      "tier": "tier3",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.2193,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p08_f8_f9_mps_training_to_checkpointing",
+      "tier": "tier3",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0011,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p09_f8_f10_mps_training_to_loss_logger",
+      "tier": "tier3",
+      "feature": "F8",
+      "outcome": "passed",
+      "duration": 0.0731,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p10_f9_f11_checkpoint_to_jiwer_evaluation",
+      "tier": "tier3",
+      "feature": "F9",
+      "outcome": "passed",
+      "duration": 0.0009,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p11_f11_f13_jiwer_eval_to_structured_json",
+      "tier": "tier3",
+      "feature": "F11",
+      "outcome": "passed",
+      "duration": 0.0008,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p12_f12_f14_fastapi_to_async_jobs",
+      "tier": "tier3",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p13_f12_f15_fastapi_to_multi_device_modes",
+      "tier": "tier3",
+      "feature": "F12",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p14_f13_f17_json_schema_to_svg_viewer",
+      "tier": "tier3",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p15_f13_f18_json_schema_to_inline_editor",
+      "tier": "tier3",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p16_f13_f19_json_schema_to_multi_export",
+      "tier": "tier3",
+      "feature": "F13",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p17_f16_f12_dropzone_to_fastapi_upload",
+      "tier": "tier3",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0024,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p18_f17_f18_viewer_panzoom_to_editor_sync",
+      "tier": "tier3",
+      "feature": "F17",
+      "outcome": "passed",
+      "duration": 0.0004,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p19_f18_f13_speed_review_to_low_confidence",
+      "tier": "tier3",
+      "feature": "F18",
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p20_f19_f20_multi_export_to_nextjs_build",
+      "tier": "tier3",
+      "feature": "F19",
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p21_f1_f14_pdf_loader_to_async_job_queue",
+      "tier": "tier3",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0045,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier3_pairwise.py::TestTier3PairwiseIntegration::test_p22_f7_f11_benchmark_loader_to_jiwer_harness",
+      "tier": "tier3",
+      "feature": "F7",
+      "outcome": "passed",
+      "duration": 0.0025,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s1_doctor_prescription_workflow_f1_f3_f4_f5_f12_f13_f18_f19",
+      "tier": "tier4",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.1448,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s2_multipage_pdf_async_workflow_f1_f5_f12_f14_f16_f17",
+      "tier": "tier4",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0281,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s3_synthetic_to_mps_training_evaluation_workflow_f6_f8_f9_f10_f11",
+      "tier": "tier4",
+      "feature": "F6",
+      "outcome": "passed",
+      "duration": 0.446,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s4_historical_document_speed_review_workflow_f1_f2_f3_f4_f5_f17_f18_f19",
+      "tier": "tier4",
+      "feature": "F1",
+      "outcome": "passed",
+      "duration": 0.0353,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s5_frontend_production_build_and_export_workflow_f16_f17_f18_f19_f20",
+      "tier": "tier4",
+      "feature": "F16",
+      "outcome": "passed",
+      "duration": 0.0011,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s6_lasa_drug_pair_beam_disambiguation",
+      "tier": "tier4",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s7_physician_cursive_signatures_and_credential_verification",
+      "tier": "tier4",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.044,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier4_workload.py::TestTier4WorkloadScenarios::test_scenario_s8_batch_throughput_and_latency_profiling_mps",
+      "tier": "tier4",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0115,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_01_extreme_aspect_ratio_and_resize_boundaries",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0049,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_02_solid_color_and_zero_variance_canvases",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0311,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_03_non_standard_pil_modes_and_alpha_compositing",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0005,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_04_overlapping_cursive_ascenders_descenders_seam_carving",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0079,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_05_severe_illumination_gradient_and_stains",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0164,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_06_multilingual_unicode_emojis_and_math_tokenization",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0329,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_07_ultra_long_transcriptions_and_label_masking",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_08_device_fallback_and_mock_engine_resilience",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0039,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_09_malformed_multipart_and_executable_rejection",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0206,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_10_corrupted_and_encrypted_pdf_rejection",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0046,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_11_async_job_state_machine_and_sse_disconnect",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0055,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_12_high_concurrency_burst_and_race_conditions",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0345,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_13_zero_area_and_inverted_bounding_box_resilience",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0003,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_14_nan_infinite_confidence_and_coordinate_guards",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_15_deeply_nested_overlapping_bounding_boxes_stress",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0016,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_16_csv_formula_injection_defense_cwe1236",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_17_xss_html_script_tag_sanitization",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_18_massive_document_50_pages_5000_words_load",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0168,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_19_unicode_bidi_arabic_hebrew_diacritics",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0002,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_20_rapid_state_mutation_undo_redo_cycles",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_21_speed_review_queue_boundary_states",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_22_api_proxy_timeout_simulation",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0028,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_23_large_payload_upload_boundary_and_rejection",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0043,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_24_mock_engine_determinism_under_concurrent_load",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0016,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_25_faint_pencil_strokes_binarization_resilience",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.001,
+      "error": null
+    },
+    {
+      "node_id": "tests/e2e/test_tier5_adversarial.py::test_adv_26_image_normalization_aspect_preservation_and_padding",
+      "tier": "tier5",
+      "feature": null,
+      "outcome": "passed",
+      "duration": 0.0019,
+      "error": null
+    }
+  ]
+}
