@@ -1,157 +1,331 @@
-# Vision Handwritten Pro: End-to-End System Strategy & Architecture
+# Vision Handwritten: Strategy v3
 
-**Document Version**: 2.0.0  
-**Target Hardware**: Apple Silicon (M3 Ultra, Metal Performance Shaders / MPS) & Cloud Vercel  
-**Core Frameworks**: PyTorch 2.x, Hugging Face Transformers, Next.js 14 (App Router), Tailwind CSS  
-**Target Domain**: Unconstrained Cursive Handwriting, Doctor Prescriptions, Historical Documents, and Legal Signatures  
+**Document Version**: 3.0.0
+**Audience**: diligence, ML review, clinical safety
+**Hardware**: Apple Silicon (M3 Ultra) for local inference and LoRA. Not a pretrain cluster.
+**App shell**: thin Next.js host. Current deploy is Azure Container Apps. Vercel is allowed for the shell only. Inference never lives there.
+**Domains**: three products on one pipeline. Signatures are out.
+
+North-star spec. The public face is [README.md](README.md). Azure inventory is [PROJECT.md](PROJECT.md).
 
 ---
 
-## 1. Executive Summary & Architectural Overview
+## 1. Verdict
 
-Vision Handwritten Pro is an enterprise-grade, offline-capable handwriting recognition and transcription platform. The system couples a **558-Million Parameter Vision-Encoder-Decoder Foundation Model (TrOCR-Large)** with an offline **RxNorm & Medical Lexicon Trie Rescorer**, executed over an optimized **Apple Silicon Metal (MPS)** training engine and rendered through an **Apple Pro Studio Darkroom UI**.
+v2 would not survive a diligence meeting, an ML review, or a pharmacist looking at the medical claims. It would survive a landing page. That is the problem.
+
+What it got right is the shape of the product: private line-level HTR on Apple Silicon, a scan-versus-transcript darkroom, writer-independent splits as a policy, a lexicon sitting after the decoder, and CWE-1236 sanitization on spreadsheet export. Those are the bones.
+
+What it got wrong is almost everything that looks like a number, plus the decision to treat cursive notes, doctor prescriptions, historical manuscripts, and legal signatures as one 558M model with a SHA-256 garnish.
+
+The 10x version is not more layers, more milliseconds, more writers. It is: one pipeline, three products, a cascade instead of a fortress model, sourced numbers, a clinical safety gate that can actually say no, and a runtime split that physics allows.
+
+---
+
+## 2. What is actually true
+
+Every number below either cites a source or is labeled **target**, **unknown**, or **local inventory**.
+
+### 2.1 The checkpoint
+
+TrOCR-Large is a 558M vision-encoder-decoder. That part is real.
+
+| Fact | Value | Source |
+| :--- | :--- | :--- |
+| Checkpoint | `microsoft/trocr-large-handwritten` | Hugging Face model card |
+| Encoder | BEiT-Large: 24 layers, hidden 1024, 16 heads | TrOCR paper / official large setting |
+| Decoder | Last 12 layers of RoBERTa-Large, not 24 | Hugging Face `TrOCRConfig` default `decoder_layers=12` |
+| Vocabulary | 50,265 BPE tokens | `TrOCRConfig` default `vocab_size=50265` |
+| Official beam | 10, not 5 | TrOCR paper / official eval setting |
+| IAM cased CER | 2.89% | TrOCR paper, official large setting |
+| Input adapter | Square-pad / letterbox to 384×384 | TrOCR processor contract |
+
+v2 named this ViT-Large plus a 24-layer RoBERTa decoder. That is the wrong architecture. If the model card cannot name the checkpoint it is fine-tuning, nobody should trust the latency HUD either.
+
+### 2.2 Corpora that exist
+
+| Corpus | Official / literature scale | Source |
+| :--- | :--- | :--- |
+| IAM | 657 writers, 1,539 pages, 13,353 lines | IAM official |
+| IMGUR5K | 8,177 pages, 230,573 word images; ~5,000 writers in the literature | TextStyleBrush / IMGUR5K paper |
+| Esposalles (line) | 3,827 lines (2,328 / 742 / 757) | Teklia `Esposalles-line` split |
+| RIMES parent | ~1,300 writers | literature, parent collection |
+| POPP Generic | 80 writers | POPP Generic |
+| Esposalles hands | 1–2 hands on the common subset | literature |
+| Belfort, German handwriting, IFT forms | writer count **unknown** | no card-cited census used here |
+
+Belfort+POPP = 37,493 and “RIMES 2011 & German Sets = 22,948” are not public headline numbers. Esposalles 3,827 is the cell that matches a source exactly. That is the standard for every other cell.
+
+### 2.3 Local inventory (sample counts only)
+
+From [data/reference_handwriting/dataset_summary.json](data/reference_handwriting/dataset_summary.json), **local inventory**, generated 2026-08-28:
+
+| Source key | Samples (local inventory) |
+| :--- | ---: |
+| imgur5k_words | 206,687 |
+| iam_words | 109,971 |
+| belfort_line | 32,699 |
+| rimes_2011_line | 12,104 |
+| german_handwriting | 10,844 |
+| iam_line | 10,373 |
+| iam_sentences | 5,663 |
+| popp_line | 4,794 |
+| iam_words_writer_labeled | 4,097 |
+| esposalles_line | 3,827 |
+| handwriting_forms | 2,099 |
+| **Total** | **403,158** |
+
+Splits (local inventory): train 298,150 / val 50,121 / test 54,887.
+
+This inventory is real downloaded image+transcription rows from named Hugging Face repos. It is not a writer census. It is not a prescription corpus.
+
+### 2.4 Engineering facts that survive
+
+- The macOS spawn / pickle blow-up is a real Apple Silicon training bug. Reducing `OCRDataset` to primitive tuples is the right fix.
+- CSV formula injection (CWE-1236) is a real export bug. The single-quote escape belongs.
+- A 1:1 curtain between ink and type is the correct primary UI. Not a chat box. Not a cinematic HUD. Implementation: `frontend/src/components/SplitCurtain.tsx`.
+- The lexicon sits after the decoder. Implementation: `pipeline/rescorer/`.
+
+---
+
+## 3. Writer math, sourced
+
+v2 claimed 403,158 samples from 294,736 distinct writers, then a train split that also had 294,736 writers, plus 49,705 val writers and 54,707 test writers, and “exactly 0.00% overlap.” Those sentences cannot be true at the same time.
+
+Train samples 298,150 against 294,736 train writers is ~1.01 images per writer. That is a one-shot identification set, not a handwriting corpus.
+
+The listed corpora cannot produce that writer pool:
+
+| Corpus | Real writer scale | Label |
+| :--- | :--- | :--- |
+| IAM | 657 | official |
+| IMGUR5K | ~5,000 in the literature, not 200k | literature |
+| RIMES parent collection | ~1,300 | literature |
+| POPP Generic | 80 | official / card |
+| Esposalles common subset | 1–2 hands | literature |
+| Belfort, German, IFT forms | unknown | unknown |
+
+**Local artifact.** [`extract_writer_id`](pipeline/dataset/download_and_curate_multisource.py) falls back to `source_key::sample_id` when `writer_field` is missing. Most ingested repos have no writer field, so `unique_writers ≈ total_samples`. That is a one-shot ID set, not a handwriting census. v3 will not print it as a result.
+
+Writer-independent splitting remains a **policy**: when a native writer field exists, partition by it; when it does not, do not invent a census. Code debt: a future curator run can silently restore the decorative `unique_writers` block unless [download_and_curate_multisource.py](pipeline/dataset/download_and_curate_multisource.py) is changed. Tests that assert 294k writers are the same debt.
+
+---
+
+## 4. The headline domain has no data
+
+“Doctor prescriptions” was in the v2 title block. Nothing in the data table is a prescription.
+
+- IAM is copied LOB-corpus English.
+- IMGUR5K is internet words.
+- RIMES is fictitious administrative letters.
+- Esposalles is 17th-century Catalan marriage licenses.
+- Belfort and POPP are French civil / census / notary hands.
+- There is no Rx pad, no SIG distribution, no dose/form confusion set, no LASA slice.
+
+Until that hole is filled, the RxNorm trie is a spellchecker sitting on a model that has never seen a prescription. A spellchecker that is allowed to snap `Amoxictllin` onto `Ampicillin` because both are in the lexicon.
+
+That is not an OCR error. That is a patient-safety incident.
+
+The older README story of 50,500 samples / 650 writers / `prescription_item` / 3D crumpled-paper augmentation is retired as a training-corpus claim. If those files still exist on disk, treat them as synthetic-disclosed fixtures, not as a clinical dataset.
+
+---
+
+## 5. Data policy
+
+**Real-first, synthetic-disclosed, real-only eval.**
+
+TrOCR’s own pretraining is large-scale synthetic printed text. Fine-tune-only-on-real is a policy, not a virgin model. “Zero-synthetic” fights the medical claim: for prescriptions, banning all rendered or style-transferred ink guarantees there will never be enough domain coverage to train the lane the product wants to sell.
+
+- Training on general and historical lanes: prefer real scans.
+- Training on the clinical lane: disclosed rendered or style-transferred ink is allowed, and must be labeled as such.
+- Evaluation: real-only. No synthetic in the numbers that decide a release.
+
+---
+
+## 6. One pipeline, three products
 
 ```mermaid
-graph TD
-    A["Raw Input Document / PDF / Scan"] --> B["Physical Preprocessing & Enhancement"]
-    B --> C["Line Segmentation & Bounding Box Extraction"]
-    C --> D["Vectorized Tensor Preprocessing (384x384)"]
-    D --> E["TrOCR-Large Foundation Model (558M)"]
-    
-    subgraph "Foundation Neural Model"
-        E --> F["ViT-Large 24-Layer Vision Encoder"]
-        F --> G["Cross-Attention Bridge"]
-        G --> H["RoBERTa-Large 24-Layer Causal Decoder"]
-    end
-    
-    H --> I["Beam Search Candidate Generation (k=5)"]
-    I --> J["Trie-Based RxNorm & Linguistic Rescorer"]
-    J --> K["Final High-Confidence Digital Vector Output"]
-    
-    K --> L["Apple Pro Studio UI / REST API"]
+flowchart TD
+  textpage[textpage] --> probe[printedTextProbe]
+  probe --> layout[layoutAndReadingOrder]
+  layout --> crops[lineOrFieldCrops]
+  crops --> l1[L1_TrOCR_SmallOrBase]
+  l1 --> hard{hardLine}
+  hard -->|yes| l2[L2_TrOCR_Large]
+  hard -->|no| pack[domainPack]
+  l2 --> pack
+  pack --> rescore[confusionWeightedRescore]
+  rescore --> gate[lasaOrLowConfGate]
+  gate --> accept[accept]
+  gate --> referee[vlmRefereeOptIn]
+  gate --> human[human]
 ```
 
----
+That cascade is the entire 10x. The three products share it.
 
-## 2. Model Architecture & Foundations
+1. **General** — private notes, letters, unconstrained cursive. Local MPS/MLX. Darkroom UI.
+2. **Historical** — manuscripts and registries (Belfort, POPP, Esposalles). Same engine, historical domain pack.
+3. **Clinical** — prescriptions and notes, only after a safety gate that can say no. Domain pack + LASA / low-confidence refuse + human. Optional VLM referee is opt-in. PHI default is off-box-never.
 
-### 2.1 Dual-Transformer Topology
-The core neural network employs a Vision-Encoder-Decoder architecture:
-1. **Vision Encoder (`ViT-Large`)**:
-   - **Parameters**: ~304 Million.
-   - **Input Resolution**: $384 \times 384 \times 3$ RGB.
-   - **Patch Size**: $16 \times 16$, yielding 576 spatial visual tokens + 1 `[CLS]` token.
-   - **Internal Structure**: 24 Transformer encoder blocks, hidden dimension $D=1024$, 16 multi-head attention heads, intermediate MLP dimension $4096$.
-   - **Attention Mechanism**: PyTorch Scaled Dot-Product Attention (`sdpa`) with float16 mixed precision.
+### 6.1 Signatures are a non-goal for HTR
 
-2. **Causal Autoregressive Decoder (`RoBERTa-Large`)**:
-   - **Parameters**: ~254 Million.
-   - **Internal Structure**: 24 Transformer decoder blocks, hidden dimension $D=1024$, 16 multi-head cross-attention heads to visual encoder representations.
-   - **Vocabulary**: 50,265 subword BPE tokens (supporting multilingual Latin scripts, punctuation, numbers, and medical symbols).
-   - **Context Window**: Max target sequence length of 128 tokens per line crop.
+Running a signature crop through TrOCR and hashing the JPEG is not verification. TrOCR will emit a hallucinated name or garbage. SHA-256 is a file checksum. Useful for chain of custody. It does not attest a hand.
+
+[`SignatureInspector.tsx`](frontend/src/components/SignatureInspector.tsx) hashes transcribed text and invents an entropy score from character-set variance. That is theater until there is a defined estimator and a test set.
+
+A future matcher needs reference versus questioned, calibrated FAR/FRR, and a human decision record. It is not this pipeline.
 
 ---
 
-## 3. Dataset Curation & Ingestion Strategy
+## 7. Cascade and page geometry
 
-### 3.1 Strict "Zero-Synthetic" Data Policy
-In accordance with strict production requirements, **zero procedurally generated or font-rendered synthetic data** is used. All training and evaluation corpora are sourced from scanned, authentic physical handwriting:
-
-| Corpus Source | Sample Count | Script Category & Characteristics |
-| :--- | :---: | :--- |
-| **IMGUR5K Word Crops** | 206,687 | Real-world in-the-wild handwriting (ballpoint, whiteboard, receipts, degraded contrast) |
-| **IAM Handwriting Database** | 126,007 | Traditional English cursive sentences, lines, and connected baseline script |
-| **Belfort & POPP Archives** | 37,493 | 18th–20th century French civil registry deeds, census records, and notary cursive |
-| **RIMES 2011 & German Sets** | 22,948 | European postal letters and forms with full Latin diacritics (`é`, `è`, `ä`, `ö`, `ü`, `ß`) |
-| **Esposalles Historical Lines** | 3,827 | Archaic medieval marriage records and legal registries |
-| **IFT Structured Forms** | 2,099 | Tabular multi-field scanned intake forms with numeric date fields |
-| **Total Curated Dataset** | **403,158** | **294,736 distinct, non-overlapping writers** |
-
-### 3.2 Writer-Independent Partitioning
-To guarantee zero data leakage between splits, data is partitioned by `writer_id`:
-- **Train Split**: 298,150 samples (73.95%) — 294,736 distinct writers.
-- **Validation Split**: 50,121 samples (12.43%) — 49,705 independent writers.
-- **Test Split**: 54,887 samples (13.61%) — 54,707 independent writers.
-- **Cross-Split Writer Overlap**: Exactly **0.00%**.
-
----
-
-## 4. Preprocessing & Physical Normalization Pipeline
-
-Before images reach the neural network, they pass through a non-destructive physical enhancement engine:
+v2:
 
 ```
-[Raw Scanned Page]
-       │
-       ▼
- 1. PDF / Multi-Page Rasterization (300 DPI high-fidelity RGB rendering)
-       │
-       ▼
- 2. Contrast Enhancement (Adaptive CLAHE: Clip Limit=2.0, Tile Grid=8x8)
-       │
-       ▼
- 3. Deskewing & Orientation Rectification (Hough Line Transform & Radon Projection)
-       │
-       ▼
- 4. Baseline & Line Segmentation (Horizontal Projection Profiles with AABB Bounding Boxes)
-       │
-       ▼
- 5. Dynamic Aspect Ratio Normalization (Bilinear Interpolation into 384x384 with zero-pad)
+textpage → CLAHE → crop → 384² → TrOCR-Large → beam 5 → RxNorm hit? → UI
 ```
 
----
+v3:
 
-## 5. Hardware Acceleration Strategy (Apple Silicon M3 Ultra)
-
-Training foundation vision models on Apple Silicon unified memory requires resolving macOS-specific multiprocessing and Metal runtime constraints:
-
-### 5.1 Multiprocessing IPC Optimization
-- **Problem**: Python's `spawn` multiprocessing method on macOS serializes dataset objects over UNIX pipes. Pickling 298k heavy dataclass objects causes pipe buffer truncation (`_pickle.UnpicklingError`).
-- **Solution**: Refactored `OCRDataset` to utilize immutable 4-element primitive tuples `(image_path, text, sample_id, writer_id)`. Serialization footprint dropped from **120 MB down to 0.57 MB (0.002s)**, allowing 16–24 worker processes to spawn instantly.
-
-### 5.2 Compute & Memory Allocation
-- **Unified Memory Saturation**: 96.0 GB Unified RAM is utilized for OS page caching and double-buffered batch pre-staging via `AsyncDevicePrefetcher` (`prefetch_factor=4`).
-- **Zero Host Stalls**: Non-blocking asynchronous Metal transfers (`non_blocking=True`) decouple data transfer from GPU kernel execution, reducing data wait I/O latency to **0.15 ms (0.01% of step time)**.
-- **Precision**: PyTorch `torch.autocast(device_type="mps", dtype=torch.float16)` with SDPA attention kernels.
-
----
-
-## 6. Linguistic Post-Processing & Trie Rescoring
-
-Neural vision models can occasionally misread ambiguous cursive ligatures (e.g. confusing `"Amoxicillin"` with `"Amoxictllin"`). To resolve this with 100% deterministic precision:
-
-```mermaid
-graph LR
-    A["Beam Search Top-K Candidates"] --> B["RxNorm Lexicon Trie Matcher"]
-    B --> C["Character Confusion Matrix Penalty"]
-    C --> D["Damerau-Levenshtein Cost Evaluation"]
-    D --> E["Rescored Clinical Text"]
+```
+textpage
+  → printed-text probe
+  → layout + reading order
+    → line / field crops (aspect preserved, page coords kept)
+      → L1 TrOCR-Small/Base
+        → L2 TrOCR-Large only on hard lines
+          → domain pack (Rx / historical / general)
+            → confusion-weighted rescore
+              → LASA / low-confidence gate
+                → accept | VLM referee (opt-in) | human
 ```
 
-1. **RxNorm Knowledge Base**: Ingests 70,000+ FDA-approved clinical drugs, formulations (`tablets`, `capsules`, `suspension`), dosages (`250mg`, `500mg`, `10ml`), and Latin prescription frequencies (`PO`, `BID`, `TID`, `QHS`, `PRN`, `STAT`).
-2. **Character Confusion Matrix**: Models visual stroke ambiguities (e.g., `l` vs `1`, `cl` vs `d`, `rn` vs `m`, `O` vs `0`).
-3. **Rescoring Formula**:
-   $$\text{Score}(W) = \log P_{\text{neural}}(W) + \alpha \cdot \mathbb{I}_{W \in \text{RxNorm}} - \beta \cdot \text{Cost}_{\text{confusion}}(W, W_{\text{raw}})$$
+Layout comes first. CLAHE, Hough/Radon deskew, horizontal projection profiles, and AABB stay as a **fallback**, not the foundation. That classical stack fails on cramped Rx pads, overlapping cursive, multi-column minutes, phone photos, and tables.
+
+384×384 letterboxing is TrOCR’s structural weakness, not a “physical normalization engine.” A long cursive line becomes a thin strip in a sea of pad tokens. Keep 384² as a checkpoint adapter. Do not make it the page geometry.
+
+This cascade is the target architecture. It is not claimed as shipped.
 
 ---
 
-## 7. Frontend & Apple Pro Studio Darkroom Architecture
+## 8. Model card and competitive frame
 
-The user-facing workspace is built with **Next.js 14 App Router** and **Tailwind CSS**, designed according to Apple Pro Studio aesthetics:
+| Item | Value | Label |
+| :--- | :--- | :--- |
+| Named checkpoint | `microsoft/trocr-large-handwritten` | sourced |
+| Encoder | BEiT-Large, 24 layers, 1024, 16 heads | sourced |
+| Decoder | 12 layers from RoBERTa-Large | sourced |
+| Official beam | 10 | sourced |
+| IAM, TrOCR-Large | 2.89% cased CER | sourced |
+| IAM, DTrOCR | 2.38% CER | literature |
+| IAM, frontier VLMs (2026) | ~1.2–1.7% CER | literature |
+| Local LoRA on M3 Ultra | allowed | policy |
+| Foundation-model pretrain on a Studio | not allowed | non-goal |
 
-1. **X-Ray Curtain Slider (`SplitCurtain.tsx`)**: Real-time 1:1 split-screen comparison between raw physical scan ink and digital vector typography.
-2. **Signature & Notary Verification (`SignatureInspector.tsx`)**: Stroke continuity, biometric entropy scoring, cryptographic SHA-256 integrity tokens, and notary seal verification.
-3. **Darkroom Studio Toolbar (`DarkroomToolbar.tsx`)**: Non-destructive live contrast adjustment ($0.5\times$ to $3.0\times$), brightness tuning, and blueprint inversion.
-4. **Retina Loupe 3.0x Magnifier (`DocumentViewer.tsx`)**: Specular 140px glass lens inspection.
-5. **Universal Command Palette (`CommandPalette.tsx` / `⌘K`)**: Quick navigation, export presets, document loading, and darkroom shortcuts.
-6. **Diagnostics HUD (`DiagnosticsHUD.tsx` / `⌘D`)**: Real-time telemetry breakdown of ViT Vision Encoder latency (14.2ms), Decoder latency (18.6ms), and Trie Rescorer latency (1.8ms).
+558M is not a ceiling. It is the controllable local engine, not the accuracy champion.
+
+Honest pitch: we will not beat GPT-5 on a public page. We will beat it on privacy, cost at volume, offline, and fine-tune control — and we will refuse to silently rewrite a drug name.
 
 ---
 
-## 8. Quality Assurance & Security Hardening
+## 9. Clinical safety gate
 
-- **Adversarial Security (CWE-1236 Formula Injection)**: All CSV, TSV, and Excel exports sanitize formula trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`) with single-quote escaping.
-- **Automated Test Coverage**:
-  - **Frontend (`vitest`)**: 303 / 303 tests passing (100%).
-  - **Backend (`pytest`)**: 50 / 50 unit and integration tests passing (100%).
-- **Deployment**: Live on **Vercel** with full static page generation and serverless API route fallback.
+RxNorm “70,000+ FDA-approved drugs” is the wrong unit. June 2026 active RxNorm counts are on the order of:
+
+| Term type | Approximate active count | Label |
+| :--- | ---: | :--- |
+| Semantic clinical drugs | ~17,500 | June 2026 scale |
+| Ingredients | ~14,600 | June 2026 scale |
+| NDCs | ~248,000 | June 2026 scale |
+| Brands, packs, and related | additional, typed | June 2026 scale |
+
+The trie stores a **term type**, not a round number. Local vocabulary files under `data/reference_handwriting/vocabularies/` are a development slice, not the FDA catalog.
+
+Confusion-weighted rescore may rank candidates. It may not silently substitute a LASA pair.
+
+Gate outcomes:
+
+- **accept** — in-domain, above threshold, no LASA collision
+- **escalate** — optional VLM referee, opt-in, PHI leaves the box only if the operator said so
+- **refuse** — low confidence or dangerous substitution. The system can say no.
+
+A silent hydralazine / hydroxyzine swap must be able to fail a build. See §11.
+
+PHI default: **off-box-never**.
+
+---
+
+## 10. Runtime split
+
+v2 drew one arrow from PDF to TrOCR-Large to Vercel. A 558M encoder-decoder does not run on Vercel serverless. An M3 Ultra with 96 GB unified memory is a strong local inference and LoRA box. It is not a pretrain cluster and not a Vercel function.
+
+Three runtimes, physics-allowed:
+
+| Runtime | Role | Current home |
+| :--- | :--- | :--- |
+| Next.js app shell | darkroom UI, export, review | Azure Container Apps (`ca-frontend-playground`). Vercel allowed for shell only. |
+| Local MPS/MLX daemon | private inference | FastAPI in `backend/app/`, Metal on Apple Silicon |
+| Optional GPU worker | VLM referee | dedicated box, opt-in |
+
+Azure ACA backend at 4 vCPU / 8 Gi is an API host and a mock-or-CPU probe. It is not TrOCR-Large production. Do not imply otherwise.
+
+Cloud referee is opt-in. PHI default is off-box-never.
+
+---
+
+## 11. Release gate
+
+303/303 frontend tests and 50/50 backend tests at 100% are CI hygiene. They are not an HTR eval. A recognition product without the following is a demo.
+
+v3 gate. All rows are **targets**, not claimed results:
+
+| Gate | What it measures | Fail condition |
+| :--- | :--- | :--- |
+| CER / WER by corpus | IAM, IMGUR5K, RIMES, Belfort, POPP, Esposalles, and any future Rx set, separately | unpublished or mixed into one vanity number |
+| Dirty-page set | phone photos, skew, bleed, tables, multi-column | no set, or only clean scans |
+| Calibration plot | confidence vs. empirical error | no plot |
+| Dangerous-substitution rate | LASA and dose/form confusions | silent hydralazine / hydroxyzine (or equivalent) swap |
+| Time-to-correct | darkroom seconds from refuse/escalate to accepted line | no human-in-the-loop metric |
+
+CI counts may stay in the README as hygiene. They may not be restated as a release verdict.
+
+---
+
+## 12. SLOs as targets
+
+Latency and memory only with named hardware and an explicit **target, not measured** label. No Diagnostics HUD fanfic. The v2 figures (encoder 14.2 ms, decoder 18.6 ms, trie 1.8 ms) are deleted.
+
+| SLO | Target | Hardware | Label |
+| :--- | :--- | :--- | :--- |
+| Interactive line (L1) | operator-usable on a local page | M3 Ultra, 96 GB, MPS/MLX | target, not measured |
+| Hard line (L2) | slower than L1; still local | same | target, not measured |
+| Rescore + gate | small vs. decode | same | target, not measured |
+| Cloud referee | opt-in; not on the default path | dedicated GPU | target, not measured |
+
+---
+
+## 13. Non-goals
+
+- One 558M fortress for all domains
+- Signature verification via TrOCR, SHA-256 of a JPEG, or “biometric entropy” on a static scan
+- Training foundation models on a Studio
+- Shipping Rx claims before Rx data
+- Silent lexicon snaps (`Amoxictllin` → `Ampicillin`)
+- Vercel (or any serverless host) as the inference runtime
+- Projection profiles as page geometry
+- 384² letterboxing as a “physical normalization engine”
+- Zero-synthetic as a slogan
+- CI pass rates as an HTR release gate
+- Decorative writer censuses from `source_key::sample_id`
+
+---
+
+## 14. What we keep building
+
+- Private line-level HTR on Apple Silicon
+- 1:1 scan-versus-transcript darkroom
+- Writer-independent splits as a policy, with native writer fields only
+- Lexicon after the decoder, typed, gated
+- CWE-1236 sanitization on spreadsheet export
+- LoRA adaptation on the Studio
+- A cascade that can refuse

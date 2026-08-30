@@ -469,6 +469,7 @@ def write_manifests(output_dir: Path, records: List[Dict[str, Any]], elapsed: fl
             "val": round(len(val_records) / max(len(records), 1), 4),
             "test": round(len(test_records) / max(len(records), 1), 4),
         },
+        # unique_writers from writer_id sets is not a census: fallback IDs are source_key::sample_id.
         "unique_writers": {
             "total": len(train_writers | val_writers | test_writers),
             "train": len(train_writers),

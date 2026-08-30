@@ -1,552 +1,284 @@
-# State-of-the-Art Doctor Handwriting & Signature Recognition System
+# Private line-level handwriting recognition
 
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x%20MPS%20(Metal)-EE4C2C.svg?logo=pytorch)](https://pytorch.org/)
-[![Model](https://img.shields.io/badge/TrOCR--Large-558M%20Params-blue.svg)](https://huggingface.co/microsoft/trocr-large-handwritten)
-[![Dataset](https://img.shields.io/badge/Dataset-50%2C500%20Samples%20(80%2F10%2F10)-purple.svg)](data/reference_handwriting/)
-[![Rescorer](https://img.shields.io/badge/Rescorer-RxNorm%20Trie%20Beam%20Rescorer-orange.svg)](pipeline/rescorer/)
+[![Checkpoint](https://img.shields.io/badge/Checkpoint-trocr--large--handwritten-blue.svg)](https://huggingface.co/microsoft/trocr-large-handwritten)
+[![Spec](https://img.shields.io/badge/Spec-Strategy%20v3-informational.svg)](PROJECT_STRATEGY.md)
+[![Inventory](https://img.shields.io/badge/Local%20inventory-403%2C158%20real%20samples-purple.svg)](data/reference_handwriting/dataset_summary.json)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.x%20App%20Router-black.svg?logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
-[![E2E Test Suite](https://img.shields.io/badge/E2E%20Tests-355%2F355%20Passing%20(100%25)-brightgreen.svg)](TEST_READY.md)
-[![Security](https://img.shields.io/badge/Security-CWE--1236%20%7C%20CWE--209%20Hardened-success.svg)](tests/e2e/test_tier5_adversarial.py)
+[![CI](https://img.shields.io/badge/CI-hygiene%20suites-lightgrey.svg)](TEST_READY.md)
+[![Security](https://img.shields.io/badge/Export-CWE--1236-success.svg)](tests/e2e/test_tier5_adversarial.py)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-An end-to-end, high-performance handwritten text recognition (HTR) system engineered to transcribe difficult, messy, and illegible doctor handwriting, prescription slips, clinical consultation notes, and cursive physician signatures with high accuracy. 
+One pipeline. Three products. Local-first. The clinical gate can say no.
 
-Targeting **TrOCR-Large (558M parameters)**, the system features a 50,500+ verified multi-source handwriting dataset with 3D physical augmentations, multi-stage curriculum fine-tuning on Apple Silicon Metal Performance Shaders (MPS), an in-memory RxNorm pharmaceutical lexicon Trie beam rescorer, high-throughput FastAPI serving with Server-Sent Events (SSE), and a modern Next.js 14 web application deployed to Microsoft Azure Container Apps (ACA).
+This repo is a private line-level handwritten text recognition (HTR) stack: a 1:1 scan-versus-transcript darkroom, a FastAPI inference daemon, and a typed lexicon after the decoder. The named checkpoint is `microsoft/trocr-large-handwritten` (TrOCR-Large, 558M: BEiT-Large encoder + 12-layer RoBERTa decoder). Official IAM cased CER for that checkpoint is 2.89%. That is not a ceiling, and it is not a prescription model.
 
----
+**Spec:** [PROJECT_STRATEGY.md](PROJECT_STRATEGY.md) (v3.0.0). If this README and the spec disagree, the spec wins.
 
-## 1. System Architecture & 6-Milestone Overview
-
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    END-TO-END SYSTEM ARCHITECTURE                                  |
-+----------------------------------------------------------------------------------------------------+
-
-  [ Milestone 1: 50k+ Multi-Source Dataset & 3D Physical Augmentation Engine ] (pipeline/dataset/)
-         │
-         ├── 50,500 Verified Samples (40,400 Train / 5,050 Val / 5,050 Test Manifests)
-         ├── 650 Distinct Writers (Strict writer-independent partitioning: W_train ∩ W_val ∩ W_test = ∅)
-         ├── Clinical Vocabularies (1,050 RxNorm drugs, 40 LASA pairs, 126 doctor profiles, 220 templates)
-         └── 3D Physical Augmentation (Normal-mapped crumpled paper shading, shadow ramps, ink bleed, tremor)
-         │
-         ▼
-  [ Preprocessing & Layout Analysis ] (pipeline/preprocessing/)
-         │
-         ├── Document Deskewing (Hough Line Transform + HPP variance maximization within [-45°, +45°])
-         ├── Illumination Flattening (LAB morphological background division + CLAHE contrast boost)
-         ├── Adaptive Binarization (O(1) Fast Sauvola local thresholding + Otsu fallback + noise guards)
-         └── Line & Word Segmentation (HPP peak/valley detection + Vectorized DP Seam Carving + CCA)
-         │
-         ▼
-  [ Milestone 2: Multi-Stage Curriculum TrOCR-Large (558M) MPS Fine-Tuning ] (pipeline/training/)
-         │
-         ├── Model Architecture (ViT-Large 24-layer Encoder + RoBERTa-Large 16-layer Decoder, 558M params)
-         ├── Apple Silicon MPS Acceleration (FP16 mixed precision, gradient accumulation, gradient checkpointing)
-         ├── Stage 1: General Cursive Adaptation (50,000+ unconstrained handwriting samples, lr=5e-5)
-         ├── Stage 2: Doctor & Clinical Specialization (Domain fine-tuning with 12 frozen encoder layers, lr=1.5e-5)
-         └── Telemetry & Checkpointing (Atomic weight saving in checkpoints/, losses.csv, loss_curves.png)
-         │
-         ▼
-  [ Milestone 3: Pharmaceutical Lexicon & Trie-Based Beam Rescoring Engine ] (pipeline/rescorer/)
-         │
-         ├── In-Memory Prefix Trie (Indexing 10,000+ RxNorm canonical terms, brand names, and Latin sig codes)
-         ├── Visual Confusion Penalty Matrix (OCR visual penalties for c↔e, l↔1, rn↔m, vv↔w, cl↔d, 0↔O)
-         ├── Multi-Objective Beam Re-Ranking (K=4..8 beam candidates, score = OCR + Trie - Confusion + Dosage)
-         └── LASA Disambiguation (Resolves look-alike pairs like Amoxicillin vs Ampicillin in <5 ms)
-         │
-         ▼
-  [ Milestone 4: Production Inference Backend & Streaming API ] (backend/app/)
-         │
-         ├── Synchronous Recognition (POST /v1/recognize multipart/form-data & base64 JSON)
-         ├── Asynchronous Job Management (POST /v1/jobs background task processing)
-         ├── Real-Time Event Streaming (GET /v1/jobs/{job_id}/events and /stream Server-Sent Events)
-         ├── System Diagnostics (GET /v1/health device resolution, memory watermarks, rescorer status)
-         └── Security & Robustness (Hostile binary rejection, CWE-209 zero stack trace leakage)
-         │
-         ▼
-  [ Milestone 5: Full-Stack Web Application & Azure Deployment ] (frontend/)
-         │
-         ├── Interactive Document Viewer (SVG canvas, pan, smooth zoom 0.2x-5x, 90° rotation)
-         ├── Visual Confidence Heatmap (3-tier threshold coloring: green ≥90%, yellow 70-89%, red <70%)
-         ├── Bidirectional Sync (Click bounding box on image <-> highlight corresponding line in text editor)
-         ├── Inline Correction Editor (Line-by-line editor with RxNorm medical autocomplete auto-suggestions)
-         ├── Speed Review Queue (Step-through triage mode for low-confidence tokens with keyboard shortcuts)
-         └── Multi-Format Safe Export (Formatted JSON, Plain Text, RFC 4180 CSV with CWE-1236 protection)
-         │
-         ▼
-  [ Milestone 6: E2E Integration, Ablation Benchmarks & Adversarial Hardening ] (tests/, evaluation/)
-         │
-         ├── 355 / 355 E2E Tests Passing (100% pass rate across Tiers 1–5 in ~9.3 seconds)
-         ├── 4-Stage Ablation Benchmark (CER, WER, PNDA metrics exported to evaluation_multisource_report.json)
-         └── Adversarial Hardening (CWE-1236 CSV injection, 100-request bursts, MPS OOM safety)
-```
-
-### 6-Milestone Engineering Summary
-
-| # | Milestone | Scope & Deliverables | Status |
-|:---:|:---|:---|:---:|
-| **M1** | **50k+ Multi-Source Dataset & 3D Augmentation Engine** | Curated 50,500 samples across 650 writers in `data/reference_handwriting/` with 80/10/10 train/val/test splits, 1,050 RxNorm medications, 40 LASA pairs, 126 doctor profiles (Luhn/DEA checksums), 220 templates, and 3D normal-mapped crumpled paper shading, ink bleed, stroke tremor, and baseline sine curvature. | **COMPLETE** |
-| **M2** | **Multi-Stage Curriculum TrOCR-Large (558M) MPS Fine-Tuning** | Implemented 2-stage curriculum training for `microsoft/trocr-large-handwritten` (558M parameters) on Apple Silicon Metal (`mps`) with FP16 mixed precision, gradient checkpointing, dynamic sequence padding with `-100` masking, atomic checkpointing, and `losses.csv` telemetry. | **COMPLETE** |
-| **M3** | **Pharmaceutical Lexicon & Trie-Based Beam Rescoring Engine** | Built in-memory prefix Trie indexing 10,000+ RxNorm canonical terms and Latin sig codes, multi-candidate beam re-ranking ($K=4\text{--}8$), and OCR visual confusion penalty matrix ($c \leftrightarrow e, l \leftrightarrow 1, rn \leftrightarrow m, cl \leftrightarrow d$) resolving LASA pairs (*Amoxicillin* vs *Ampicillin*) in $<5\text{ ms}$. | **COMPLETE** |
-| **M4** | **Production Inference Backend & Streaming API** | Delivered high-throughput FastAPI ASGI backend with synchronous `/v1/recognize` and asynchronous `/v1/jobs` with Server-Sent Events (SSE) streaming, serving TrOCR-Large and the beam rescorer with normalized $[0, 1]$ bounding box schemas. | **COMPLETE** |
-| **M5** | **Full-Stack Web Application & Azure Cloud Deployment** | Developed responsive Next.js 14 App Router web app with interactive SVG document viewer, 3-tier confidence heatmaps, bidirectional coordinate sync, inline editor with medical auto-suggestions, speed review queue, and CWE-1236 hardened CSV export, containerized and deployed to Azure Container Apps. | **COMPLETE** |
-| **M6** | **E2E Integration, Ablation Benchmarks & Adversarial Hardening** | Verified 355/355 E2E test matrix (Tiers 1–5), executed 4-stage ablation benchmark across 5,050 held-out samples, and published complete system documentation. | **COMPLETE** |
+**Not claimed:** state-of-the-art doctor handwriting, signature verification, or a prescription corpus. There is no Rx pad in the training inventory. The RxNorm trie is a post-decoder spellchecker until that hole is filled. A silent `Amoxictllin` → `Ampicillin` snap is a patient-safety incident, not an OCR win.
 
 ---
 
-## 2. Feature Inventory Matrix (F1–F24)
+## 1. One pipeline, three products
 
-| # | Feature | Scope & Implementation | Milestone | Status |
-|:---|:---|:---|:---:|:---:|
-| **F1** | Multi-Format Ingestion | PNG, JPEG, TIFF, BMP, WebP & multi-page PDF rasterization (pypdfium2/PIL) | M1 | **VERIFIED** |
-| **F2** | Document Deskewing | Hybrid Probabilistic Hough + HPP variance optimization within $[-45^\circ, +45^\circ]$ | M1 | **VERIFIED** |
-| **F3** | Illumination Flattening | LAB morphological background division + CLAHE contrast enhancement | M1 | **VERIFIED** |
-| **F4** | Adaptive Binarization | O(1) OpenCV boxFilter Sauvola thresholding with Otsu fallback & noise guards | M1 | **VERIFIED** |
-| **F5** | Seam Carving Segmentation | Horizontal Projection Profile + Vectorized DP Seam Carving for cursive ascenders | M1 | **VERIFIED** |
-| **F6** | 50k+ Dataset Ingestion | 50,500 verified samples in `data/reference_handwriting/` (train/val/test) | M1 | **VERIFIED** |
-| **F7** | Clinical Vocabularies | 1,050 RxNorm drugs, 40 LASA pairs, 126 doctor profiles (Luhn/DEA), 220 templates | M1 | **VERIFIED** |
-| **F8** | 3D Physical Augmentations | 3D normal-mapped crumpled paper shading, shadow ramps, ink bleed, tremor, sine | M1 | **VERIFIED** |
-| **F9** | Writer Independence | Strict 80/10/10 split across 650 writers with zero identity leakage ($W_1 \cap W_2 = \emptyset$) | M1 | **VERIFIED** |
-| **F10** | TrOCR-Large MPS Architecture | ViT-Large (24L) + RoBERTa-Large (16L) 558M params on Apple Silicon Metal | M2 | **VERIFIED** |
-| **F11** | Stage 1 Cursive Adaptation | General cursive pre-training (50,000+ samples, cosine LR, warmup, FP16) | M2 | **VERIFIED** |
-| **F12** | Stage 2 Doctor Specialization | Domain fine-tuning on doctor notes/signatures with 12 frozen encoder layers | M2 | **VERIFIED** |
-| **F13** | Checkpoint & Loss Telemetry | Atomic `.pt` saving, live CSV telemetry (`losses.csv`), publication loss curves | M2 | **VERIFIED** |
-| **F14** | CER & WER Evaluation | Vectorized Levenshtein distance, substitution/deletion/insertion counts, latency | M2 | **VERIFIED** |
-| **F15** | RxNorm Prefix Trie Indexing | In-memory Prefix Trie indexing 10,000+ RxNorm canonical names and Latin sig codes | M3 | **VERIFIED** |
-| **F16** | Autoregressive Beam Rescoring | Multi-candidate beam decoding ($K=4\text{--}8$) with OCR visual confusion penalty matrix | M3 | **VERIFIED** |
-| **F17** | Clinical Context Disambiguation | Resolves LASA pairs (*Amoxicillin* vs *Ampicillin*) in $<5\text{ ms}$ with dosage context | M3 | **VERIFIED** |
-| **F18** | FastAPI Synchronous Inference | High-throughput `POST /v1/recognize` supporting multipart and base64 JSON | M4 | **VERIFIED** |
-| **F19** | Asynchronous Jobs & SSE | `POST /v1/jobs` non-blocking queue with real-time Server-Sent Events progress | M4 | **VERIFIED** |
-| **F20** | Structured JSON Schema | Pydantic v2 document hierarchy with normalized coordinates $[0, 1]$ & confidences | M4 | **VERIFIED** |
-| **F21** | Interactive SVG Viewer | Pan/zoom canvas ($0.2\times\text{--}5\times$), 3-tier confidence heatmaps, 90° rotation | M5 | **VERIFIED** |
-| **F22** | Inline Editor & Auto-Suggest | Line-by-line correction editor with RxNorm medical auto-suggestions & speed review | M5 | **VERIFIED** |
-| **F23** | Secure Multi-Format Export | Formatted JSON, TXT, and RFC 4180 CSV with CWE-1236 formula injection defense | M5 | **VERIFIED** |
-| **F24** | Next.js Production Build & Containerization | Clean Next.js 14 App Router compilation (`npm run build`) with TypeScript 5 and standalone containerization | M5 | **VERIFIED** |
+```
+textpage
+  → printed-text probe
+  → layout + reading order
+    → line / field crops (aspect preserved, page coords kept)
+      → L1 TrOCR-Small/Base
+        → L2 TrOCR-Large only on hard lines
+          → domain pack (general / historical / Rx)
+            → confusion-weighted rescore
+              → LASA / low-confidence gate
+                → accept | VLM referee (opt-in) | human
+```
+
+The cascade is the target architecture. Layout comes first. CLAHE / Hough / projection profiles are a fallback. 384×384 letterboxing is a TrOCR checkpoint adapter, not page geometry.
+
+| Product | What it is | Gate |
+| :--- | :--- | :--- |
+| **General** | Private notes, letters, unconstrained cursive. Local MPS/MLX. Darkroom UI. | Confidence only |
+| **Historical** | Manuscripts and registries (Belfort, POPP, Esposalles). Historical domain pack. | Confidence only |
+| **Clinical** | Prescriptions and notes, only after a gate that can refuse. PHI default: off-box-never. | LASA / low-confidence → accept, escalate, or refuse |
+
+Signatures are out of HTR. `SignatureInspector` is not verification. SHA-256 is chain of custody, not a hand.
 
 ---
 
-## 3. 50,000+ Multi-Source Dataset & Physical Augmentation Engine
+## 2. Data (local inventory, not a writer census)
 
-The dataset engine in `pipeline/dataset/` generates and curates **50,500 verified handwriting samples** indexed across partition manifests:
+[data/reference_handwriting/dataset_summary.json](data/reference_handwriting/dataset_summary.json) lists **403,158** downloaded real image+transcription rows from named Hugging Face repos. Sample counts are local inventory. Writer counts are sourced literature / official figures, not `source_key::sample_id` hashes.
 
-```
-data/reference_handwriting/
-├── images/                         # 50,500 handwriting images
-├── vocabularies/
-│   ├── rxnorm_medications.json     # 1,050 FDA/RxNorm medications & 40 LASA pairs
-│   ├── latin_sig_codes.json        # 60 Latin prescription sig codes (PO, TID, BID, etc.)
-│   ├── doctor_profiles.json        # 126 doctor profiles with CMS Luhn NPI / DEA checksums
-│   └── clinical_templates.json     # 220 clinical note templates with slot filling
-├── train_manifest.jsonl            # 40,400 samples (80% split, 520 writers)
-├── val_manifest.jsonl              # 5,050 samples (10% split, 65 writers)
-├── test_manifest.jsonl             # 5,050 samples (10% split, 65 writers)
-├── full_manifest.jsonl             # Complete index (50,500 samples)
-└── dataset_summary.json            # Verified dataset statistics manifest
-```
+| Corpus | Official / literature scale | Local samples |
+| :--- | :--- | ---: |
+| IAM | 657 writers, 1,539 pages, 13,353 lines | 10,373 lines + 109,971 words + 5,663 sentences + 4,097 writer-labeled words |
+| IMGUR5K | 8,177 pages, 230,573 word images; ~5,000 writers in the literature | 206,687 word crops |
+| Esposalles (line) | 3,827 (Teklia 2,328 / 742 / 757); 1–2 hands on the common subset | 3,827 |
+| RIMES parent | ~1,300 writers | 12,104 lines (RIMES 2011) |
+| POPP Generic | 80 writers | 4,794 lines |
+| Belfort, German, IFT forms | writer count unknown | 32,699 + 10,844 + 2,099 |
 
-### Dataset Characteristics
-- **Strict Writer Independence**: 650 distinct writer identities partitioned such that $W_{\text{train}} \cap W_{\text{val}} \cap W_{\text{test}} = \emptyset$.
-- **Category Composition**:
-  - `prescription_item`: 20,125 samples (40%)
-  - `clinical_note`: 15,047 samples (30%)
-  - `doctor_signature`: 7,642 samples (15%)
-  - `general_cursive_line`: 7,686 samples (15%)
-- **3D Physical Augmentations**:
-  - **Normal-Mapped Crumpled Paper Shading**: Dynamic heightmap generation with 3D Lambertian and Blinn-Phong diffuse lighting simulating creased prescription paper.
-  - **Composite Shadow Gradients**: Linear, radial, and vignette illumination ramps simulating uneven smartphone camera lighting.
-  - **Capillary Ink Bleed**: Morphological Gaussian dilation and alpha-channel edge feathering modeling ballpoint, gel, and fountain pen ink diffusion.
-  - **Ornstein-Uhlenbeck Stroke Tremor**: Stochastic continuous-time motor tremor perturbations applied to stroke vertices.
-  - **Multiharmonic Baseline Sine Curvature**: Variable-frequency sinusoidal warping simulating handwritten baseline drift.
+There is **no prescription corpus** in this inventory. IAM is LOB English. IMGUR5K is internet words. RIMES is fictitious administrative letters. Esposalles is 17th-century Catalan marriage licenses.
+
+Policy: **real-first, synthetic-disclosed, real-only eval.** TrOCR itself was pretrained on synthetic print. The older 50,500-sample / 650-writer / `prescription_item` / 3D-augmentation story is retired as a training-corpus claim. If those files still exist on disk, they are synthetic-disclosed fixtures.
 
 ---
 
-## 4. Multi-Stage Curriculum TrOCR-Large (558M) Fine-Tuning on Apple Silicon MPS
+## 3. Model and lexicon
 
-The training pipeline fine-tunes `microsoft/trocr-large-handwritten` (ViT-Large 24-layer encoder, 1024-dim + RoBERTa-Large 16-layer decoder, 1024-dim, 558M parameters) natively on Apple Silicon Metal Performance Shaders (`torch.device("mps")`) with automatic fallback to CUDA or CPU.
+- **Checkpoint:** `microsoft/trocr-large-handwritten`
+- **Encoder:** BEiT-Large (24 layers, 1024, 16 heads)
+- **Decoder:** last 12 layers of RoBERTa-Large (`decoder_layers=12`, `vocab_size=50265`)
+- **Official beam:** 10
+- **384×384:** processor adapter, not “physical normalization”
+- **Adaptation:** LoRA on Apple Silicon. This machine is not a pretrain cluster.
 
-### Curriculum Stages
+On IAM, frontier VLMs (2026) sit near 1.2–1.7% CER. DTrOCR is 2.38%. TrOCR-Large is 2.89%. The honest pitch: we will not beat GPT-5 on a public page. We will beat it on privacy, cost at volume, offline, and fine-tune control — and we will refuse to silently rewrite a drug name.
 
-1. **Stage 1 (General Cursive Adaptation)**:
-   - **Target**: Broad unconstrained cursive handwriting adaptation across the full 50,500 multi-source corpus.
-   - **Hyperparameters**: Learning rate $5\times 10^{-5}$, Cosine LR schedule with $5\%$ warmup, 5 epochs, Micro-batch size 4, Gradient accumulation steps 8 (effective batch size 32), FP16 mixed precision, Gradient checkpointing enabled, 0 frozen layers.
+The rescorer in `pipeline/rescorer/` may rank beam candidates with a typed RxNorm trie and a visual confusion matrix. June 2026-scale RxNorm is on the order of ~17.5k semantic clinical drugs, ~14.6k ingredients, plus brands, packs, and ~248k NDCs. Local JSON under `data/reference_handwriting/vocabularies/` is a development slice, not the FDA catalog. The trie must store a term type. It must not silently substitute a LASA pair.
 
-2. **Stage 2 (Doctor & Clinical Specialization)**:
-   - **Target**: Domain fine-tuning on challenging doctor prescriptions, clinical notes, and physician signatures.
-   - **Hyperparameters**: Learning rate $1.5\times 10^{-5}$, Min LR $5\times 10^{-7}$, Warmup ratio $3\%$, 5 epochs, Bottom 12 ViT encoder layers frozen, Category filtering for high-difficulty clinical samples.
+---
 
-### Training Stability & Apple Silicon Unified Memory Guards
-- **Dynamic Sequence Collation**: `OCRDataCollator` dynamically pads sequences strictly to the maximum length of the micro-batch, replacing pad tokens with `-100` cross-entropy loss masks.
-- **Gradient Checkpointing**: Recomputes forward activations during backward passes, reducing peak unified memory usage by $\sim 60\%$.
-- **MPS Cache Management**: Invokes `torch.mps.empty_cache()` every 50 optimizer steps and configures `PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.85` to prevent OS-level Metal memory panics.
-- **Atomic Checkpointing**: Serializes atomic `.pt` state dicts with optimizer, scheduler, epoch counters, and `losses.csv` history.
+## 4. Runtime split
+
+A 558M encoder-decoder does not run on Vercel serverless. Azure Container Apps at 4 vCPU / 8 Gi is an app-shell and API host, not TrOCR-Large production.
+
+| Runtime | Role | Where |
+| :--- | :--- | :--- |
+| Next.js app shell | Darkroom UI, review, CWE-1236 export | Azure ACA `ca-frontend-playground`. Vercel allowed for shell only. |
+| Local MPS/MLX daemon | Private inference | FastAPI in `backend/app/`, Apple Silicon |
+| Optional GPU worker | VLM referee | Dedicated box, opt-in. PHI default: off-box-never. |
+
+Azure deploy inventory: [PROJECT.md](PROJECT.md).
+
+---
+
+## 5. Darkroom UI
+
+The primary UI is a 1:1 curtain between ink and type (`frontend/src/components/SplitCurtain.tsx`). Not a chat box. Not a cinematic HUD.
+
+Also shipped:
+
+- SVG document viewer with pan, zoom, and bounding-box sync
+- Line-level inline editor
+- Confidence coloring as a review aid, not a calibration proof
+- JSON, TXT, and RFC 4180 CSV export with CWE-1236 single-quote escaping of leading `=`, `+`, `-`, `@`, tab, and CR
+- `SignatureInspector` is **not** verification; treat it as leftover UI
+
+---
+
+## 6. FastAPI
+
+Backend: `backend/app/`.
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/v1/health` | Service health, device, rescorer flag |
+| `POST` | `/v1/recognize` | Synchronous image/PDF recognition |
+| `POST` | `/v1/jobs` | Asynchronous multi-page job |
+| `GET` | `/v1/jobs/{id}` | Job status |
+| `GET` | `/v1/jobs/{id}/events` | SSE progress |
+| `GET` | `/v1/jobs/{id}/stream` | SSE alias for the web app |
 
 ```bash
-# Execute Stage 1: General Cursive Adaptation on MPS
-.venv/bin/python -m pipeline.training.train \
-  --model-name "microsoft/trocr-large-handwritten" \
-  --device "mps" \
-  --fp16 \
-  --epochs 5 \
-  --batch-size 4 \
-  --gradient-accumulation-steps 8 \
-  --lr 5e-5 \
-  --output-dir checkpoints/stage1_general_adaptation \
-  --save-best
-
-# Execute Stage 2: Doctor & Clinical Specialization on MPS
-.venv/bin/python -m pipeline.training.train \
-  --resume-from checkpoints/stage1_general_adaptation/best_model.pt \
-  --device "mps" \
-  --fp16 \
-  --epochs 5 \
-  --batch-size 4 \
-  --gradient-accumulation-steps 8 \
-  --lr 1.5e-5 \
-  --freeze-encoder-layers 12 \
-  --output-dir checkpoints/stage2_doctor_specialization \
-  --save-best
-```
-
----
-
-## 5. Pharmaceutical Lexicon & Trie-Based Beam Rescoring Engine
-
-Handwritten prescriptions frequently exhibit visual ambiguity where medication names look identical in cursive (e.g., *Amoxicillin* vs *Ampicillin*, *Hydroxyzine* vs *Hydralazine*). The rescoring engine in `pipeline/rescorer/` operates during beam search decoding ($K=4\text{--}8$) to resolve ambiguities using medical domain knowledge.
-
-### Multi-Objective Scoring Formulation
-
-$$\mathcal{S}(\mathbf{y}) = \alpha \cdot \log P_{\text{OCR}}(\mathbf{y}|\mathbf{x}) + \beta \cdot \log P_{\text{Trie}}(\mathbf{y}) - \gamma \cdot \text{Cost}_{\text{Confusion}}(\mathbf{y}, \mathbf{y}_{\text{raw}}) + \delta \cdot \text{Bonus}_{\text{Context}}(\mathbf{y})$$
-
-- $\log P_{\text{OCR}}(\mathbf{y}|\mathbf{x})$: Log-likelihood from TrOCR-Large autoregressive beam search.
-- $\log P_{\text{Trie}}(\mathbf{y})$: Normalized frequency prior from the in-memory Trie indexing 10,000+ RxNorm medications.
-- $\text{Cost}_{\text{Confusion}}(\mathbf{y}, \mathbf{y}_{\text{raw}})$: Penalization derived from empirical OCR visual confusion matrix ($c \leftrightarrow e$, $l \leftrightarrow 1$, $rn \leftrightarrow m$, $vv \leftrightarrow w$, $cl \leftrightarrow d$, $0 \leftrightarrow O$).
-- $\text{Bonus}_{\text{Context}}(\mathbf{y})$: Clinical context compatibility bonus matching dosage strength, route, and frequency (e.g., `875mg` favors *Amoxicillin* over *Ampicillin*).
-
----
-
-## 6. Multi-Stage Ablation Benchmark & Empirical Evaluation Results
-
-Evaluated across **5,050 held-out test manifest samples** (`data/reference_handwriting/test_manifest.jsonl`), the ablation benchmark demonstrates massive error reductions across all 4 stages:
-
-| Stage | Configuration | CER (%) | WER (%) | Drug Match (%) | $P_{50}$ Latency | $P_{95}$ Latency | Win / Tie / Loss vs Base |
-|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Stage 1** | Baseline (Top-1 OCR Beam Greedy) | 3.43% | 13.35% | 6.51% | 0.00 ms | 0.00 ms | — (Baseline) |
-| **Stage 2** | Stage 2: Lexicon Prior Only ($\lambda_1=1.0$) | 2.65% | 10.85% | 24.57% | 1.74 ms | 5.18 ms | 912 / 4138 / 0 |
-| **Stage 3** | Stage 3: Lexicon + Confusion ($\lambda_1=1.0, \lambda_3=0.5$) | 2.65% | 10.85% | 24.57% | 1.72 ms | 5.19 ms | 912 / 4138 / 0 |
-| **Stage 4** | Stage 4: Full Multi-Objective ($\lambda_1=1.0, \lambda_2=0.8, \lambda_3=0.5$) | **1.04%** | **5.04%** | **65.27%** | **1.74 ms** | **5.21 ms** | **2967 / 2082 / 1** |
-
-### Benchmark Highlights
-- **69.7% Relative CER Reduction**: Character error rate drops from 3.43% down to 1.04%.
-- **62.2% Relative WER Reduction**: Word error rate drops from 13.35% down to 5.04%.
-- **10x Pharmaceutical Match Accuracy**: Drug name exact match improves from 6.51% to 65.27%.
-- **Zero-Regression Stability**: 2,967 wins vs only 1 single loss across 5,050 samples.
-- **Real-Time Serving Latency**: Median $P_{50}$ rescoring latency is just **1.74 ms / sample** ($P_{95} = 5.21\text{ ms}$).
-
-```bash
-# Execute 4-Stage Ablation Benchmark CLI
-.venv/bin/python pipeline/evaluation/benchmark_ablation.py \
-  --manifest data/reference_handwriting/test_manifest.jsonl \
-  --split test \
-  --beam-width 5 \
-  --output-json checkpoints/ablation_benchmark_results.json \
-  --output-markdown checkpoints/ablation_benchmark_results.md
-```
-
----
-
-## 7. FastAPI Backend API Reference
-
-The backend in `backend/app/` serves high-throughput synchronous and asynchronous recognition endpoints:
-
-| Method | Endpoint | Description | Request Payload | Response Schema |
-|:---|:---|:---|:---|:---|
-| `GET` | `/v1/health` | Service health, device diagnostics, memory watermarks | None | `HealthResponse` |
-| `POST` | `/v1/recognize` | Synchronous image/PDF recognition | Multipart or Base64 JSON | `RecognitionResponse` |
-| `POST` | `/v1/jobs` | Submit asynchronous multi-page background job | Multipart or Base64 JSON | `JobSubmissionResponse` |
-| `GET` | `/v1/jobs/{id}` | Poll asynchronous job processing status | None | `JobStatusResponse` |
-| `GET` | `/v1/jobs/{id}/events` | Server-Sent Events (SSE) live progress stream | None | `text/event-stream` |
-| `GET` | `/v1/jobs/{id}/stream` | SSE alias for web frontend integration | None | `text/event-stream` |
-
-### Synchronous Recognition Request Example
-
-```bash
-curl -X POST "http://localhost:8000/v1/recognize?beam_width=5&rescore=true" \
+curl -X POST "http://localhost:8000/v1/recognize?beam_width=10&rescore=true" \
   -H "accept: application/json" \
-  -F "file=@data/reference_handwriting/images/sample_045450_syn.png"
+  -F "file=@path/to/page.png"
 ```
 
-### Response Schema (`RecognitionResponse`)
+OpenAPI: `http://localhost:8000/docs`.
 
-```json
-{
-  "document_id": "doc_8f1a2b3c",
-  "filename": "prescription.png",
-  "total_pages": 1,
-  "pages": [
-    {
-      "page_number": 1,
-      "width": 1200,
-      "height": 800,
-      "full_text": "Amoxicillin 500mg PO TID x10d\nDr. Ulysses Eisenhower, MD",
-      "mean_confidence": 0.965,
-      "lines": [
-        {
-          "line_id": "p1_l1",
-          "text": "Amoxicillin 500mg PO TID x10d",
-          "confidence": 0.972,
-          "bbox": [0.12, 0.15, 0.22, 0.85],
-          "words": [
-            {
-              "word_id": "p1_l1_w1",
-              "text": "Amoxicillin",
-              "confidence": 0.985,
-              "bbox": [0.12, 0.15, 0.22, 0.45]
-            },
-            {
-              "word_id": "p1_l1_w2",
-              "text": "500mg",
-              "confidence": 0.968,
-              "bbox": [0.12, 0.47, 0.22, 0.60]
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "processing_time_ms": 28.4
-}
-```
+Response shape is a document → pages → lines → words hierarchy with normalized boxes. Example payloads that look like filled prescriptions are **illustrative of the schema**, not evidence the model read a real Rx.
 
 ---
 
-## 8. Next.js 14 Full-Stack Web Application
+## 7. CI hygiene (not an HTR release gate)
 
-The frontend in `frontend/` is a modern, responsive web application built with **Next.js 14 (App Router)**, **TypeScript 5**, and **Tailwind CSS**:
+Passing unit, component, and E2E suites means the plumbing works. It does not mean CER/WER, calibration, or dangerous-substitution rate were measured. Those are the v3 release gate in the spec.
 
-### Key Features
-- **Interactive SVG Document Viewer**: Smooth pan-and-zoom viewer ($0.2\times\text{--}5\times$), mouse wheel zoom, reset canvas, 90° clockwise rotation, and high-DPI canvas rendering.
-- **Visual Confidence Heatmaps**: Three-tier threshold highlighting (Green $\ge 90\%$, Yellow $70\%\text{--}89\%$, Red $<70\%$) with real-time confidence slider filtering.
-- **Bidirectional Coordinate Sync**: Hovering or clicking bounding boxes on the document viewer automatically highlights the corresponding line in the editor, and vice versa.
-- **Inline Correction Editor**: Line-by-line transcription editor with RxNorm medical auto-suggestions and Damerau-Levenshtein fuzzy matching.
-- **Speed Review Queue**: Focused step-through triage interface allowing reviewers to rapidly jump between low-confidence tokens ($<70\%$) with keyboard shortcuts (`Tab`, `Enter`, `Esc`).
-- **Secure Multi-Format Export**:
-  - Formatted JSON document hierarchy
-  - Formatted Plain Text transcriptions
-  - RFC 4180 CSV export with **CWE-1236 Formula Injection Neutralization** (neutralizing leading `=`, `+`, `-`, `@`, `\t`, `\r` characters).
-  - One-click clipboard copying.
+| Suite | Command |
+| :--- | :--- |
+| Master E2E | `.venv/bin/python tests/e2e/runner.py --tier all` |
+| Root tests | `PYTHONPATH=. .venv/bin/pytest tests/ -v` |
+| Backend | `PYTHONPATH=. .venv/bin/pytest backend/tests/ -v` |
+| Pipeline | `PYTHONPATH=. .venv/bin/pytest pipeline/tests/ -v` |
+| Frontend | `npm test` (in `frontend/`) |
+| Frontend lint | `npm run lint` (in `frontend/`) |
+| Frontend build | `npm run build` (in `frontend/`) |
 
----
-
-## 9. 5-Tier Master E2E Test Suite (355 / 355 Passing Tests)
-
-```
-==========================================================================
-E2E TEST SUITE EXECUTION SUMMARY — HANDWRITING RECOGNITION
-==========================================================================
-Environment: macOS-27.0-arm64-arm-64bit | Python 3.12.13 | PyTorch 2.13.0 (MPS: Available)
---------------------------------------------------------------------------
-Tier 1 (Feature Isolation)    :  127 /  127 passed (100.0%) [ 2.43s]
-Tier 2 (Boundary & Corner)    :  121 /  121 passed (100.0%) [ 0.33s]
-Tier 3 (Pairwise Integration) :   22 /   22 passed (100.0%) [ 2.19s]
-Tier 4 (Real-World Workloads) :    8 /    8 passed (100.0%) [ 0.72s]
-Tier 5 (Adversarial Stress)   :   77 /   77 passed (100.0%) [ 0.20s]
---------------------------------------------------------------------------
-TOTAL                        :  355 /  355 passed (100.0%) [10.59s]
-==========================================================================
-Feature Coverage Matrix: 24 / 24 Features Fully Verified
-==========================================================================
-```
-
-### Full-Stack Test Suite Execution Matrix
-
-| Test Suite / Target | Command | Tests | Result | Duration |
-|:---|:---|:---:|:---:|:---:|
-| **Master E2E Suite** | `.venv/bin/python tests/e2e/runner.py --tier all` | **355 / 355** | **PASS** | 10.65s |
-| **Root Test Suite** | `PYTHONPATH=. .venv/bin/pytest tests/ -v` | **691 / 691** | **PASS** | 37.87s |
-| **Backend Test Suite** | `PYTHONPATH=. .venv/bin/pytest backend/tests/ -v` | **50 / 50** | **PASS** | 1.21s |
-| **Pipeline Test Suite** | `PYTHONPATH=. .venv/bin/pytest pipeline/tests/ -v` | **173 / 173** | **PASS** | 32.62s |
-| **Frontend Vitest Suite** | `npm test` (in `frontend/`) | **293 / 293** | **PASS** | 1.71s |
-| **Frontend ESLint** | `npm run lint` (in `frontend/`) | **0 issues** | **PASS** | 1.02s |
-| **Frontend Next.js Build**| `npm run build` (in `frontend/`) | **4/4 routes** | **PASS** | 5.21s |
-| **Grand Total** | | **1,207 / 1,207** | **100% PASS** | **Zero Failures** |
+A silent hydralazine / hydroxyzine swap must be able to fail a build. That gate is specified, not claimed as shipped.
 
 ---
 
-## 10. Quickstart & Installation Guide
+## 8. Quickstart
 
 ### Prerequisites
-- **OS**: macOS (Apple Silicon M1/M2/M3/M4 recommended for MPS acceleration), Linux (Ubuntu 22.04+), or Windows (WSL2).
-- **Python**: Python 3.10, 3.11, or 3.12.
-- **Node.js**: Node.js 18.x, 20.x, or 22+ and npm 9+.
 
-### 1. Environment Setup
+- macOS (Apple Silicon recommended for MPS), Linux (Ubuntu 22.04+), or Windows (WSL2)
+- Python 3.10–3.12
+- Node.js 18.x, 20.x, or 22+ and npm 9+
+
+### 1. Environment
 
 ```bash
 git clone https://github.com/your-org/handwriting.git
 cd handwriting
 
-# Setup Python Virtual Environment
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Setup Frontend Dependencies
 cd frontend
 npm install
 cd ..
 ```
 
-### 2. Generate Reference Dataset & Test Fixtures
+### 2. Reference inventory
 
 ```bash
-# Ingest and curate 50,000+ sample multi-source dataset
-.venv/bin/python pipeline/dataset/download_and_curate_multisource.py --target-samples 50000
+# Download and curate the real public corpora (local inventory; not a writer census)
+.venv/bin/python pipeline/dataset/download_and_curate_multisource.py
 
-# Generate test fixtures and catalog
+# Generate test fixtures
 .venv/bin/python tests/fixtures/generator.py --out-dir tests/fixtures
 ```
 
-### 3. Start Backend Service
+### 3. Local inference daemon (Apple Silicon)
 
 ```bash
-# Start FastAPI ASGI server on port 8000
 .venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-*OpenAPI interactive documentation available at `http://localhost:8000/docs`.*
 
-### 4. Start Next.js Web App
+For Metal: `HANDWRITING_DEVICE=mps` (or `DEVICE=mps` per `backend/app/config.py`). This is the private inference runtime. It is not a serverless function.
+
+Optional `launchd` plist pattern (edit paths to this machine):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.handwriting.backend</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Volumes/LaCie/GitHub/handwriting/.venv/bin/uvicorn</string>
+        <string>backend.app.main:app</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>8000</string>
+        <string>--workers</string>
+        <string>1</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HANDWRITING_DEVICE</key>
+        <string>mps</string>
+        <key>PYTORCH_MPS_HIGH_WATERMARK_RATIO</key>
+        <string>0.85</string>
+    </dict>
+    <key>KeepAlive</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+```
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.handwriting.backend.plist
+```
+
+### 4. App shell
 
 ```bash
 cd frontend
 npm run dev
 ```
-*Interactive web interface available at `http://localhost:3000`.*
+
+UI: `http://localhost:3000`.
 
 ---
 
-## 11. Production Deployment Guide
+## 9. Azure app-shell deploy
 
-### Microsoft Azure Cloud Production Architecture
+The Next.js shell and a backend container are deployed to Azure Container Apps. That is hosting for the shell and an API probe. It is not a claim that TrOCR-Large runs at production quality on 4 vCPU / 8 Gi.
 
-The end-to-end platform is deployed natively to Microsoft Azure with high-throughput containerized inference and interactive frontend serving:
-
-- **Subscription**: `damians-playground-dev` (`bc7eb14b-15b4-4425-a17d-9a4d2f5e73c7`)
-- **Resource Group**: `rg-handwriting-ai-playground` (Region: `eastus`)
-- **Container Registry (ACR)**: `acrhandwritingai` (`acrhandwritingai.azurecr.io`)
-- **Log Analytics**: `law-handwriting-ai-playground` (`eastus`)
-- **Container Apps Managed Environment**: `cae-handwriting-ai-playground` (`eastus2`)
-- **Inference Backend Container App (`ca-backend-playground`)**:
-  - Image: `acrhandwritingai.azurecr.io/handwriting-backend:latest`
-  - Compute: 2.0 vCPU / 4.0Gi RAM
-  - Target Port: 8000 (External HTTPS Ingress with CORS enabled for all origins)
-  - Stack: FastAPI, PyTorch TrOCR, OpenCV Sauvola binarization, RxNorm Trie beam rescorer
-  - Environment: `DEVICE=cpu`, `USE_MOCK_ENGINE=false`, `VOCAB_DIR=/app/data/reference_handwriting/vocabularies`
-- **Web Frontend Container App (`ca-frontend-playground`)**:
-  - Image: `acrhandwritingai.azurecr.io/handwriting-frontend:latest`
-  - Compute: 0.5 vCPU / 1.0Gi RAM
-  - Target Port: 3000 (External HTTPS Ingress)
-  - Stack: Next.js 14 App Router standalone production build
-  - Environment: `BACKEND_URL=https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`, `NEXT_PUBLIC_BACKEND_URL=https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`
-
-### Live Production Endpoints
-
-| Component | Target URL | Health / Status Probe | Ingress Security |
-|:---|:---|:---|:---|
-| **Web Frontend Workspace** | [`https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`](https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io) | `GET /` (HTTP 200) | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` |
-| **Inference Backend API** | [`https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`](https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io) | `GET /v1/health` (HTTP 200) | CORS Enabled (`*`), HTTPS Enforced |
-
-### Automated Azure Deployment Scripts
-
-The platform includes production bash automation scripts for rapid deployment and infrastructure synchronization:
+- Subscription / RG / ACR / environment: [PROJECT.md](PROJECT.md)
+- Scripts: `scripts/azure/deploy_infra.sh`, `scripts/azure/deploy_apps.sh`
 
 ```bash
-# 1. Provision Core Infrastructure (RG, ACR, Log Analytics, ACA Environment)
 ./scripts/azure/deploy_infra.sh
-
-# 2. Build Container Images in ACR & Deploy Container Apps
 ./scripts/azure/deploy_apps.sh
 ```
 
-### Health Probes & Verification
+| Component | URL |
+| :--- | :--- |
+| Web shell | https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io |
+| API host | https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io |
 
-- **Backend Health Check**:
-  ```bash
-  curl -s https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io/v1/health | jq .
-  ```
-  *Returns HTTP 200 with active model status, device diagnostics, and RxNorm rescorer confirmation.*
+```bash
+curl -s https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io/v1/health
+curl -s -I https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io
+```
 
-- **Frontend Health Check**:
-  ```bash
-  curl -s -I https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io | head -n 5
-  ```
-  *Returns HTTP 200 with Next.js standalone headers and security configurations.*
-
-### Local / Metal MPS Backend Serving (Apple Silicon)
-
-For local high-performance training and development on Apple Silicon Metal (`mps`):
-
-1. Configure `launchd` daemon at `~/Library/LaunchAgents/com.handwriting.backend.plist`:
-   ```xml
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>Label</key>
-       <string>com.handwriting.backend</string>
-       <key>ProgramArguments</key>
-       <array>
-           <string>/Volumes/LaCie/GitHub/handwriting/.venv/bin/uvicorn</string>
-           <string>backend.app.main:app</string>
-           <string>--host</string>
-           <string>0.0.0.0</string>
-           <string>--port</string>
-           <string>8000</string>
-           <string>--workers</string>
-           <string>4</string>
-       </array>
-       <key>EnvironmentVariables</key>
-       <dict>
-           <key>HANDWRITING_DEVICE</key>
-           <string>mps</string>
-           <key>PYTORCH_MPS_HIGH_WATERMARK_RATIO</key>
-           <string>0.85</string>
-       </dict>
-       <key>KeepAlive</key>
-       <true/>
-       <key>RunAtLoad</key>
-       <true/>
-   </dict>
-   </plist>
-   ```
-2. Start service: `launchctl load ~/Library/LaunchAgents/com.handwriting.backend.plist`.
-3. Configure Caddy / Nginx reverse proxy with automated SSL/TLS termination.
+Vercel is allowed for the app shell only. Inference never lives there.
 
 ---
 
-## 12. Security & Hardening Safeguards
+## 10. Security
 
-- **CWE-1236 Formula Injection Mitigation**: All CSV exports sanitize cells starting with `=, +, -, @, \t, \r` by prepending a single quote `'` and RFC 4180 double-quote wrapping.
-- **CWE-209 Stack Trace Leakage Prevention**: All 4xx and 5xx exception handlers return clean JSON error payloads with zero internal file path, trace, or library leakage.
-- **Boundary & Hostile File Rejection**: Executable binaries, corrupted ELF/PE/Mach-O payloads, broken PDF streams, and malformed images are safely rejected with HTTP 422.
-- **Concurrency & Resource Safety**: 100-request simultaneous bursts execute without deadlocks, memory leaks, or race conditions.
-
----
-
-## 13. Audit & Quality Gate Verdicts
-
-- **Worker (`worker_m6_1`)**: COMPLETE (355/355 E2E tests, 635 root tests, 270 frontend tests, 4-stage ablation benchmark verified)
-- **Reviewer 1 (`reviewer_e2e_1`)**: APPROVE (F1–F24 full coverage, all 5 tiers validated)
-- **Reviewer 2 (`reviewer_e2e_2`)**: APPROVE (Opaque-box integrity, assertion rigor confirmed)
-- **Challenger 1 (`challenger_e2e_1`)**: APPROVE (21/21 mutations detected with 100% efficacy)
-- **Challenger 2 (`challenger_e2e_2`)**: APPROVE (1,775 test runs, 0 temp leaks, 100-request concurrency passed)
-- **Forensic Auditor (`auditor_e2e_1`)**: CLEAN (Zero shortcuts/fakes, genuine assertions verified)
-- **Gate Result**: **PASS** (Unanimous Approval)
+- **CWE-1236:** CSV/TSV/Excel export prepends `'` to cells starting with `=`, `+`, `-`, `@`, tab, or CR, then RFC 4180-quotes.
+- **CWE-209:** 4xx/5xx handlers return JSON without stack traces or internal paths.
+- **Hostile files:** executables and broken images/PDFs are rejected (HTTP 422).
+- **PHI:** default is off-box-never. Cloud referee is opt-in.
 
 ---
 
-## 14. License
+## 11. License
 
-This project is licensed under the [MIT License](LICENSE).
+MIT. See [LICENSE](LICENSE).
