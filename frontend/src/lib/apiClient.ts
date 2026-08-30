@@ -64,8 +64,8 @@ export class ApiClient {
   constructor(config: ApiClientConfig = {}) {
     // Read from environment if available
     const envBackend =
-      typeof process !== 'undefined'
-        ? process.env?.NEXT_PUBLIC_BACKEND_URL || process.env?.BACKEND_URL || ''
+      typeof window === 'undefined' && typeof process !== 'undefined'
+        ? process.env?.BACKEND_URL || ''
         : '';
     this.baseUrl = config.baseUrl !== undefined ? config.baseUrl : envBackend;
     this.proxyUrl = config.proxyUrl || '/api/recognize';

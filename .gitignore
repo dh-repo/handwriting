@@ -18,6 +18,8 @@ dist/
 
 # Large Datasets and Model Weights (298,000 images & 6.7GB checkpoints)
 data/
+runs/
+export/
 checkpoints/
 *.pt
 *.bin

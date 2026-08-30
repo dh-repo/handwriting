@@ -2,7 +2,7 @@
 End-to-End Cloud Transcription Verification Test Suite for Microsoft Azure Deployment.
 
 Validates:
-1. Azure Backend Health (/v1/health) - status, models, rescorer.
+1. Azure Frontend Health Proxy (/api/health) - status, models, rescorer.
 2. Azure Frontend Homepage (/) - HTTP 200, HTML structure, security headers (X-Frame-Options, X-Content-Type-Options).
 3. Single-Page Prescription Transcription - uploads sample_prescription.png, validates structured response,
    valid [ymin, xmin, ymax, xmax] line/word bounding boxes, and medical prescription tokens.
@@ -21,12 +21,12 @@ from typing import Any, Dict, List
 import pytest
 import requests
 
-# Live Azure Container App Endpoints
-DEFAULT_BACKEND_URL = "https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io"
+# Live Azure frontend is the only public surface. Inference is proxied internally.
 DEFAULT_FRONTEND_URL = "https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io"
 
-BACKEND_URL = os.environ.get("AZURE_BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
 FRONTEND_URL = os.environ.get("AZURE_FRONTEND_URL", DEFAULT_FRONTEND_URL).rstrip("/")
+HEALTH_URL = f"{FRONTEND_URL}/api/health"
+RECOGNIZE_URL = f"{FRONTEND_URL}/api/recognize"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SAMPLES_DIR = REPO_ROOT / "samples"
@@ -67,7 +67,7 @@ def _validate_bbox(bbox: List[float], label: str = "bbox") -> None:
 @pytest.mark.azure
 def test_azure_backend_health() -> None:
     """Validate Azure backend /v1/health probe returns HTTP 200, healthy status, and active models."""
-    url = f"{BACKEND_URL}/v1/health"
+    url = HEALTH_URL
     response = requests.get(url, timeout=HEALTH_TIMEOUT)
     assert response.status_code == 200, f"Expected HTTP 200, got {response.status_code}: {response.text}"
 
@@ -102,7 +102,7 @@ def test_azure_single_page_prescription_transcription() -> None:
     sample_file = SAMPLES_DIR / "sample_prescription.png"
     assert sample_file.exists(), f"Sample file {sample_file} does not exist"
 
-    url = f"{BACKEND_URL}/v1/recognize"
+    url = RECOGNIZE_URL
     with open(sample_file, "rb") as f:
         response = requests.post(
             url,
@@ -153,7 +153,7 @@ def test_azure_cursive_handwriting_transcription() -> None:
     sample_file = SAMPLES_DIR / "sample_clean_cursive.png"
     assert sample_file.exists(), f"Sample file {sample_file} does not exist"
 
-    url = f"{BACKEND_URL}/v1/recognize"
+    url = RECOGNIZE_URL
     with open(sample_file, "rb") as f:
         response = requests.post(
             url,
@@ -189,7 +189,7 @@ def test_azure_multipage_pdf_transcription() -> None:
     sample_file = SAMPLES_DIR / "sample_multipage.pdf"
     assert sample_file.exists(), f"Sample file {sample_file} does not exist"
 
-    url = f"{BACKEND_URL}/v1/recognize"
+    url = RECOGNIZE_URL
     with open(sample_file, "rb") as f:
         response = requests.post(
             url,
@@ -220,7 +220,7 @@ def test_azure_zero_mock_fallback_enforcement() -> None:
     sample_file = SAMPLES_DIR / "sample_clean_cursive.png"
     assert sample_file.exists()
 
-    url = f"{BACKEND_URL}/v1/recognize"
+    url = RECOGNIZE_URL
     with open(sample_file, "rb") as f:
         response = requests.post(
             url,

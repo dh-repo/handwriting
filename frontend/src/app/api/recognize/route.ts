@@ -68,7 +68,7 @@ export async function POST(req: Request | NextRequest) {
       );
     }
 
-    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+    const backendUrl = process.env.BACKEND_URL;
 
     // 3. If backend is configured, proxy to FastAPI /v1/recognize with 240s timeout
     if (backendUrl) {
@@ -80,7 +80,8 @@ export async function POST(req: Request | NextRequest) {
           proxyFormData.append('file', file);
           proxyFormData.append('model_type', modelType);
 
-          response = await fetch(`${backendUrl}/v1/recognize`, {
+          const qs = new URLSearchParams({ beam_width: '1', rescore: 'true' }).toString();
+          response = await fetch(`${backendUrl}/v1/recognize?${qs}`, {
             method: 'POST',
             body: proxyFormData,
             signal: AbortSignal.timeout(240000), // 240s timeout

@@ -41,9 +41,10 @@ The cascade is the target architecture. Layout comes first. CLAHE / Hough / proj
 | :--- | :--- | :--- |
 | **General** | Private notes, letters, unconstrained cursive. Local MPS/MLX. Darkroom UI. | Confidence only |
 | **Historical** | Manuscripts and registries (Belfort, POPP, Esposalles). Historical domain pack. | Confidence only |
-| **Clinical** | Prescriptions and notes, only after a gate that can refuse. PHI default: off-box-never. | LASA / low-confidence → accept, escalate, or refuse |
+| **Clinical** | Prescriptions and notes, only after a gate that can refuse. Text only. Not a medical-signature product. PHI default: off-box-never. | LASA / low-confidence → accept, escalate, or refuse |
+| **Signatures** | General-purpose marks on letters, contracts, and forms. Candidate list + human review. | No auto-verify. No Dr./MD heuristic. |
 
-Signatures are out of HTR. `SignatureInspector` is not verification. SHA-256 is chain of custody, not a hand.
+Signatures are **general-purpose** (letters, contracts, forms, personal marks). Not physician credentials. HTR may propose sign-off candidates. It does not verify a hand. Medical signatures are not a product.
 
 ---
 
@@ -105,7 +106,7 @@ Also shipped:
 - Line-level inline editor
 - Confidence coloring as a review aid, not a calibration proof
 - JSON, TXT, and RFC 4180 CSV export with CWE-1236 single-quote escaping of leading `=`, `+`, `-`, `@`, tab, and CR
-- `SignatureInspector` is **not** verification; treat it as leftover UI
+- `SignatureInspector`: general-purpose sign-off candidates, review required. Not verification. Not medical.
 
 ---
 
@@ -249,6 +250,7 @@ UI: `http://localhost:3000`.
 The Next.js shell and a backend container are deployed to Azure Container Apps. That is hosting for the shell and an API probe. It is not a claim that TrOCR-Large runs at production quality on 4 vCPU / 8 Gi.
 
 - Subscription / RG / ACR / environment: [PROJECT.md](PROJECT.md)
+- IaC: `infra/main.bicep`
 - Scripts: `scripts/azure/deploy_infra.sh`, `scripts/azure/deploy_apps.sh`
 
 ```bash
@@ -259,10 +261,12 @@ The Next.js shell and a backend container are deployed to Azure Container Apps. 
 | Component | URL |
 | :--- | :--- |
 | Web shell | https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io |
-| API host | https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io |
+| Health proxy | https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io/api/health |
+
+The FastAPI container is internal to the Container Apps environment. The browser never receives a backend URL.
 
 ```bash
-curl -s https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io/v1/health
+curl -s https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io/api/health
 curl -s -I https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io
 ```
 

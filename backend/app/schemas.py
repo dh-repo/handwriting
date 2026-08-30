@@ -133,6 +133,15 @@ class JobStatusResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
+class LiveResponse(BaseModel):
+    """Cheap liveness signal that does not load the inference engine."""
+
+    status: str = Field(default="live", description="Process liveness state")
+    timestamp: str = Field(..., description="ISO-8601 UTC timestamp")
+
+    model_config = ConfigDict(extra="ignore")
+
+
 class HealthResponse(BaseModel):
     """Service health and runtime information."""
 
@@ -157,7 +166,7 @@ class RecognitionOptions(BaseModel):
     binarization_method: str = Field(default="sauvola", description="Binarization algorithm ('sauvola' | 'otsu' | 'none')")
     extract_words: bool = Field(default=True, description="Enable word segmentation within line crops")
     dpi: int = Field(default=300, ge=72, le=600, description="DPI resolution for PDF rasterization")
-    beam_width: int = Field(default=5, ge=1, le=16, description="Beam search candidate width")
+    beam_width: int = Field(default=1, ge=1, le=16, description="Beam search candidate width")
     rescore: bool = Field(default=True, description="Enable RxNorm beam rescoring")
 
     model_config = ConfigDict(extra="ignore")

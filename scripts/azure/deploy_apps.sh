@@ -1,53 +1,38 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# Script: deploy_apps.sh
-# Purpose: Build container images via Azure Container Registry (ACR) and deploy
-#          FastAPI Backend and Next.js Frontend to Azure Container Apps (ACA).
-# Resources:
-#   - Resource Group: rg-handwriting-ai-playground (eastus)
-#   - ACR: acrhandwritingai (acrhandwritingai.azurecr.io)
-#   - ACA Environment: cae-handwriting-ai-playground
-#   - Backend Container App: ca-backend-playground (Port 8000, 2.0 vCPU, 4.0Gi RAM)
-#   - Frontend Container App: ca-frontend-playground (Port 3000, 0.5 vCPU, 1.0Gi RAM)
-# Subscription: damians-playground-dev (bc7eb14b-15b4-4425-a17d-9a4d2f5e73c7)
-# ==============================================================================
-
+# Build SHA-tagged images into the eastus2 ACR and deploy both Container Apps via Bicep.
+# Requires deploy_infra.sh to have created acrhwaiplaye2 and the ACA environment.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-# Configuration with override support
 SUBSCRIPTION_ID="${SUBSCRIPTION_ID:-bc7eb14b-15b4-4425-a17d-9a4d2f5e73c7}"
 RESOURCE_GROUP="${RESOURCE_GROUP:-rg-handwriting-ai-playground}"
-ACR_NAME="${ACR_NAME:-acrhandwritingai}"
+LOCATION="${LOCATION:-eastus2}"
+ACR_NAME="${ACR_NAME:-acrhwaiplaye2}"
+LOG_ANALYTICS_NAME="${LOG_ANALYTICS_NAME:-law-handwriting-ai-e2}"
 ACA_ENV_NAME="${ACA_ENV_NAME:-cae-handwriting-ai-playground}"
 BACKEND_APP_NAME="${BACKEND_APP_NAME:-ca-backend-playground}"
 FRONTEND_APP_NAME="${FRONTEND_APP_NAME:-ca-frontend-playground}"
-BACKEND_IMAGE_TAG="${BACKEND_IMAGE_TAG:-latest}"
-FRONTEND_IMAGE_TAG="${FRONTEND_IMAGE_TAG:-latest}"
+IMAGE_TAG="${IMAGE_TAG:-$(git -C "${REPO_ROOT}" rev-parse --short HEAD)}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
 
 echo "================================================================="
-echo " Handwriting AI - Application Container Build & Azure Deployment"
+echo " Handwriting AI - Azure app deploy"
 echo "================================================================="
-echo " Subscription ID       : ${SUBSCRIPTION_ID}"
-echo " Resource Group        : ${RESOURCE_GROUP}"
-echo " ACR Name              : ${ACR_NAME}"
-echo " ACA Environment       : ${ACA_ENV_NAME}"
-echo " Backend Container App : ${BACKEND_APP_NAME}"
-echo " Frontend Container App: ${FRONTEND_APP_NAME}"
-echo " Repo Root             : ${REPO_ROOT}"
+echo " Subscription : ${SUBSCRIPTION_ID}"
+echo " ACR          : ${ACR_NAME}"
+echo " Image tag    : ${IMAGE_TAG}"
 echo "================================================================="
 
-# 1. Set Active Subscription
-echo "[1/6] Activating Azure subscription..."
 az account set --subscription "${SUBSCRIPTION_ID}"
-echo "Active subscription: $(az account show --query name -o tsv)"
 
-# 2. Build and Push Backend Container Image via ACR
+ACR_SERVER=$(az acr show --name "${ACR_NAME}" --resource-group "${RESOURCE_GROUP}" --query loginServer -o tsv)
+BACKEND_IMAGE="${ACR_SERVER}/handwriting-backend:${IMAGE_TAG}"
+FRONTEND_IMAGE="${ACR_SERVER}/handwriting-frontend:${IMAGE_TAG}"
+
 if [[ "${SKIP_BUILD}" != "true" ]]; then
-  echo "[2/6] Building Backend container image in ACR (${ACR_NAME})..."
+  echo "Building backend image ${BACKEND_IMAGE}..."
   STAGING_DIR="/tmp/handwriting_backend_build_context"
   rm -rf "${STAGING_DIR}"
   mkdir -p "${STAGING_DIR}/backend" "${STAGING_DIR}/pipeline" "${STAGING_DIR}/data/reference_handwriting"
@@ -60,142 +45,102 @@ if [[ "${SKIP_BUILD}" != "true" ]]; then
 
   COPYFILE_DISABLE=1 az acr build \
     --registry "${ACR_NAME}" \
-    --image "handwriting-backend:${BACKEND_IMAGE_TAG}" \
+    --image "handwriting-backend:${IMAGE_TAG}" \
     --file "${STAGING_DIR}/Dockerfile" \
     "${STAGING_DIR}"
   rm -rf "${STAGING_DIR}"
 
-  # 3. Build and Push Frontend Container Image via ACR
-  echo "[3/6] Building Frontend container image in ACR (${ACR_NAME})..."
+  echo "Building frontend image ${FRONTEND_IMAGE}..."
   COPYFILE_DISABLE=1 az acr build \
     --registry "${ACR_NAME}" \
-    --image "handwriting-frontend:${FRONTEND_IMAGE_TAG}" \
+    --image "handwriting-frontend:${IMAGE_TAG}" \
     --file "${REPO_ROOT}/frontend/Dockerfile" \
     "${REPO_ROOT}/frontend"
-else
-  echo "[2/6 & 3/6] Skipping image build step (SKIP_BUILD=true)..."
 fi
 
-# Retrieve ACR credentials & server
-ACR_SERVER=$(az acr show --name "${ACR_NAME}" --resource-group "${RESOURCE_GROUP}" --query loginServer -o tsv)
-ACR_PASSWORD=$(az acr credential show --name "${ACR_NAME}" --resource-group "${RESOURCE_GROUP}" --query "passwords[0].value" -o tsv)
-
-# 4. Deploy Backend Container App
-echo "[4/6] Deploying Backend Container App (${BACKEND_APP_NAME})..."
-BACKEND_IMAGE="${ACR_SERVER}/handwriting-backend:${BACKEND_IMAGE_TAG}"
-
-if az containerapp show --name "${BACKEND_APP_NAME}" --resource-group "${RESOURCE_GROUP}" >/dev/null 2>&1; then
-  REV_SUFFIX="r$(date +%s)"
-  echo "Updating existing Container App ${BACKEND_APP_NAME} (revision suffix: ${REV_SUFFIX})..."
-  az containerapp update \
-    --name "${BACKEND_APP_NAME}" \
+# Identity + AcrPull must exist before the image changes. Bicep cannot
+# create the role and pull the new image in the same revision.
+ACR_ID=$(az acr show --name "${ACR_NAME}" --resource-group "${RESOURCE_GROUP}" --query id -o tsv)
+for app in "${BACKEND_APP_NAME}" "${FRONTEND_APP_NAME}"; do
+  echo "Ensuring system identity and AcrPull for ${app}..."
+  PRINCIPAL_ID=$(az containerapp identity assign \
+    --name "${app}" \
     --resource-group "${RESOURCE_GROUP}" \
-    --image "${BACKEND_IMAGE}" \
-    --revision-suffix "${REV_SUFFIX}" \
-    --set-env-vars DEVICE=cpu USE_MOCK_ENGINE=false VOCAB_DIR=/app/data/reference_handwriting/vocabularies
-else
-  echo "Creating new Container App ${BACKEND_APP_NAME}..."
-  az containerapp create \
-    --name "${BACKEND_APP_NAME}" \
-    --resource-group "${RESOURCE_GROUP}" \
-    --environment "${ACA_ENV_NAME}" \
-    --image "${BACKEND_IMAGE}" \
-    --registry-server "${ACR_SERVER}" \
-    --registry-username "${ACR_NAME}" \
-    --registry-password "${ACR_PASSWORD}" \
-    --target-port 8000 \
-    --ingress external \
-    --cpu 2.0 \
-    --memory 4.0Gi \
-    --min-replicas 1 \
-    --max-replicas 3 \
-    --env-vars DEVICE=cpu USE_MOCK_ENGINE=false VOCAB_DIR=/app/data/reference_handwriting/vocabularies \
-    --tags Project=HandwritingAI Tier=Backend ManagedBy=Teamwork
-fi
-
-# Configure CORS on Backend Ingress
-echo "Configuring CORS on ${BACKEND_APP_NAME}..."
-az containerapp ingress cors enable \
-  --name "${BACKEND_APP_NAME}" \
-  --resource-group "${RESOURCE_GROUP}" \
-  --allowed-origins "*" \
-  --allowed-methods "GET" "POST" "PUT" "DELETE" "OPTIONS" \
-  --allowed-headers "*" \
-  --allow-credentials false
-
-# Retrieve Backend FQDN
-BACKEND_FQDN=$(az containerapp show --name "${BACKEND_APP_NAME}" --resource-group "${RESOURCE_GROUP}" --query "properties.configuration.ingress.fqdn" -o tsv)
-BACKEND_URL="https://${BACKEND_FQDN}"
-echo "Backend URL: ${BACKEND_URL}"
-
-# 5. Deploy Frontend Container App
-echo "[5/6] Deploying Frontend Container App (${FRONTEND_APP_NAME})..."
-FRONTEND_IMAGE="${ACR_SERVER}/handwriting-frontend:${FRONTEND_IMAGE_TAG}"
-
-if az containerapp show --name "${FRONTEND_APP_NAME}" --resource-group "${RESOURCE_GROUP}" >/dev/null 2>&1; then
-  FE_REV_SUFFIX="r$(date +%s)"
-  echo "Updating existing Container App ${FRONTEND_APP_NAME} (revision suffix: ${FE_REV_SUFFIX})..."
-  az containerapp update \
-    --name "${FRONTEND_APP_NAME}" \
-    --resource-group "${RESOURCE_GROUP}" \
-    --image "${FRONTEND_IMAGE}" \
-    --revision-suffix "${FE_REV_SUFFIX}" \
-    --set-env-vars BACKEND_URL="${BACKEND_URL}" NEXT_PUBLIC_BACKEND_URL="${BACKEND_URL}"
-else
-  echo "Creating new Container App ${FRONTEND_APP_NAME}..."
-  az containerapp create \
-    --name "${FRONTEND_APP_NAME}" \
-    --resource-group "${RESOURCE_GROUP}" \
-    --environment "${ACA_ENV_NAME}" \
-    --image "${FRONTEND_IMAGE}" \
-    --registry-server "${ACR_SERVER}" \
-    --registry-username "${ACR_NAME}" \
-    --registry-password "${ACR_PASSWORD}" \
-    --target-port 3000 \
-    --ingress external \
-    --cpu 0.5 \
-    --memory 1.0Gi \
-    --min-replicas 1 \
-    --max-replicas 2 \
-    --env-vars BACKEND_URL="${BACKEND_URL}" NEXT_PUBLIC_BACKEND_URL="${BACKEND_URL}" \
-    --tags Project=HandwritingAI Tier=Frontend ManagedBy=Teamwork
-fi
-
-FRONTEND_FQDN=$(az containerapp show --name "${FRONTEND_APP_NAME}" --resource-group "${RESOURCE_GROUP}" --query "properties.configuration.ingress.fqdn" -o tsv)
-FRONTEND_URL="https://${FRONTEND_FQDN}"
-echo "Frontend URL: ${FRONTEND_URL}"
-
-# 6. Verify Health of Endpoints
-echo "[6/6] Verifying live endpoints..."
-echo "Checking Backend Health (${BACKEND_URL}/v1/health)..."
-for i in {1..24}; do
-  if curl -s -f "${BACKEND_URL}/v1/health" >/tmp/backend_health.json 2>/dev/null; then
-    echo "Backend Health Probe: HTTP 200 OK"
-    cat /tmp/backend_health.json
-    echo ""
-    break
-  else
-    echo "Waiting for backend container startup (attempt ${i}/24)..."
-    sleep 5
-  fi
+    --system-assigned \
+    --query principalId -o tsv)
+  az role assignment create \
+    --assignee-object-id "${PRINCIPAL_ID}" \
+    --assignee-principal-type ServicePrincipal \
+    --role AcrPull \
+    --scope "${ACR_ID}" \
+    --output none 2>/dev/null || true
 done
 
-echo "Checking Frontend Homepage (${FRONTEND_URL})..."
-for i in {1..24}; do
-  if curl -s -f -I "${FRONTEND_URL}" >/tmp/frontend_health.txt 2>/dev/null; then
-    echo "Frontend Health Probe: HTTP 200 OK"
-    head -n 5 /tmp/frontend_health.txt
+echo "Waiting 60s for AcrPull to propagate..."
+sleep 60
+
+for app in "${BACKEND_APP_NAME}" "${FRONTEND_APP_NAME}"; do
+  echo "Binding ${app} to ${ACR_SERVER} via system identity..."
+  az containerapp registry set \
+    --name "${app}" \
+    --resource-group "${RESOURCE_GROUP}" \
+    --server "${ACR_SERVER}" \
+    --identity system
+done
+
+az deployment group create \
+  --resource-group "${RESOURCE_GROUP}" \
+  --template-file "${REPO_ROOT}/infra/main.bicep" \
+  --parameters \
+    location="${LOCATION}" \
+    acrName="${ACR_NAME}" \
+    logAnalyticsName="${LOG_ANALYTICS_NAME}" \
+    environmentName="${ACA_ENV_NAME}" \
+    deployApps=true \
+    backendImage="${BACKEND_IMAGE}" \
+    frontendImage="${FRONTEND_IMAGE}"
+
+az acr update --name "${ACR_NAME}" --admin-enabled false >/dev/null
+
+BACKEND_INTERNAL_URL=$(az deployment group show \
+  --resource-group "${RESOURCE_GROUP}" \
+  --name main \
+  --query properties.outputs.backendInternalUrl.value -o tsv 2>/dev/null || true)
+if [[ -z "${BACKEND_INTERNAL_URL}" ]]; then
+  CAE_DOMAIN=$(az containerapp env show --name "${ACA_ENV_NAME}" --resource-group "${RESOURCE_GROUP}" --query properties.defaultDomain -o tsv)
+  BACKEND_INTERNAL_URL="https://${BACKEND_APP_NAME}.internal.${CAE_DOMAIN}"
+fi
+
+FRONTEND_FQDN=$(az containerapp show --name "${FRONTEND_APP_NAME}" --resource-group "${RESOURCE_GROUP}" --query properties.configuration.ingress.fqdn -o tsv)
+FRONTEND_URL="https://${FRONTEND_FQDN}"
+
+echo "Verifying frontend ${FRONTEND_URL}..."
+for i in {1..36}; do
+  if curl -s -f -I "${FRONTEND_URL}" >/dev/null 2>&1; then
+    echo "Frontend homepage: HTTP 200"
     break
-  else
-    echo "Waiting for frontend container startup (attempt ${i}/24)..."
-    sleep 5
   fi
+  echo "Waiting for frontend (attempt ${i}/36)..."
+  sleep 5
+done
+
+echo "Verifying frontend health proxy..."
+for i in {1..36}; do
+  if curl -s -f "${FRONTEND_URL}/api/health" >/tmp/frontend_health.json 2>/dev/null; then
+    echo "Frontend /api/health:"
+    cat /tmp/frontend_health.json
+    echo ""
+    break
+  fi
+  echo "Waiting for backend readiness via proxy (attempt ${i}/36)..."
+  sleep 5
 done
 
 echo ""
 echo "================================================================="
-echo " Azure Application Deployment Complete!"
-echo "================================================================="
-echo " Backend URL  : ${BACKEND_URL}"
-echo " Frontend URL : ${FRONTEND_URL}"
+echo " Deploy complete"
+echo " Frontend URL        : ${FRONTEND_URL}"
+echo " Backend (internal)  : ${BACKEND_INTERNAL_URL}"
+echo " Images              : ${BACKEND_IMAGE}"
+echo "                       ${FRONTEND_IMAGE}"
 echo "================================================================="

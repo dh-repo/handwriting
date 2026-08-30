@@ -12,7 +12,6 @@ describe('/api/recognize Route Handler', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     delete process.env.BACKEND_URL;
-    delete process.env.NEXT_PUBLIC_BACKEND_URL;
   });
 
   it('returns 400 Bad Request when neither file nor sample_id is provided', async () => {

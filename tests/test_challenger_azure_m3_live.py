@@ -1,8 +1,8 @@
 """
 Empirical Adversarial Stress Test Suite for Microsoft Azure Live Deployment.
 Target Endpoints:
-- Backend: https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io
 - Frontend: https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io
+- Health/recognize: frontend /api/health and /api/recognize (backend is internal)
 """
 
 from __future__ import annotations
@@ -18,14 +18,12 @@ from typing import Any, Dict, List
 import pytest
 import requests
 
-BACKEND_URL = os.environ.get(
-    "AZURE_BACKEND_URL",
-    "https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io",
-).rstrip("/")
 FRONTEND_URL = os.environ.get(
     "AZURE_FRONTEND_URL",
     "https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io",
 ).rstrip("/")
+RECOGNIZE_URL = os.environ.get("AZURE_RECOGNIZE_URL", f"{FRONTEND_URL}/api/recognize").rstrip("/")
+HEALTH_URL = os.environ.get("AZURE_HEALTH_URL", f"{FRONTEND_URL}/api/health").rstrip("/")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SAMPLES_DIR = REPO_ROOT / "samples"
@@ -144,8 +142,8 @@ def test_concurrent_health_probe_during_inference() -> None:
     and verify HTTP 200 responds without blocking or timing out (<500ms per probe).
     """
     sample_file = SAMPLES_DIR / "sample_clean_cursive.png"
-    recognize_url = f"{BACKEND_URL}/v1/recognize"
-    health_url = f"{BACKEND_URL}/v1/health"
+    recognize_url = RECOGNIZE_URL
+    health_url = HEALTH_URL
 
     health_results: List[Dict[str, Any]] = []
     inference_result: Dict[str, Any] = {}

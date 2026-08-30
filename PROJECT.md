@@ -2,13 +2,14 @@
 
 ## Architecture
 - **Cloud Provider**: Microsoft Azure (`damians-playground-dev` subscription `bc7eb14b-15b4-4425-a17d-9a4d2f5e73c7`)
-- **Region**: `eastus`
+- **Region**: `eastus2` for all live resources
 - **Resource Group**: `rg-handwriting-ai-playground`
-- **Registry**: Azure Container Registry `acrhandwritingai` (`acrhandwritingai.azurecr.io`)
-- **Hosting Platform**: Azure Container Apps (ACA) managed environment `cae-handwriting-ai-playground` with Log Analytics `law-handwriting-ai-playground`
-- **Inference Backend**: `ca-backend-playground` (FastAPI, PyTorch TrOCR, OpenCV Sauvola binarizer, RxNorm beam rescorer, 2.0 vCPU / 4.0Gi RAM, Port 8000, external HTTPS ingress with CORS enabled)
-- **Web Frontend**: `ca-frontend-playground` (Next.js 14 App Router, standalone container, 0.5 vCPU / 1.0Gi RAM, Port 3000, external HTTPS ingress, connected to backend FQDN)
-- **Decommissioned**: Vercel temporary deployment artifacts and references (`temporary-sonic-ridge-qzz8f0o.vercel.app`)
+- **Registry**: Azure Container Registry `acrhwaiplaye2` (`acrhwaiplaye2.azurecr.io`), admin disabled, managed-identity pulls
+- **Hosting Platform**: Azure Container Apps environment `cae-handwriting-ai-playground` with Log Analytics `law-handwriting-ai-e2`
+- **Inference Backend**: `ca-backend-playground` (FastAPI, TrOCR, 4.0 vCPU / 8.0Gi, minReplicas=1, **internal** ingress)
+- **Web Frontend**: `ca-frontend-playground` (Next.js 14, 0.5 vCPU / 1.0Gi, minReplicas=1, external ingress, `BACKEND_URL` = internal FQDN)
+- **IaC**: `infra/main.bicep` is the source of truth; `scripts/azure/*.sh` are thin wrappers
+- **Decommissioned**: Vercel temporary deployment; eastus ACR `acrhandwritingai` and LAW `law-handwriting-ai-playground` after cutover
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
@@ -34,17 +35,17 @@
 
 ## Interface Contracts
 ### Frontend (`ca-frontend-playground`) ↔ Backend (`ca-backend-playground`)
-- `BACKEND_URL`: Environment variable pointing to `https://<ca-backend-playground-fqdn>`
-- `NEXT_PUBLIC_BACKEND_URL`: Injected public FQDN for client-side API calls
-- `GET /v1/health`: Returns `HealthResponse` `{status: "healthy", loaded_models: [...], rescorer_active: true, ...}`
-- `POST /v1/recognize`: Multipart form `file=@...` or JSON `{file_base64: "..."}` returning `RecognitionResponse` `{document_id, pages: [{page_number, lines: [{text, bounding_box, words: [...]}]}]}`
-- `CORS`: Allowed origins `*`, allowed methods `GET, POST, PUT, DELETE, OPTIONS`, allowed headers `*`
+- `BACKEND_URL`: Server-only env on the frontend, pointing at the backend **internal** FQDN
+- `GET /v1/live`: Process liveness (no engine load). Used by ACA startup/liveness probes
+- `GET /v1/health`: Readiness + model status. Publicly reached only via frontend `GET /api/health`
+- `POST /v1/recognize`: Reached only via frontend `POST /api/recognize`
 
 ## Code Layout
 - `backend/Dockerfile`: Production multi-stage Dockerfile for FastAPI + PyTorch + OpenCV + Sauvola + RxNorm
 - `frontend/Dockerfile`: Production multi-stage Dockerfile for Next.js 14 standalone
 - `frontend/next.config.mjs`: Next.js config with `output: 'standalone'` and custom security headers
-- `scripts/azure/deploy_infra.sh`: Infrastructure provisioning script (RG, ACR, Log Analytics, ACA)
-- `scripts/azure/deploy_apps.sh`: ACR build and Container Apps deployment script
+- `infra/main.bicep`: Azure infrastructure (ACR, Log Analytics, ACA env, apps, AcrPull)
+- `scripts/azure/deploy_infra.sh`: `az deployment group create` for foundation resources
+- `scripts/azure/deploy_apps.sh`: SHA-tagged `az acr build` plus app Bicep deploy
 - `tests/e2e/test_azure_cloud_transcription.py`: Automated live cloud verification test suite
 - `README.md`: Official project documentation referencing Microsoft Azure Container Apps

@@ -13,7 +13,7 @@ from fastapi import APIRouter
 
 from backend.app.config import get_settings
 from backend.app.engine import get_engine
-from backend.app.schemas import HealthResponse
+from backend.app.schemas import HealthResponse, LiveResponse
 
 router = APIRouter()
 
@@ -30,6 +30,12 @@ def _get_memory_usage_mb() -> float:
             return round(usage / 1024.0, 2)
     except Exception:
         return 0.0
+
+
+@router.get("/live", response_model=LiveResponse)
+async def liveness() -> LiveResponse:
+    """Return process liveness without touching the inference engine."""
+    return LiveResponse(timestamp=datetime.now(timezone.utc).isoformat())
 
 
 @router.get("/health", response_model=HealthResponse)

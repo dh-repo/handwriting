@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from backend.app.schemas import (
     ErrorResponse,
     HealthResponse,
+    LiveResponse,
     JobStatusEnum,
     JobStatusResponse,
     JobSubmissionResponse,
@@ -131,6 +132,14 @@ def test_recognition_response_json_roundtrip() -> None:
     assert loaded_resp.document_id == "doc_test123"
     assert loaded_resp.total_pages == 1
     assert len(loaded_resp.pages[0].lines) == 2
+
+
+def test_live_response_serialization() -> None:
+    """Verify LiveResponse stays a process-only signal."""
+    live = LiveResponse(timestamp="2026-08-29T20:00:00Z")
+    assert live.status == "live"
+    dumped = live.model_dump()
+    assert "loaded_models" not in dumped
 
 
 def test_health_response_serialization() -> None:
