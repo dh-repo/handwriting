@@ -1,0 +1,42 @@
+# Version control & metadata
+.git
+.github
+.agents
+.venv
+venv
+env
+
+# Python caches & test artifacts
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+*.log
+*.swp
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Large datasets & heavy checkpoint files
+data/*
+!data/reference_handwriting
+data/reference_handwriting/*
+!data/reference_handwriting/vocabularies
+checkpoints
+*.pt
+*.bin
+*.safetensors
+
+# Frontend build & temporary artifacts
+frontend/.next
+frontend/node_modules
+frontend/.vercel
+node_modules
+.next
+.vercel
+out
+dist
+build

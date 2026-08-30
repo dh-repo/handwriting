@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
-import { UploadCloud, FileText, Image as ImageIcon, AlertCircle, Loader2, Sparkles, Zap } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { UploadCloud, FileText, Image as ImageIcon, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 
 export interface DropzoneProps {
   onFileAccepted: (file: File) => void;
@@ -11,7 +11,6 @@ export interface DropzoneProps {
   disabled?: boolean;
   maxSizeBytes?: number;
   className?: string;
-  onSelectSample?: (sampleId: string) => void;
 }
 
 const ACCEPTED_MIME_TYPES = [
@@ -30,15 +29,31 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   onFileAccepted,
   isLoading = false,
   uploadProgress = 0,
-  processingStage = 'Processing document...',
+  processingStage = 'Analyzing handwriting strokes...',
   disabled = false,
-  maxSizeBytes = 25 * 1024 * 1024,
+  maxSizeBytes = 50 * 1024 * 1024,
   className = '',
-  onSelectSample,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Timer for active processing
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isLoading) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds((prev) => +(prev + 0.5).toFixed(1));
+      }, 500);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoading]);
 
   const validateAndProcessFile = useCallback(
     (file: File) => {
@@ -104,18 +119,17 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       validateAndProcessFile(e.target.files[0]);
-      e.target.value = '';
     }
   };
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full max-w-2xl mx-auto ${className}`}>
       <div
         data-testid="dropzone-container"
         onClick={handleClick}
         onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
         onDrop={handleDrop}
         role="button"
         tabIndex={0}
@@ -126,11 +140,11 @@ export const Dropzone: React.FC<DropzoneProps> = ({
             handleClick();
           }
         }}
-        className={`relative overflow-hidden flex flex-col items-center justify-center p-8 sm:p-12 rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer select-none outline-none focus:ring-4 focus:ring-cyan-500/20 group ${
+        className={`relative overflow-hidden flex flex-col items-center justify-center p-10 sm:p-14 rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer select-none outline-none group ${
           isDragOver
-            ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01] shadow-2xl shadow-cyan-500/20 ring-2 ring-cyan-400/40'
-            : 'border-slate-800 hover:border-cyan-500/50 bg-slate-900/60 hover:bg-slate-900/80 shadow-xl backdrop-blur-xl'
-        } ${disabled || isLoading ? 'pointer-events-none opacity-90' : ''}`}
+            ? 'border-blue-400 bg-blue-500/10 scale-[1.01] shadow-2xl shadow-blue-500/20 ring-4 ring-blue-500/20'
+            : 'border-white/15 hover:border-blue-400/50 bg-slate-900/40 hover:bg-slate-900/60 shadow-2xl backdrop-blur-2xl'
+        } ${disabled || isLoading ? 'pointer-events-none' : ''}`}
       >
         <input
           ref={fileInputRef}
@@ -142,94 +156,64 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           disabled={disabled || isLoading}
         />
 
-        {/* Laser scanline animation during active processing */}
-        {isLoading && <div className="animate-scanline" />}
-
         {isLoading ? (
-          <div className="flex flex-col items-center text-center space-y-4 max-w-sm py-4">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full border-4 border-cyan-500/20 border-t-cyan-400 animate-spin" />
-              <Loader2 className="w-7 h-7 text-cyan-400 absolute inset-0 m-auto animate-pulse" />
-            </div>
-            <div>
-              <p className="font-bold text-white text-base tracking-tight flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
-                <span>Recognizing Handwriting...</span>
-              </p>
-              <p className="text-xs text-slate-400 mt-1 font-mono">{processingStage}</p>
-            </div>
-            {uploadProgress > 0 && (
-              <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden mt-1 p-0.5 border border-slate-700/50">
-                <div
-                  className="bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 h-full rounded-full transition-all duration-300 ease-out shadow-sm shadow-cyan-500/50"
-                  style={{ width: `${uploadProgress}%` }}
-                />
+          <div className="flex flex-col items-center text-center space-y-5 max-w-md py-4">
+            {/* Apple Intelligence style pulsing ambient glow */}
+            <div className="relative flex items-center justify-center">
+              <div className="absolute w-20 h-20 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 blur-xl opacity-40 animate-pulse" />
+              <div className="w-16 h-16 rounded-2xl bg-white/[0.08] border border-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
               </div>
-            )}
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="font-semibold text-white text-base sm:text-lg tracking-tight flex items-center justify-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-400 animate-pulse" />
+                <span>Transcribing Handwriting...</span>
+              </p>
+              <p className="text-xs text-slate-400 font-normal tracking-wide">{processingStage}</p>
+              {elapsedSeconds > 0 && (
+                <p className="text-[11px] text-slate-500 font-mono pt-1">
+                  Processing time: {elapsedSeconds.toFixed(1)}s
+                </p>
+              )}
+            </div>
+
+            {/* Smooth progress indicator */}
+            <div className="w-64 sm:w-80 bg-white/10 rounded-full h-1.5 overflow-hidden p-0.5 border border-white/5 shadow-inner">
+              <div
+                className="bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 h-full rounded-full transition-all duration-500 ease-out shadow-sm"
+                style={{ width: `${Math.max(15, uploadProgress)}%` }}
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center text-center space-y-4">
-            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500/20 via-indigo-500/20 to-purple-500/20 flex items-center justify-center text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10 group-hover:scale-110 group-hover:border-cyan-400/60 transition-all duration-300">
-              <UploadCloud className="w-8 h-8 transition-transform" />
+            {/* Apple HIG elevated icon button */}
+            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-white/10 to-white/5 flex items-center justify-center text-blue-400 border border-white/20 shadow-xl shadow-black/40 group-hover:scale-105 group-hover:border-blue-400/50 group-hover:shadow-blue-500/20 transition-all duration-300">
+              <UploadCloud className="w-8 h-8 text-white/90 group-hover:text-blue-400 transition-colors" />
             </div>
 
             <div className="space-y-1">
-              <p className="text-base sm:text-lg font-bold text-white tracking-tight">
-                Drag & drop your handwriting document here
+              <p className="text-base sm:text-lg font-semibold text-white tracking-tight">
+                Drop your handwriting image or PDF here
               </p>
               <p className="text-xs sm:text-sm text-slate-400">
-                or <span className="text-cyan-400 font-semibold hover:underline cursor-pointer">browse files</span> from your Mac / device
+                or <span className="text-blue-400 font-medium hover:text-blue-300 transition-colors">choose a file</span> from your device
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700/80 shadow-sm">
-                <ImageIcon className="w-3.5 h-3.5 text-cyan-400" /> PNG, JPEG, TIFF
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.06] text-slate-300 border border-white/10 shadow-sm">
+                <ImageIcon className="w-3.5 h-3.5 text-blue-400" /> PNG, JPEG, TIFF
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700/80 shadow-sm">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.06] text-slate-300 border border-white/10 shadow-sm">
                 <FileText className="w-3.5 h-3.5 text-indigo-400" /> Multi-page PDF
               </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-mono text-slate-400 bg-slate-800/40 border border-slate-700/40">
-                Max 25 MB
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-mono text-slate-400 bg-white/[0.03] border border-white/5">
+                Up to 50 MB
               </span>
             </div>
-
-            {onSelectSample && (
-              <div
-                className="pt-2 text-xs text-slate-400 flex items-center gap-2 flex-wrap justify-center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="text-slate-500">Quick Demo Presets:</span>
-                <button
-                  type="button"
-                  onClick={() => onSelectSample('sample_clean_cursive')}
-                  className="font-medium text-cyan-400 hover:text-cyan-300 px-2 py-0.5 rounded-md bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-colors"
-                >
-                  Clean Cursive
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectSample('sample_legal_contract')}
-                  className="font-medium text-indigo-400 hover:text-indigo-300 px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors"
-                >
-                  Legal & Signatures
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectSample('sample_prescription')}
-                  className="font-medium text-purple-400 hover:text-purple-300 px-2 py-0.5 rounded-md bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-colors"
-                >
-                  Doctor Prescription
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectSample('sample_multipage')}
-                  className="font-medium text-emerald-400 hover:text-emerald-300 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
-                >
-                  3-Page Multi-Document
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -237,7 +221,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
       {errorMessage && (
         <div
           data-testid="dropzone-error"
-          className="mt-3 p-3.5 rounded-2xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs shadow-lg shadow-rose-950/40 flex items-center gap-2.5 animate-in fade-in"
+          className="mt-4 p-3.5 rounded-2xl bg-rose-950/50 border border-rose-500/30 text-rose-300 text-xs shadow-xl flex items-center gap-2.5 backdrop-blur-xl animate-in fade-in"
         >
           <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
           <span>{errorMessage}</span>

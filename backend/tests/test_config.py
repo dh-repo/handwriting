@@ -19,7 +19,7 @@ def test_default_settings() -> None:
     assert settings.PORT == 8000
     assert settings.HOST == "0.0.0.0"
     assert settings.MODEL_NAME_OR_PATH == "microsoft/trocr-large-handwritten"
-    assert settings.USE_FP16 is True
+    assert settings.USE_FP16 is False
     assert settings.DEFAULT_DPI == 300
     assert settings.MAX_IMAGE_SIZE_MB >= 25
     assert settings.ENABLE_RESCORER is True

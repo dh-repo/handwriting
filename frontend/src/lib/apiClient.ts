@@ -69,7 +69,7 @@ export class ApiClient {
         : '';
     this.baseUrl = config.baseUrl !== undefined ? config.baseUrl : envBackend;
     this.proxyUrl = config.proxyUrl || '/api/recognize';
-    this.timeoutMs = config.timeoutMs || 30000;
+    this.timeoutMs = config.timeoutMs || 240000;
     this.enableFallback = config.enableFallback ?? true;
   }
 

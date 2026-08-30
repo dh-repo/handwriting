@@ -39,10 +39,10 @@ class Settings(BaseSettings):
         description="Stage 1 General adaptation model path",
     )
     FALLBACK_CHECKPOINT_PATH: Optional[str] = Field(
-        default="checkpoints/best_model.pt",
+        default=None,
         description="Root best model checkpoint",
     )
-    USE_FP16: bool = Field(default=True, description="Enable float16 mixed precision on MPS/CUDA")
+    USE_FP16: bool = Field(default=False, description="Enable float16 mixed precision on MPS/CUDA")
     USE_MOCK_ENGINE: bool = Field(
         default=False,
         description="Force deterministic mock engine for testing/preview",
@@ -54,8 +54,8 @@ class Settings(BaseSettings):
 
     # Beam Search & Rescorer settings
     ENABLE_RESCORER: bool = Field(default=True, description="Enable RxNorm beam rescoring")
-    BEAM_WIDTH: int = Field(default=5, ge=1, le=16, description="Beam search width (K candidates)")
-    NUM_RETURN_SEQUENCES: int = Field(default=5, ge=1, le=16, description="Candidate beam count")
+    BEAM_WIDTH: int = Field(default=1, ge=1, le=16, description="Beam search width (K candidates)")
+    NUM_RETURN_SEQUENCES: int = Field(default=1, ge=1, le=16, description="Candidate beam count")
     VOCAB_DIR: str = Field(
         default="data/reference_handwriting/vocabularies",
         description="Path to pharmaceutical and clinical vocabularies directory",
@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     MAX_SAFE_MG: float = Field(default=4000.0, description="Upper bound for realistic single dose")
 
     # Apple Silicon MPS & Batching settings
-    LINE_BATCH_SIZE: int = Field(default=8, ge=1, le=64, description="Line crop micro-batch size")
+    LINE_BATCH_SIZE: int = Field(default=16, ge=1, le=64, description="Line crop micro-batch size")
     MPS_HIGH_WATERMARK_RATIO: float = Field(default=0.85, description="MPS memory high watermark ratio")
     MPS_EMPTY_CACHE_INTERVAL: int = Field(default=10, description="Steps between empty_cache calls")
 

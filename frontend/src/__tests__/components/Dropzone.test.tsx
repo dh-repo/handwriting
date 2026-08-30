@@ -7,7 +7,7 @@ describe('Dropzone Component', () => {
   it('renders upload instructions and format badges', () => {
     render(<Dropzone onFileAccepted={() => {}} />);
     expect(
-      screen.getByText(/Drag & drop your handwriting document here/i)
+      screen.getByText(/Drop your handwriting image or PDF here/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/PNG, JPEG, TIFF/i)).toBeInTheDocument();
     expect(screen.getByText(/Multi-page PDF/i)).toBeInTheDocument();
@@ -56,17 +56,7 @@ describe('Dropzone Component', () => {
       />
     );
 
-    expect(screen.getByText(/Recognizing Handwriting.../i)).toBeInTheDocument();
+    expect(screen.getByText(/Transcribing Handwriting.../i)).toBeInTheDocument();
     expect(screen.getByText(/Segmenting handwriting lines.../i)).toBeInTheDocument();
-  });
-
-  it('triggers onSelectSample callback when clicking preset buttons', () => {
-    const onSelectSample = vi.fn();
-    render(<Dropzone onFileAccepted={() => {}} onSelectSample={onSelectSample} />);
-
-    const cleanPresetBtn = screen.getByRole('button', { name: /Clean Cursive/i });
-    fireEvent.click(cleanPresetBtn);
-
-    expect(onSelectSample).toHaveBeenCalledWith('sample_clean_cursive');
   });
 });

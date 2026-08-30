@@ -235,7 +235,11 @@ class OCRDataset(Dataset):
 
     def _extract_image(self, item: Any) -> np.ndarray:
         """Extract RGB uint8 numpy image from diverse input types."""
-        if isinstance(item, HandwritingSample):
+        if isinstance(item, tuple) and len(item) >= 1:
+            p = _resolve_image_path(item[0])
+            if p:
+                return np.array(Image.open(p).convert("RGB"), dtype=np.uint8)
+        elif isinstance(item, HandwritingSample):
             if item.image is not None:
                 return to_rgb(item.image)
             p = _resolve_image_path(item.image_path)
@@ -271,7 +275,9 @@ class OCRDataset(Dataset):
 
     def _extract_text(self, item: Any) -> str:
         """Extract ground-truth transcription string from sample object."""
-        if isinstance(item, HandwritingSample):
+        if isinstance(item, tuple) and len(item) >= 2:
+            return str(item[1]) or ""
+        elif isinstance(item, HandwritingSample):
             return item.text or ""
         elif isinstance(item, MedicalPrescriptionSample):
             return item.full_text or ""
@@ -283,7 +289,9 @@ class OCRDataset(Dataset):
 
     def _extract_id(self, item: Any, idx: int) -> str:
         """Extract sample identifier."""
-        if isinstance(item, (HandwritingSample, MedicalPrescriptionSample)):
+        if isinstance(item, tuple) and len(item) >= 3:
+            return str(item[2]) or f"sample_{idx:06d}"
+        elif isinstance(item, (HandwritingSample, MedicalPrescriptionSample)):
             return item.sample_id or f"sample_{idx:06d}"
         elif isinstance(item, LineCrop):
             return f"line_{item.line_index}"
@@ -293,7 +301,9 @@ class OCRDataset(Dataset):
 
     def _extract_writer_id(self, item: Any) -> str:
         """Extract writer identifier."""
-        if isinstance(item, HandwritingSample):
+        if isinstance(item, tuple) and len(item) >= 4:
+            return str(item[3]) or "unknown"
+        elif isinstance(item, HandwritingSample):
             return item.writer_id or "unknown"
         elif isinstance(item, dict):
             return str(item.get("writer_id", "unknown"))
@@ -423,16 +433,41 @@ class OCRDataset(Dataset):
         max_target_length: int = 128,
         is_training: bool = True,
     ) -> OCRDataset:
-        """Create OCRDataset from a medical prescription or generic JSON/CSV manifest."""
-        loader = MedicalPrescriptionDatasetLoader()
-        samples = loader.load_manifest(str(manifest_path))
-        if not samples:
+        """Create OCRDataset from a medical prescription or generic JSON/CSV manifest using ultra-lightweight tuples."""
+        manifest_p = Path(manifest_path)
+        if not manifest_p.exists():
+            raise FileNotFoundError(f"Manifest not found: {manifest_p}")
+
+        tuples: List[Tuple[str, str, str, str]] = []
+        if manifest_p.suffix == ".jsonl":
+            with open(manifest_p, "r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line_s = line.strip()
+                    if not line_s:
+                        continue
+                    data = json.loads(line_s)
+                    img_p = data.get("image_path") or data.get("relative_image_path") or ""
+                    txt = data.get("text") or data.get("transcription") or data.get("full_text") or ""
+                    sid = data.get("sample_id") or ""
+                    wid = data.get("writer_id") or "unknown"
+                    tuples.append((img_p, txt, sid, wid))
+        else:
+            loader = MedicalPrescriptionDatasetLoader()
+            samples = loader.load_manifest(str(manifest_path))
+            for s in samples:
+                img_p = getattr(s, "image_path", "") or ""
+                txt = getattr(s, "text", "") or getattr(s, "full_text", "") or ""
+                sid = getattr(s, "sample_id", "") or ""
+                wid = getattr(s, "writer_id", "unknown") or "unknown"
+                tuples.append((img_p, txt, sid, wid))
+
+        if not tuples:
             raise ValueError(
                 f"No real handwriting samples found in {manifest_path}. "
                 "Synthetic corpus records are excluded."
             )
         return cls(
-            samples=samples,
+            samples=tuples,
             processor=processor,
             max_target_length=max_target_length,
             is_training=is_training,

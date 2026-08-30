@@ -7,6 +7,13 @@ dynamic padding collation, and robust checkpoint management.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 import argparse
 from contextlib import nullcontext
 from dataclasses import asdict, is_dataclass
@@ -14,9 +21,7 @@ from datetime import datetime, timezone
 import json
 import logging
 import os
-from pathlib import Path
 import random
-import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -349,10 +354,10 @@ class TrOCRTrainer:
                 logger.debug(f"torch.compile skipped ({e}).")
 
         device_type = self.device.type
-        scaler_enabled = (self.config.mixed_precision.lower() in ("fp16", "bf16")) and device_type in ("mps", "cuda")
+        scaler_enabled = (self.config.mixed_precision.lower() in ("fp16", "bf16")) and device_type == "cuda"
         self.scaler = (
             torch.amp.GradScaler(device_type, enabled=scaler_enabled)
-            if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler") and device_type in ("mps", "cuda")
+            if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler") and device_type == "cuda"
             else None
         )
 
@@ -659,6 +664,13 @@ class TrOCRTrainer:
                         logger.info(
                             f"Epoch {epoch} [Step {self.global_step}] Loss: {recent_loss:.4f} | LR: {lr:.2e}{mps_mem}"
                         )
+                        if hasattr(self.logger, "log_step"):
+                            self.logger.log_step(
+                                step=self.global_step,
+                                loss=recent_loss,
+                                lr=lr,
+                                epoch=epoch + (step / max(1, len(loader))),
+                            )
 
                     # Inter-step unified memory cleanup
                     if self.config.empty_cache_steps > 0 and self.global_step % self.config.empty_cache_steps == 0:

@@ -13,7 +13,7 @@
 
 An end-to-end, high-performance handwritten text recognition (HTR) system engineered to transcribe difficult, messy, and illegible doctor handwriting, prescription slips, clinical consultation notes, and cursive physician signatures with high accuracy. 
 
-Targeting **TrOCR-Large (558M parameters)**, the system features a 50,500+ verified multi-source handwriting dataset with 3D physical augmentations, multi-stage curriculum fine-tuning on Apple Silicon Metal Performance Shaders (MPS), an in-memory RxNorm pharmaceutical lexicon Trie beam rescorer, high-throughput FastAPI serving with Server-Sent Events (SSE), and a modern Next.js 14 web application ready for Vercel deployment.
+Targeting **TrOCR-Large (558M parameters)**, the system features a 50,500+ verified multi-source handwriting dataset with 3D physical augmentations, multi-stage curriculum fine-tuning on Apple Silicon Metal Performance Shaders (MPS), an in-memory RxNorm pharmaceutical lexicon Trie beam rescorer, high-throughput FastAPI serving with Server-Sent Events (SSE), and a modern Next.js 14 web application deployed to Microsoft Azure Container Apps (ACA).
 
 ---
 
@@ -66,7 +66,7 @@ Targeting **TrOCR-Large (558M parameters)**, the system features a 50,500+ verif
          └── Security & Robustness (Hostile binary rejection, CWE-209 zero stack trace leakage)
          │
          ▼
-  [ Milestone 5: Vercel Full-Stack Web Application ] (frontend/)
+  [ Milestone 5: Full-Stack Web Application & Azure Deployment ] (frontend/)
          │
          ├── Interactive Document Viewer (SVG canvas, pan, smooth zoom 0.2x-5x, 90° rotation)
          ├── Visual Confidence Heatmap (3-tier threshold coloring: green ≥90%, yellow 70-89%, red <70%)
@@ -91,7 +91,7 @@ Targeting **TrOCR-Large (558M parameters)**, the system features a 50,500+ verif
 | **M2** | **Multi-Stage Curriculum TrOCR-Large (558M) MPS Fine-Tuning** | Implemented 2-stage curriculum training for `microsoft/trocr-large-handwritten` (558M parameters) on Apple Silicon Metal (`mps`) with FP16 mixed precision, gradient checkpointing, dynamic sequence padding with `-100` masking, atomic checkpointing, and `losses.csv` telemetry. | **COMPLETE** |
 | **M3** | **Pharmaceutical Lexicon & Trie-Based Beam Rescoring Engine** | Built in-memory prefix Trie indexing 10,000+ RxNorm canonical terms and Latin sig codes, multi-candidate beam re-ranking ($K=4\text{--}8$), and OCR visual confusion penalty matrix ($c \leftrightarrow e, l \leftrightarrow 1, rn \leftrightarrow m, cl \leftrightarrow d$) resolving LASA pairs (*Amoxicillin* vs *Ampicillin*) in $<5\text{ ms}$. | **COMPLETE** |
 | **M4** | **Production Inference Backend & Streaming API** | Delivered high-throughput FastAPI ASGI backend with synchronous `/v1/recognize` and asynchronous `/v1/jobs` with Server-Sent Events (SSE) streaming, serving TrOCR-Large and the beam rescorer with normalized $[0, 1]$ bounding box schemas. | **COMPLETE** |
-| **M5** | **Vercel Full-Stack Web Application** | Developed responsive Next.js 14 App Router web app with interactive SVG document viewer, 3-tier confidence heatmaps, bidirectional coordinate sync, inline editor with medical auto-suggestions, speed review queue, and CWE-1236 hardened CSV export. | **COMPLETE** |
+| **M5** | **Full-Stack Web Application & Azure Cloud Deployment** | Developed responsive Next.js 14 App Router web app with interactive SVG document viewer, 3-tier confidence heatmaps, bidirectional coordinate sync, inline editor with medical auto-suggestions, speed review queue, and CWE-1236 hardened CSV export, containerized and deployed to Azure Container Apps. | **COMPLETE** |
 | **M6** | **E2E Integration, Ablation Benchmarks & Adversarial Hardening** | Verified 355/355 E2E test matrix (Tiers 1–5), executed 4-stage ablation benchmark across 5,050 held-out samples, and published complete system documentation. | **COMPLETE** |
 
 ---
@@ -123,7 +123,7 @@ Targeting **TrOCR-Large (558M parameters)**, the system features a 50,500+ verif
 | **F21** | Interactive SVG Viewer | Pan/zoom canvas ($0.2\times\text{--}5\times$), 3-tier confidence heatmaps, 90° rotation | M5 | **VERIFIED** |
 | **F22** | Inline Editor & Auto-Suggest | Line-by-line correction editor with RxNorm medical auto-suggestions & speed review | M5 | **VERIFIED** |
 | **F23** | Secure Multi-Format Export | Formatted JSON, TXT, and RFC 4180 CSV with CWE-1236 formula injection defense | M5 | **VERIFIED** |
-| **F24** | Next.js Vercel Production Build | Clean Next.js 14 App Router compilation (`npm run build`) with TypeScript 5 | M5 | **VERIFIED** |
+| **F24** | Next.js Production Build & Containerization | Clean Next.js 14 App Router compilation (`npm run build`) with TypeScript 5 and standalone containerization | M5 | **VERIFIED** |
 
 ---
 
@@ -321,7 +321,7 @@ curl -X POST "http://localhost:8000/v1/recognize?beam_width=5&rescore=true" \
 
 ---
 
-## 8. Next.js 14 Vercel Web Application
+## 8. Next.js 14 Full-Stack Web Application
 
 The frontend in `frontend/` is a modern, responsive web application built with **Next.js 14 (App Router)**, **TypeScript 5**, and **Tailwind CSS**:
 
@@ -429,16 +429,65 @@ npm run dev
 
 ## 11. Production Deployment Guide
 
-### Deploying Next.js Web App to Vercel
-1. Push repository to GitHub or GitLab.
-2. Import project into Vercel dashboard and set **Root Directory** to `frontend`.
-3. Set Environment Variable:
-   ```env
-   NEXT_PUBLIC_BACKEND_URL=https://api.yourdomain.com
-   ```
-4. Deploy. Vercel automatically runs `npm run build` and serves static and serverless routes at edge latency.
+### Microsoft Azure Cloud Production Architecture
 
-### Deploying FastAPI Backend on Mac Studio (Metal MPS)
+The end-to-end platform is deployed natively to Microsoft Azure with high-throughput containerized inference and interactive frontend serving:
+
+- **Subscription**: `damians-playground-dev` (`bc7eb14b-15b4-4425-a17d-9a4d2f5e73c7`)
+- **Resource Group**: `rg-handwriting-ai-playground` (Region: `eastus`)
+- **Container Registry (ACR)**: `acrhandwritingai` (`acrhandwritingai.azurecr.io`)
+- **Log Analytics**: `law-handwriting-ai-playground` (`eastus`)
+- **Container Apps Managed Environment**: `cae-handwriting-ai-playground` (`eastus2`)
+- **Inference Backend Container App (`ca-backend-playground`)**:
+  - Image: `acrhandwritingai.azurecr.io/handwriting-backend:latest`
+  - Compute: 2.0 vCPU / 4.0Gi RAM
+  - Target Port: 8000 (External HTTPS Ingress with CORS enabled for all origins)
+  - Stack: FastAPI, PyTorch TrOCR, OpenCV Sauvola binarization, RxNorm Trie beam rescorer
+  - Environment: `DEVICE=cpu`, `USE_MOCK_ENGINE=false`, `VOCAB_DIR=/app/data/reference_handwriting/vocabularies`
+- **Web Frontend Container App (`ca-frontend-playground`)**:
+  - Image: `acrhandwritingai.azurecr.io/handwriting-frontend:latest`
+  - Compute: 0.5 vCPU / 1.0Gi RAM
+  - Target Port: 3000 (External HTTPS Ingress)
+  - Stack: Next.js 14 App Router standalone production build
+  - Environment: `BACKEND_URL=https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`, `NEXT_PUBLIC_BACKEND_URL=https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`
+
+### Live Production Endpoints
+
+| Component | Target URL | Health / Status Probe | Ingress Security |
+|:---|:---|:---|:---|
+| **Web Frontend Workspace** | [`https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`](https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io) | `GET /` (HTTP 200) | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` |
+| **Inference Backend API** | [`https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io`](https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io) | `GET /v1/health` (HTTP 200) | CORS Enabled (`*`), HTTPS Enforced |
+
+### Automated Azure Deployment Scripts
+
+The platform includes production bash automation scripts for rapid deployment and infrastructure synchronization:
+
+```bash
+# 1. Provision Core Infrastructure (RG, ACR, Log Analytics, ACA Environment)
+./scripts/azure/deploy_infra.sh
+
+# 2. Build Container Images in ACR & Deploy Container Apps
+./scripts/azure/deploy_apps.sh
+```
+
+### Health Probes & Verification
+
+- **Backend Health Check**:
+  ```bash
+  curl -s https://ca-backend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io/v1/health | jq .
+  ```
+  *Returns HTTP 200 with active model status, device diagnostics, and RxNorm rescorer confirmation.*
+
+- **Frontend Health Check**:
+  ```bash
+  curl -s -I https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azurecontainerapps.io | head -n 5
+  ```
+  *Returns HTTP 200 with Next.js standalone headers and security configurations.*
+
+### Local / Metal MPS Backend Serving (Apple Silicon)
+
+For local high-performance training and development on Apple Silicon Metal (`mps`):
+
 1. Configure `launchd` daemon at `~/Library/LaunchAgents/com.handwriting.backend.plist`:
    ```xml
    <?xml version="1.0" encoding="UTF-8"?>

@@ -3,7 +3,7 @@ import { SAMPLE_PRESETS } from '@/lib/sampleDocuments';
 import { runMockOcr } from '@/lib/mockOcrEngine';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Vercel function timeout limit
+export const maxDuration = 300; // 300s timeout limit for cloud inference
 
 export async function POST(req: Request | NextRequest) {
   try {
@@ -70,67 +70,105 @@ export async function POST(req: Request | NextRequest) {
 
     const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
 
-    // 3. If backend is configured, attempt proxying to FastAPI /v1/recognize
+    // 3. If backend is configured, proxy to FastAPI /v1/recognize with 240s timeout
     if (backendUrl) {
       try {
+        let response: Response;
+
         if (file) {
           const proxyFormData = new FormData();
           proxyFormData.append('file', file);
           proxyFormData.append('model_type', modelType);
 
-          const response = await fetch(`${backendUrl}/v1/recognize`, {
+          response = await fetch(`${backendUrl}/v1/recognize`, {
             method: 'POST',
             body: proxyFormData,
-            signal: AbortSignal.timeout(15000), // 15s timeout
+            signal: AbortSignal.timeout(240000), // 240s timeout
           });
-
-          if (response.ok) {
-            const backendData = await response.json();
-            return NextResponse.json(backendData, {
-              status: 200,
-              headers: {
-                'X-Recognition-Provider': 'backend',
-                'Content-Type': 'application/json',
-              },
-            });
-          }
-        } else if (fileBase64) {
+        } else {
           const payload = {
             file_base64: fileBase64,
             filename,
             options,
           };
-          const response = await fetch(`${backendUrl}/v1/recognize`, {
+          response = await fetch(`${backendUrl}/v1/recognize`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(15000),
+            signal: AbortSignal.timeout(240000), // 240s timeout
           });
+        }
 
-          if (response.ok) {
-            const backendData = await response.json();
-            return NextResponse.json(backendData, {
-              status: 200,
+        if (response.ok) {
+          const backendData = await response.json();
+          return NextResponse.json(backendData, {
+            status: 200,
+            headers: {
+              'X-Recognition-Provider': 'backend',
+              'Content-Type': 'application/json',
+            },
+          });
+        }
+
+        // Forward upstream HTTP errors directly from backend (4xx, 5xx)
+        let errorBody: unknown;
+        try {
+          errorBody = await response.json();
+        } catch {
+          const text = await response.text().catch(() => response.statusText);
+          errorBody = { error: text || `Backend returned status ${response.status}` };
+        }
+
+        return NextResponse.json(errorBody, {
+          status: response.status,
+          headers: {
+            'X-Recognition-Provider': 'backend',
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (proxyError: unknown) {
+        console.error('[API /api/recognize] Backend proxy error:', proxyError);
+
+        const isTimeout =
+          proxyError instanceof Error &&
+          (proxyError.name === 'TimeoutError' ||
+            proxyError.name === 'AbortError' ||
+            proxyError.message.toLowerCase().includes('timeout') ||
+            proxyError.message.toLowerCase().includes('aborted'));
+
+        if (isTimeout) {
+          return NextResponse.json(
+            {
+              error: 'Backend recognition timed out',
+              details: 'Inference request exceeded the 240-second timeout limit.',
+            },
+            {
+              status: 504,
               headers: {
                 'X-Recognition-Provider': 'backend',
                 'Content-Type': 'application/json',
               },
-            });
-          }
+            }
+          );
         }
 
-        console.warn(
-          '[API /api/recognize] Backend request failed. Falling back to in-app mock engine.'
-        );
-      } catch (proxyError) {
-        console.warn(
-          '[API /api/recognize] Backend proxy failed, falling back to in-app mock engine:',
-          proxyError
+        return NextResponse.json(
+          {
+            error: 'Backend recognition service unavailable',
+            details: proxyError instanceof Error ? proxyError.message : String(proxyError),
+          },
+          {
+            status: 502,
+            headers: {
+              'X-Recognition-Provider': 'backend',
+              'Content-Type': 'application/json',
+            },
+          }
         );
       }
     }
 
-    // 4. Standalone in-app mock engine execution
+    // 4. Standalone in-app mock engine execution (only when no backend is configured)
     const mockResult = await runMockOcr({
       filename: file ? file.name : filename,
       mimeType: file ? file.type : 'image/png',

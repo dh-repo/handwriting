@@ -4,6 +4,7 @@ Synchronous handwriting recognition endpoint for image and PDF documents.
 """
 
 from __future__ import annotations
+import asyncio
 import base64
 from datetime import datetime, timezone
 import json
@@ -141,7 +142,12 @@ async def recognize_document(
 
     # 6. Execute inference
     try:
-        response = engine.recognize(file_bytes, filename=filename, options=options)
+        response = await asyncio.to_thread(
+            engine.recognize,
+            file_bytes,
+            filename=filename,
+            options=options,
+        )
         return response
     except (EmptyDocumentError, ValueError, UnidentifiedImageError) as e:
         raise HTTPException(

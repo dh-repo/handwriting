@@ -47,6 +47,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "gpu: Tests requiring Apple Silicon MPS hardware acceleration")
     config.addinivalue_line("markers", "slow: Long-running benchmark or training tests")
     config.addinivalue_line("markers", "mock_only: Tests verified strictly with MockInferenceEngine")
+    config.addinivalue_line("markers", "azure: Tests against live Microsoft Azure deployment")
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:

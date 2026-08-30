@@ -20,6 +20,12 @@ from PIL import Image
 import torch
 import torch.nn.functional as F
 
+if hasattr(torch, "set_num_threads"):
+    try:
+        torch.set_num_threads(min(4, os.cpu_count() or 4))
+    except Exception:
+        pass
+
 try:
     from transformers import (
         AutoTokenizer,
@@ -349,7 +355,8 @@ class InferenceEngine:
                                 pixel_values,
                                 num_beams=effective_k,
                                 num_return_sequences=effective_k,
-                                max_new_tokens=64,
+                                max_new_tokens=48,
+                                repetition_penalty=1.2,
                                 early_stopping=True,
                                 return_dict_in_generate=True,
                                 output_scores=True,
@@ -357,7 +364,8 @@ class InferenceEngine:
                         else:
                             outputs = self.model.generate(
                                 pixel_values,
-                                max_new_tokens=64,
+                                max_new_tokens=48,
+                                repetition_penalty=1.2,
                                 return_dict_in_generate=True,
                                 output_scores=True,
                             )

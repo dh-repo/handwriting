@@ -180,6 +180,18 @@ class LossLogger:
             except OSError:
                 pass
 
+    def log_step(self, step: int, loss: float, lr: float = 0.0, epoch: float = 1.0) -> None:
+        """Record step-level metrics and persist to step_losses.csv for live monitoring."""
+        import time
+        step_csv = self.log_dir / "step_losses.csv"
+        init_header = not step_csv.exists()
+        with open(step_csv, "a", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            if init_header:
+                w.writerow(["step", "train_loss", "learning_rate", "epoch", "timestamp"])
+            w.writerow([step, round(loss, 4), f"{lr:.2e}", round(epoch, 3), time.time()])
+            f.flush()
+
     def get_history(self) -> Dict[str, Any]:
         """
         Return structured dictionary of recorded metrics history.

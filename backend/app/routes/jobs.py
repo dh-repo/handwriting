@@ -269,7 +269,8 @@ async def _generate_sse_stream(job_id: str) -> AsyncIterator[str]:
     # Compute result if not completed yet
     try:
         engine = get_engine()
-        res = engine.recognize(
+        res = await asyncio.to_thread(
+            engine.recognize,
             job["file_bytes"],
             filename=job["filename"],
             options=job.get("options"),

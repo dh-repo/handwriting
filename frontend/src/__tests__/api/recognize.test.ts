@@ -109,7 +109,7 @@ describe('/api/recognize Route Handler', () => {
     expect(data.document_id).toBe('doc_backend_live');
   });
 
-  it('falls back to in-app mock engine when backend proxy fails', async () => {
+  it('returns 502 Bad Gateway when backend proxy encounters connection failure', async () => {
     process.env.BACKEND_URL = 'http://127.0.0.1:8000';
 
     global.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
@@ -120,11 +120,31 @@ describe('/api/recognize Route Handler', () => {
     const req = createMockFormDataRequest(formData);
 
     const res = await POST(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get('X-Recognition-Provider')).toBe('mock');
+    expect(res.status).toBe(502);
+    expect(res.headers.get('X-Recognition-Provider')).toBe('backend');
 
     const data = await res.json();
-    expect(data.pages).toBeDefined();
+    expect(data.error).toContain('Backend recognition service unavailable');
+  });
+
+  it('returns 504 Gateway Timeout when backend proxy encounters timeout', async () => {
+    process.env.BACKEND_URL = 'http://127.0.0.1:8000';
+
+    const timeoutError = new Error('The operation was aborted due to timeout');
+    timeoutError.name = 'TimeoutError';
+    global.fetch = vi.fn().mockRejectedValue(timeoutError) as unknown as typeof fetch;
+
+    const formData = new FormData();
+    const file = new File(['dummy-bytes'], 'timeout_test.png', { type: 'image/png' });
+    formData.append('file', file);
+    const req = createMockFormDataRequest(formData);
+
+    const res = await POST(req);
+    expect(res.status).toBe(504);
+    expect(res.headers.get('X-Recognition-Provider')).toBe('backend');
+
+    const data = await res.json();
+    expect(data.error).toContain('Backend recognition timed out');
   });
 
   it('rejects GET requests with 405 Method Not Allowed', async () => {
