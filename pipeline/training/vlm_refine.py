@@ -178,6 +178,16 @@ def _refine_azure_openai(rgb: Image.Image, hypothesis: str, previous_text: str) 
 
 def _first_line(text: str) -> str:
     cleaned = (text or "").strip().strip('"').strip()
+    lower = cleaned.lower()
+    if (
+        "no handwriting visible" in lower
+        or "no text visible" in lower
+        or "not visible" in lower
+        or lower.startswith("i'm sorry")
+        or lower.startswith("sorry")
+        or "cannot see any handwriting" in lower
+    ):
+        return ""
     parts = [normalize_line_text(part) for part in cleaned.splitlines() if part.strip()]
     if not parts:
         return ""
@@ -237,12 +247,20 @@ _PAGE_CHROME = {
 
 
 def is_page_chrome_line(text: str) -> bool:
-    """True for leftover Wikipedia/UI strings the decoder sometimes appends."""
+    """True for leftover Wikipedia/UI strings or VLM refusal apologies."""
     cleaned = normalize_line_text(text or "")
     if not cleaned:
         return True
     lower = cleaned.lower().rstrip(".,!?;:")
-    if lower in _PAGE_CHROME or lower.startswith("4th century"):
+    if (
+        lower in _PAGE_CHROME
+        or lower.startswith("4th century")
+        or lower.startswith("i'm sorry")
+        or lower.startswith("sorry")
+        or "no handwriting" in lower
+        or "no text visible" in lower
+        or "cannot see any handwriting" in lower
+    ):
         return True
     if "this article" in lower or "what links here" in lower:
         return True

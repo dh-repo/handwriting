@@ -141,11 +141,15 @@ logger = logging.getLogger("handwriting_backend.engine")
 
 
 def is_sliver_bbox(bbox: List[float]) -> bool:
-    """True for leftover segmenter crumbs too thin to be a handwritten line."""
+    """True for leftover segmenter crumbs too thin or top/bottom binder holes."""
     if len(bbox) < 4:
         return True
     ymin, xmin, ymax, xmax = [float(value) for value in bbox[:4]]
-    return (xmax - xmin) < 0.05 or (ymax - ymin) < 0.03
+    if (xmax - xmin) < 0.05 or (ymax - ymin) < 0.03:
+        return True
+    if ymax <= 0.075:
+        return True
+    return False
 
 
 def is_page_echo(text: str, page_so_far: str) -> bool:
