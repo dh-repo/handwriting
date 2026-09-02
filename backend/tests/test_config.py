@@ -19,11 +19,13 @@ def test_default_settings() -> None:
     assert settings.PORT == 8000
     assert settings.HOST == "0.0.0.0"
     assert settings.MODEL_NAME_OR_PATH == "microsoft/trocr-large-handwritten"
+    assert settings.HTR_MODEL_ID == "microsoft/trocr-large-handwritten"
+    assert settings.HTR_NUM_BEAMS == 4
     assert settings.USE_FP16 is False
     assert settings.DEFAULT_DPI == 300
     assert settings.MAX_IMAGE_SIZE_MB >= 25
     assert settings.ENABLE_RESCORER is True
-    assert settings.BEAM_WIDTH == 5
+    assert settings.BEAM_WIDTH == 4
     assert settings.NUM_RETURN_SEQUENCES == 5
     assert settings.VOCAB_DIR == "data/reference_handwriting/vocabularies"
     assert settings.RESCORER_WEIGHT == 1.0
@@ -130,4 +132,9 @@ def test_resolve_model_path(tmp_path: pytest.TempPathFactory) -> None:
         STAGE2_CHECKPOINT_PATH=str(stage2_dir),
     )
     assert s3.resolve_model_path() == str(custom_model_dir)
+
+
+def test_resolve_model_path_rejects_failed_stage1_run() -> None:
+    with pytest.raises(ValueError, match="stage1"):
+        Settings(MODEL_NAME_OR_PATH="microsoft/trocr-base-stage1").resolve_model_path()
 

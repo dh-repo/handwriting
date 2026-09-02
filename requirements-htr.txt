@@ -1,0 +1,20 @@
+# Offline line-level HTR (design doc 29 Aug 2026). Pin after the first green run.
+torch
+torchvision
+transformers
+datasets
+accelerate
+evaluate
+jiwer
+sentencepiece
+pillow
+albumentations
+tensorboard
+safetensors
+pyyaml
+onnx
+onnxruntime
+optimum
+fastapi
+uvicorn
+python-multipart

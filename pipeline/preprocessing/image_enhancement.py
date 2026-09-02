@@ -551,6 +551,29 @@ def normalize_tensor(
     return np.transpose(normalized, (2, 0, 1))
 
 
+def suppress_ruling_lines(image: np.ndarray) -> np.ndarray:
+    """Inpaint long notebook rules without erasing vertical pen strokes."""
+    rgb = to_rgb(image)
+    gray = to_grayscale(rgb)
+    height, width = gray.shape[:2]
+    if height < 8 or width < 32:
+        return rgb
+
+    inverted = cv2.subtract(255, gray)
+    rule_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (max(25, int(width * 0.28)), 1))
+    opened = cv2.morphologyEx(inverted, cv2.MORPH_OPEN, rule_kernel)
+    ruling = (opened > 28).astype(np.uint8) * 255
+    vertical = cv2.morphologyEx(
+        inverted,
+        cv2.MORPH_OPEN,
+        cv2.getStructuringElement(cv2.MORPH_RECT, (1, max(5, height // 6))),
+    )
+    ruling[vertical > 36] = 0
+    if int(np.count_nonzero(ruling)) < max(20, width // 4):
+        return rgb
+    return cv2.inpaint(rgb, ruling, 3, cv2.INPAINT_TELEA)
+
+
 # ---------------------------------------------------------------------------
 # High-Level ImageEnhancer Class Wrapper
 # ---------------------------------------------------------------------------

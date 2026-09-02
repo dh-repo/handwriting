@@ -4,7 +4,7 @@
 **Audience**: diligence, ML review, clinical safety
 **Hardware**: Apple Silicon (M3 Ultra) for local inference and LoRA. Not a pretrain cluster.
 **App shell**: thin Next.js host. Current deploy is Azure Container Apps. Vercel is allowed for the shell only. Inference never lives there.
-**Domains**: three products on one pipeline. Signatures are out.
+**Domains**: three HTR products on one pipeline, plus a general-purpose signature lane. Medical / physician signatures are not a product.
 
 North-star spec. The public face is [README.md](README.md). Azure inventory is [PROJECT.md](PROJECT.md).
 
@@ -165,15 +165,17 @@ That cascade is the entire 10x. The three products share it.
 
 1. **General** — private notes, letters, unconstrained cursive. Local MPS/MLX. Darkroom UI.
 2. **Historical** — manuscripts and registries (Belfort, POPP, Esposalles). Same engine, historical domain pack.
-3. **Clinical** — prescriptions and notes, only after a safety gate that can say no. Domain pack + LASA / low-confidence refuse + human. Optional VLM referee is opt-in. PHI default is off-box-never.
+3. **Clinical** — prescriptions and notes, only after a safety gate that can say no. Domain pack + LASA / low-confidence refuse + human. Optional VLM referee is opt-in. PHI default is off-box-never. This lane is text. It is not a medical-signature product.
 
-### 6.1 Signatures are a non-goal for HTR
+### 6.1 General-purpose signatures
 
-Running a signature crop through TrOCR and hashing the JPEG is not verification. TrOCR will emit a hallucinated name or garbage. SHA-256 is a file checksum. Useful for chain of custody. It does not attest a hand.
+Signatures in this product are ordinary marks: letters, contracts, forms, personal sign-offs. Not physician credentials. Not DEA/NPI theater. Not a prescription garnish.
 
-[`SignatureInspector.tsx`](frontend/src/components/SignatureInspector.tsx) hashes transcribed text and invents an entropy score from character-set variance. That is theater until there is a defined estimator and a test set.
+HTR may **propose candidates** when the line contains general sign-off language (`signature`, `signed`, `witness`, `authorized sign`). It must not treat `Dr.`, `MD`, `NPI`, or “last line on the page” as a signature.
 
-A future matcher needs reference versus questioned, calibrated FAR/FRR, and a human decision record. It is not this pipeline.
+TrOCR on a crop is not verification. It will emit a hallucinated name or garbage. A file checksum is chain of custody, not a hand. [`SignatureInspector.tsx`](frontend/src/components/SignatureInspector.tsx) is a review list: candidate, kind, line confidence, **review required**. No “verified seal.” No “biometric entropy.”
+
+A later matcher (reference vs questioned, calibrated FAR/FRR, human decision record) is the real signature product. Until that exists, the UI may only surface candidates.
 
 ---
 
@@ -307,6 +309,7 @@ Latency and memory only with named hardware and an explicit **target, not measur
 ## 13. Non-goals
 
 - One 558M fortress for all domains
+- Medical / physician / prescriber signatures as a product
 - Signature verification via TrOCR, SHA-256 of a JPEG, or “biometric entropy” on a static scan
 - Training foundation models on a Studio
 - Shipping Rx claims before Rx data
@@ -329,3 +332,5 @@ Latency and memory only with named hardware and an explicit **target, not measur
 - CWE-1236 sanitization on spreadsheet export
 - LoRA adaptation on the Studio
 - A cascade that can refuse
+- General-purpose signature candidates with a human decision, not a medical seal
+- L1 retrain on line-level real scans only (`microsoft/trocr-small-handwritten`, not another 400k word+line Large mix). The prior Large run at 96.6% CER is retired as a training result.

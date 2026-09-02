@@ -38,6 +38,7 @@ export interface DocumentViewerProps {
   isInverted?: boolean;
   onToggleInvert?: () => void;
   contrastBoost?: number;
+  signatureLineIds?: string[];
   className?: string;
 }
 
@@ -59,6 +60,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   isInverted = false,
   onToggleInvert,
   contrastBoost = 1.0,
+  signatureLineIds = [],
   className = '',
 }) => {
   const [scale, setScale] = useState<number>(1.0);
@@ -497,22 +499,31 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               {page.lines.map((line: LineItem, lineIdx: number) => {
                 const isLineSelected = selectedLineId === line.line_id;
                 const isLineHovered = hoveredLineId === line.line_id;
+                const isSignatureCandidate = signatureLineIds.includes(line.line_id);
                 const colorStyle = getConfidenceColor(line.confidence);
                 const rect = bboxToSvgRect(line.bbox, docWidth, docHeight);
+                const stroke = isLineSelected
+                  ? '#06b6d4'
+                  : isLineHovered
+                    ? '#38bdf8'
+                    : isSignatureCandidate
+                      ? '#f59e0b'
+                      : colorStyle.stroke;
 
                 return (
                   <g key={line.line_id} data-testid={`svg-line-group-${line.line_id}`} className="pointer-events-auto">
                     {/* Line Bounding Box */}
                     <rect
                       data-testid={`svg-line-rect-${line.line_id}`}
+                      data-signature-candidate={isSignatureCandidate ? 'true' : 'false'}
                       x={rect.x}
                       y={rect.y}
                       width={rect.width}
                       height={rect.height}
                       rx={4}
                       fill={showConfidenceHeatmap ? colorStyle.fill : "rgba(99, 102, 241, 0.08)"}
-                      stroke={isLineSelected ? "#06b6d4" : isLineHovered ? "#38bdf8" : colorStyle.stroke}
-                      strokeWidth={isLineSelected ? 3 : isLineHovered ? 2.5 : 1.5}
+                      stroke={stroke}
+                      strokeWidth={isLineSelected ? 3 : isLineHovered || isSignatureCandidate ? 2.5 : 1.5}
                       strokeDasharray={line.confidence < 0.70 ? "4 2" : undefined}
                       className="cursor-pointer transition-all duration-150"
                       onClick={(e) => {

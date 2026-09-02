@@ -1,8 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { DocumentOCRResult, PageResult, LineItem, WordToken } from '../types/ocr';
+import { DocumentOCRResult, PageResult, LineItem, WordToken, SignatureDecision } from '../types/ocr';
 import { SAMPLE_PRESETS } from '../lib/sampleDocuments';
+import { findSignatureCandidates, upsertSignatureReview } from '../lib/signatureCandidates';
 
 export interface DocumentContextType {
   // Document state
@@ -63,6 +64,7 @@ export interface DocumentContextType {
   canUndo: boolean;
   canRedo: boolean;
   loadPreset: (presetId: string) => void;
+  setSignatureDecision: (lineId: string, decision: SignatureDecision) => void;
 }
 
 const DocumentContext = createContext<DocumentContextType | null>(null);
@@ -263,6 +265,21 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
     }
   }, [setDocument]);
 
+  const setSignatureDecision = useCallback((lineId: string, decision: SignatureDecision) => {
+    if (!document || !activePage) return;
+    const candidate = findSignatureCandidates(activePage).find((row) => row.lineId === lineId);
+    if (!candidate) return;
+    const newDoc = structuredClone(document);
+    newDoc.signature_reviews = upsertSignatureReview(newDoc.signature_reviews ?? [], {
+      page_number: activePage.page_number,
+      line_id: lineId,
+      kind: candidate.kind,
+      decision,
+      decided_at: decision === 'pending' ? undefined : new Date().toISOString(),
+    });
+    pushDocumentUpdate(newDoc);
+  }, [document, activePage, pushDocumentUpdate]);
+
   const value = useMemo(
     () => ({
       document,
@@ -312,6 +329,7 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
       canUndo: undoStack.length > 0,
       canRedo: redoStack.length > 0,
       loadPreset,
+      setSignatureDecision,
     }),
     [
       document,
@@ -346,6 +364,7 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
       undoStack.length,
       redoStack.length,
       loadPreset,
+      setSignatureDecision,
     ]
   );
 

@@ -5,10 +5,13 @@ Configuration management using Pydantic v2 BaseSettings.
 
 from __future__ import annotations
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Literal, Optional
 import torch
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from backend.app.ship_gate import assert_shippable_checkpoint
 
 
 class Settings(BaseSettings):
@@ -30,6 +33,11 @@ class Settings(BaseSettings):
         default="microsoft/trocr-large-handwritten",
         description="HuggingFace model identifier or local checkpoint path",
     )
+    HTR_MODEL_ID: str = Field(
+        default="microsoft/trocr-large-handwritten",
+        description="Teklia-proven line-HTR checkpoint for POST /v1/recognize-line",
+    )
+    HTR_NUM_BEAMS: int = Field(default=4, ge=1, le=16, description="Beam width for line-HTR serve")
     STAGE2_CHECKPOINT_PATH: Optional[str] = Field(
         default="checkpoints/stage2_doctor_specialization/best_model",
         description="Stage 2 Doctor fine-tuned model path",
@@ -54,8 +62,24 @@ class Settings(BaseSettings):
 
     # Beam Search & Rescorer settings
     ENABLE_RESCORER: bool = Field(default=True, description="Enable RxNorm beam rescoring")
-    BEAM_WIDTH: int = Field(default=1, ge=1, le=16, description="Beam search width (K candidates)")
-    NUM_RETURN_SEQUENCES: int = Field(default=1, ge=1, le=16, description="Candidate beam count")
+    ENABLE_VLM_REFINE: bool = Field(
+        default=True,
+        description="Second-pass VLM (MLX on Apple Silicon or Azure OpenAI in Cloud) on line crops",
+    )
+    AZURE_OPENAI_ENDPOINT: Optional[str] = Field(
+        default=None,
+        description="Azure OpenAI endpoint for cloud VLM refinement",
+    )
+    AZURE_OPENAI_API_KEY: Optional[str] = Field(
+        default=None,
+        description="Azure OpenAI API key for cloud VLM refinement",
+    )
+    AZURE_OPENAI_DEPLOYMENT: str = Field(
+        default="gpt-4o",
+        description="Azure OpenAI deployment name",
+    )
+    BEAM_WIDTH: int = Field(default=4, ge=1, le=16, description="Beam search width (K candidates)")
+    NUM_RETURN_SEQUENCES: int = Field(default=5, ge=1, le=16, description="Candidate beam count")
     VOCAB_DIR: str = Field(
         default="data/reference_handwriting/vocabularies",
         description="Path to pharmaceutical and clinical vocabularies directory",
@@ -77,7 +101,7 @@ class Settings(BaseSettings):
     MAX_SAFE_MG: float = Field(default=4000.0, description="Upper bound for realistic single dose")
 
     # Apple Silicon MPS & Batching settings
-    LINE_BATCH_SIZE: int = Field(default=16, ge=1, le=64, description="Line crop micro-batch size")
+    LINE_BATCH_SIZE: int = Field(default=8, ge=1, le=64, description="Line crop micro-batch size")
     MPS_HIGH_WATERMARK_RATIO: float = Field(default=0.85, description="MPS memory high watermark ratio")
     MPS_EMPTY_CACHE_INTERVAL: int = Field(default=10, description="Steps between empty_cache calls")
 
@@ -131,11 +155,8 @@ class Settings(BaseSettings):
         4. Stage 1 general adaptation checkpoint
         5. Configured MODEL_NAME_OR_PATH or HuggingFace ID
         """
-        from pathlib import Path
-
-        # If explicit path is configured and exists on disk
         if self.MODEL_NAME_OR_PATH and Path(self.MODEL_NAME_OR_PATH).exists():
-            return self.MODEL_NAME_OR_PATH
+            return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH)
 
         candidates = [
             self.STAGE2_CHECKPOINT_PATH,
@@ -146,13 +167,13 @@ class Settings(BaseSettings):
             if cand:
                 p = Path(cand)
                 if p.exists():
-                    return str(p)
+                    return assert_shippable_checkpoint(str(p))
                 if Path(f"{cand}_hf").exists():
-                    return f"{cand}_hf"
+                    return assert_shippable_checkpoint(f"{cand}_hf")
                 if Path(f"{cand}.pt").exists():
-                    return f"{cand}.pt"
+                    return assert_shippable_checkpoint(f"{cand}.pt")
 
-        return self.MODEL_NAME_OR_PATH or "microsoft/trocr-large-handwritten"
+        return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH or "microsoft/trocr-large-handwritten")
 
 
 

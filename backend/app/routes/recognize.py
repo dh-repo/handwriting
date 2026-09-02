@@ -6,25 +6,25 @@ Synchronous handwriting recognition endpoint for image and PDF documents.
 from __future__ import annotations
 import asyncio
 import base64
-from datetime import datetime, timezone
-import json
+import io
 import logging
-from typing import Any, Dict, Optional
+import time
+from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
     Depends,
     File,
-    Form,
     HTTPException,
     Query,
     Request,
     UploadFile,
     status,
 )
-from PIL import UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 
 from backend.app.config import Settings, get_settings
+from backend.app.ship_gate import assert_shippable_checkpoint
 from backend.app.engine import (
     CorruptDocumentError,
     DocumentLoadingError,
@@ -43,6 +43,40 @@ from backend.app.schemas import (
 router = APIRouter()
 logger = logging.getLogger("handwriting_backend.recognize")
 
+LINE_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+LINE_MIN_DIM = 16
+
+
+@router.post("/recognize-line")
+async def recognize_line_crop(
+    file: UploadFile = File(...),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """Line crop in, Unicode string out. No page layout."""
+    raw = await file.read()
+    if len(raw) > LINE_MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="file larger than 10 MB")
+    try:
+        image = Image.open(io.BytesIO(raw)).convert("RGB")
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"not an image: {exc}") from exc
+    if min(image.size) < LINE_MIN_DIM:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="crop smaller than 16 px")
+
+    engine = get_engine()
+    model_id = assert_shippable_checkpoint(settings.HTR_MODEL_ID or engine.model_name)
+    if engine.mode == "mock" or engine.model is None or engine.processor is None:
+        return {"text": "", "ms": 0.0, "model_id": model_id}
+
+    t0 = time.perf_counter()
+    text = await asyncio.to_thread(_decode_line_crop, engine, image)
+    ms = (time.perf_counter() - t0) * 1000.0
+    return {"text": text, "ms": round(ms, 2), "model_id": model_id}
+
+
+def _decode_line_crop(engine: InferenceEngine, image: Image.Image) -> str:
+    return engine.recognize_single_crop(image, num_beams=4)
+
 
 @router.post("/recognize", response_model=RecognitionResponse)
 async def recognize_document(
@@ -53,8 +87,8 @@ async def recognize_document(
     binarization_method: str = Query(default="sauvola"),
     extract_words: bool = Query(default=True),
     dpi: int = Query(default=300),
-    beam_width: int = Query(default=5, ge=1, le=16),
-    rescore: bool = Query(default=True),
+    beam_width: int = Query(default=4, ge=1, le=16),
+    rescore: bool = Query(default=False),
     settings: Settings = Depends(get_settings),
 ) -> RecognitionResponse:
     """

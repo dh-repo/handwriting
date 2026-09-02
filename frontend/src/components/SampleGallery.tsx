@@ -24,7 +24,7 @@ export const SAMPLE_CARD_CONFIGS = [
   {
     id: 'sample_legal_contract',
     title: 'Legal Contract & Signature',
-    description: 'Legal agreement clauses with date stamps and cursive signature verification.',
+    description: 'Agreement clauses with dates and a general-purpose sign-off line for human review.',
     category: 'Legal / Signatures',
     difficulty: 'Signatures',
     icon: <Scale className="w-5 h-5 text-indigo-400" />,

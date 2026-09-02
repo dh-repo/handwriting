@@ -2,11 +2,11 @@
   "sample_id": "sample_messy_cursive",
   "width": 800,
   "height": 600,
-  "full_text": "Patient reported recurring headaches since Tuesday\nNeurological exam unremarkable but symptoms continue\nRecommend MRI scan of brain and cervical spine\nReview results in follow-up appointment next week",
+  "full_text": "Patient reported recurring headaches si\nNeurological exam unremarkable but s\nrecommend MRI scan of brain and ce\nReview results in follow-up appointme",
   "lines": [
     {
       "line_index": 0,
-      "text": "Patient reported recurring headaches since Tuesday",
+      "text": "Patient reported recurring headaches si",
       "bbox": [
         0.21667,
         0.12375,
@@ -16,7 +16,7 @@
     },
     {
       "line_index": 1,
-      "text": "Neurological exam unremarkable but symptoms continue",
+      "text": "Neurological exam unremarkable but s",
       "bbox": [
         0.405,
         0.125,
@@ -26,7 +26,7 @@
     },
     {
       "line_index": 2,
-      "text": "Recommend MRI scan of brain and cervical spine",
+      "text": "recommend MRI scan of brain and ce",
       "bbox": [
         0.58167,
         0.1175,
@@ -36,7 +36,7 @@
     },
     {
       "line_index": 3,
-      "text": "Review results in follow-up appointment next week",
+      "text": "Review results in follow-up appointme",
       "bbox": [
         0.76667,
         0.1175,

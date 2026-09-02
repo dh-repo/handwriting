@@ -3,17 +3,22 @@ backend/tests/test_engine.py
 Unit tests for InferenceEngine, preprocessing integration, and recognition execution.
 """
 
+from pathlib import Path
+
 import pytest
 
 from backend.app.engine import (
     CorruptDocumentError,
     EmptyDocumentError,
     InferenceEngine,
+    _finalize_page_lines,
     get_engine,
+    is_page_echo,
+    is_sliver_bbox,
     reset_engine,
     set_engine,
 )
-from backend.app.schemas import RecognitionOptions, RecognitionResponse
+from backend.app.schemas import LineBox, RecognitionOptions, RecognitionResponse
 
 
 def test_engine_mock_mode_initialization() -> None:
@@ -124,7 +129,7 @@ def test_engine_rescorer_initialization() -> None:
     """Verify BeamRescorer is initialized with RxNorm lexicon and default parameters."""
     engine = InferenceEngine(execution_mode="mock")
     assert engine.enable_rescorer is True
-    assert engine.beam_width == 5
+    assert engine.beam_width == 4
     assert engine.rescorer is not None
     assert hasattr(engine.rescorer, "trie")
     assert len(engine.rescorer.trie) > 0
@@ -169,6 +174,115 @@ def test_engine_polymorphic_loading_fallback() -> None:
     )
     assert engine.mode == "mock"
     assert engine.model is None
+
+
+def test_sliver_bbox_and_page_echo() -> None:
+    assert is_sliver_bbox([0.869, 0.00365, 0.998, 0.0198])
+    assert not is_sliver_bbox([0.038, 0.015, 0.375, 0.996])
+    prior = "Sir Roy's United Federal Party is boycotting the London talks on the Protectorate's s future."
+    assert is_page_echo(prior, prior)
+    assert not is_page_echo("future.", prior)
+    assert not is_page_echo(
+        "patient reported recurring headaches si .", "n"
+    )
+
+
+def test_finalize_drops_full_sentence_echo() -> None:
+    lines = [
+        LineBox(line_id="p1_l1", text="When Mr. Brown sat down Labour MPs cheered for", confidence=0.9, bbox=[0.1, 0.1, 0.2, 0.9]),
+        LineBox(line_id="p1_l2", text="a full minute - and even his different opponents", confidence=0.9, bbox=[0.2, 0.1, 0.3, 0.9]),
+        LineBox(line_id="p1_l3", text="on defence joined in", confidence=0.9, bbox=[0.3, 0.1, 0.4, 0.9]),
+        LineBox(
+            line_id="p1_l4",
+            text="When Mr. Brown sat down Labour MPs cheered for a full minute - and even his different opponents on defence joined in.",
+            confidence=0.8,
+            bbox=[0.4, 0.1, 0.5, 0.9],
+        ),
+    ]
+    _finalize_page_lines(lines)
+    assert len(lines) == 3
+    assert "When Mr. Brown sat down Labour MPs cheered for a full minute" not in lines[-1].text
+
+
+def test_finalize_drops_chrome_and_repeated_long_lines() -> None:
+    lines = [
+        LineBox(line_id="p1_l1", text="Sir Roy's United Federal Party is boycotting the London talks.", confidence=0.9, bbox=[0.1, 0.1, 0.2, 0.9]),
+        LineBox(line_id="p1_l2", text="Sir Roy's United Federal Party is boycotting the London talks.", confidence=0.8, bbox=[0.2, 0.1, 0.3, 0.9]),
+        LineBox(line_id="p1_l3", text="I - I", confidence=0.4, bbox=[0.92, 0.03, 0.99, 0.17]),
+        LineBox(line_id="p1_l4", text="Navigation menu", confidence=0.5, bbox=[0.8, 0.1, 0.9, 0.4]),
+        LineBox(line_id="p1_l5", text="# U.V.O.", confidence=0.4, bbox=[0.9, 0.1, 0.95, 0.3]),
+        LineBox(line_id="p1_l6", text="Dick D.", confidence=0.9, bbox=[0.7, 0.1, 0.8, 0.3]),
+    ]
+    _finalize_page_lines(lines)
+    assert [line.text for line in lines] == [
+        "Sir Roy's United Federal Party is boycotting the London talks."
+    ]
+
+
+def test_finalize_drops_perioded_chrome_before_final_stop() -> None:
+    lines = [
+        LineBox(line_id="p1_l1", text="The Conference will meet", confidence=0.9, bbox=[0.1, 0.1, 0.2, 0.9]),
+        LineBox(line_id="p1_l2", text="to discuss the function of a proposed House", confidence=0.9, bbox=[0.2, 0.1, 0.3, 0.9]),
+        LineBox(line_id="p1_l3", text="of chiefs", confidence=0.9, bbox=[0.3, 0.1, 0.4, 0.9]),
+        LineBox(line_id="p1_l4", text="Navigation menu.", confidence=0.4, bbox=[0.8, 0.1, 0.9, 0.4]),
+    ]
+    _finalize_page_lines(lines)
+    assert [line.text for line in lines] == [
+        "The conference will meet",
+        "to discuss the function of a proposed House",
+        "of Chiefs.",
+    ]
+
+
+def test_finalize_drops_wrapped_name_periods_and_keeps_signature() -> None:
+    lines = [
+        LineBox(line_id="p1_l1", text="and he is to be backed by Mr. Will.", confidence=0.9, bbox=[0.1, 0.1, 0.2, 0.9]),
+        LineBox(line_id="p1_l2", text="Griffiths, MP for Manchester Exchange.", confidence=0.9, bbox=[0.2, 0.1, 0.3, 0.9]),
+        LineBox(line_id="p1_l3", text="does a lot of the work for me", confidence=0.9, bbox=[0.5, 0.1, 0.6, 0.9]),
+        LineBox(line_id="p1_l4", text="Dick D.", confidence=0.9, bbox=[0.6, 0.1, 0.7, 0.3]),
+    ]
+    _finalize_page_lines(lines)
+    texts = [line.text for line in lines]
+    assert "Will. Griffiths" not in " ".join(texts)
+    assert texts[-2] == "does a lot of the work for me."
+    assert texts[-1] == "Dick D."
+
+
+def test_finalize_drops_news_page_signature_leftover() -> None:
+    lines = [
+        LineBox(line_id="p1_l1", text="guests present, Mr. Kennedy and Mr. Macmillan met three more", confidence=0.9, bbox=[0.1, 0.1, 0.2, 0.9]),
+        LineBox(line_id="p1_l2", text="times yesterday", confidence=0.9, bbox=[0.2, 0.1, 0.3, 0.9]),
+        LineBox(line_id="p1_l3", text="Waugh N.", confidence=0.4, bbox=[0.3, 0.1, 0.4, 0.3]),
+    ]
+    _finalize_page_lines(lines)
+    assert not any("Waugh" in line.text for line in lines)
+
+
+def test_finalize_keeps_name_wrap_after_mr() -> None:
+    lines = [
+        LineBox(line_id="p1_l1", text="telephoned his chief a report on his talks with Mr.", confidence=0.9, bbox=[0.1, 0.1, 0.2, 0.9]),
+        LineBox(line_id="p1_l2", text="Macmillan at Chequers.", confidence=0.9, bbox=[0.2, 0.1, 0.3, 0.9]),
+    ]
+    _finalize_page_lines(lines)
+    assert "Chequers" in " ".join(line.text for line in lines)
+
+
+def test_finalize_drops_unrelated_tail_after_finished_sentence() -> None:
+    lines = [
+        LineBox(line_id="p1_l1", text="but no big changes should be expected in the political situation.", confidence=0.9, bbox=[0.1, 0.1, 0.2, 0.9]),
+        LineBox(line_id="p1_l2", text="I'll be confused.", confidence=0.4, bbox=[0.3, 0.1, 0.4, 0.3]),
+        LineBox(line_id="p1_l3", text="4th Century.", confidence=0.4, bbox=[0.4, 0.1, 0.5, 0.3]),
+    ]
+    _finalize_page_lines(lines)
+    assert [line.text for line in lines] == [
+        "but no big changes should be expected in the political situation."
+    ]
+
+
+def test_engine_does_not_force_sdpa_after_load() -> None:
+    """SDPA after load makes TrOCR-Large generate loop on MPS/CPU. Do not reintroduce."""
+    source = Path(__file__).resolve().parents[1] / "app" / "engine.py"
+    assert '_attn_implementation = "sdpa"' not in source.read_text()
 
 
 def test_engine_recognize_with_rescorer_options(sample_image_bytes: bytes) -> None:

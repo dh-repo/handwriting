@@ -20,6 +20,7 @@ from pipeline.preprocessing.image_enhancement import (
     to_rgb,
     to_grayscale,
     normalize_tensor,
+    suppress_ruling_lines,
 )
 
 
@@ -160,6 +161,16 @@ def test_normalize_tensor():
     tensor = normalize_tensor(img)
     assert tensor.shape == (3, 64, 128)
     assert tensor.dtype == np.float32
+
+
+def test_suppress_ruling_lines_keeps_vertical_strokes():
+    img = np.full((48, 220, 3), 250, dtype=np.uint8)
+    img[24, :] = (40, 40, 40)
+    cv2.rectangle(img, (30, 10), (42, 38), (20, 30, 90), -1)
+    cleaned = suppress_ruling_lines(img)
+    assert cleaned.shape == img.shape
+    assert int(cleaned[24, 8].mean()) > 180
+    assert int(cleaned[24, 36].mean()) < 80
 
 
 def test_image_enhancer_class_wrapper(synthetic_multiline_image: np.ndarray):

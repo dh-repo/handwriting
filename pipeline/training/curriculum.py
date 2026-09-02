@@ -414,8 +414,9 @@ class MultiStageCurriculumTrainer:
         for stage_epoch in range(1, stage_cfg.num_epochs + 1):
             self.global_epoch += 1
             self.model.train()
-            total_loss = 0.0
-            accum_loss = 0.0
+            epoch_loss_t = None
+            accum_loss_t = None
+            n_opt = 0
             optimizer.zero_grad(set_to_none=True)
 
             if use_prefetcher:
@@ -455,18 +456,13 @@ class MultiStageCurriculumTrainer:
                         loss = raw_loss / max(1, stage_cfg.gradient_accumulation_steps)
                     t_fwd = time.perf_counter() - t_fwd_start
 
-                    if torch.isnan(loss) or torch.isinf(loss):
-                        optimizer.zero_grad(set_to_none=True)
-                        t_data_start = time.perf_counter()
-                        continue
-
                     t_bwd_start = time.perf_counter()
                     if self.scaler is not None and self.scaler.is_enabled():
                         self.scaler.scale(loss).backward()
                     else:
                         loss.backward()
                     t_bwd = time.perf_counter() - t_bwd_start
-                    accum_loss += raw_loss.item()
+                    accum_loss_t = raw_loss.detach() if accum_loss_t is None else accum_loss_t + raw_loss.detach()
 
                     t_opt_start = time.perf_counter()
                     is_opt_step = ((step + 1) % stage_cfg.gradient_accumulation_steps == 0) or ((step + 1) == len(train_loader))
@@ -484,8 +480,11 @@ class MultiStageCurriculumTrainer:
                         scheduler.step()
                         optimizer.zero_grad(set_to_none=True)
                         self.global_step += 1
-                        total_loss += (accum_loss / max(1, (step % stage_cfg.gradient_accumulation_steps + 1)))
-                        accum_loss = 0.0
+                        if accum_loss_t is not None:
+                            step_loss = accum_loss_t / max(1, (step % stage_cfg.gradient_accumulation_steps + 1))
+                            epoch_loss_t = step_loss if epoch_loss_t is None else epoch_loss_t + step_loss
+                            n_opt += 1
+                        accum_loss_t = None
 
                         if self.config.empty_cache_steps > 0 and self.global_step % self.config.empty_cache_steps == 0:
                             if self.device.type == "mps" and hasattr(torch, "mps"):
@@ -509,7 +508,7 @@ class MultiStageCurriculumTrainer:
                 if use_prefetcher and hasattr(data_iter, "close"):
                     data_iter.close()
 
-            epoch_train_loss = total_loss / max(1, steps_per_epoch)
+            epoch_train_loss = float((epoch_loss_t / max(1, n_opt)).item()) if epoch_loss_t is not None else 0.0
 
             # Evaluation
             val_cer, val_wer, val_loss = self._evaluate_stage(val_ds, stage_cfg.eval_batch_size, collator)
@@ -600,7 +599,7 @@ class MultiStageCurriculumTrainer:
                 with autocast_ctx:
                     if labels is not None:
                         outputs = self.model(pixel_values=pixel_values, labels=labels.to(self.device, non_blocking=True))
-                        total_val_loss += outputs.loss.item()
+                        total_val_loss += float(outputs.loss.detach().item())
                     generated_ids = self.model.generate(pixel_values, max_new_tokens=64)
 
                 if hasattr(self.processor, "batch_decode"):

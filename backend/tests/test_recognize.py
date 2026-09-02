@@ -4,8 +4,15 @@ Integration tests for POST /v1/recognize endpoint with multipart and JSON payloa
 """
 
 import base64
-from fastapi.testclient import TestClient
+import io
+from types import MethodType
 
+from fastapi.testclient import TestClient
+from PIL import Image
+import torch
+
+from backend.app.engine import InferenceEngine
+from backend.app.routes.recognize import _decode_line_crop
 from backend.app.schemas import RecognitionResponse
 
 
@@ -104,3 +111,62 @@ def test_recognize_all_formats(
     # WebP
     r4 = client.post("/v1/recognize", files={"file": ("doc.webp", sample_webp_bytes, "image/webp")})
     assert r4.status_code == 200
+
+
+def test_recognize_line_returns_text_ms_model_id(client: TestClient, sample_image_bytes: bytes) -> None:
+    resp = client.post(
+        "/v1/recognize-line",
+        files={"file": ("line.png", sample_image_bytes, "image/png")},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "text" in body
+    assert "ms" in body
+    assert body["model_id"] == "microsoft/trocr-large-handwritten"
+
+
+def test_decode_line_crop_uses_page_generate() -> None:
+    seen: dict[str, object] = {}
+
+    class FakeProc:
+        def __call__(self, images, return_tensors="pt", padding=False):
+            class Out:
+                pixel_values = torch.zeros(1, 3, 16, 16)
+
+            return Out()
+
+        def batch_decode(self, ids, skip_special_tokens=True):
+            return ["hello line"]
+
+    class FakeModel:
+        def generate(self, *args, **kwargs):
+            seen.update(kwargs)
+
+            class Out:
+                sequences = torch.tensor([[0, 1, 2]])
+
+            return Out()
+
+    engine = InferenceEngine.__new__(InferenceEngine)
+    engine.processor = FakeProc()
+    engine.model = FakeModel()
+    engine.device = torch.device("cpu")
+    engine.beam_width = 4
+    engine.use_fp16 = False
+    engine.recognize_single_crop = MethodType(InferenceEngine.recognize_single_crop, engine)
+
+    text = _decode_line_crop(engine, Image.new("RGB", (64, 24), "white"))
+    assert seen.get("num_beams") == 4
+    assert seen.get("max_new_tokens") == 128
+    assert seen.get("num_return_sequences") == 4
+    assert text == "hello line"
+
+
+def test_recognize_line_rejects_tiny_crop(client: TestClient) -> None:
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 8), color="white").save(buf, format="PNG")
+    resp = client.post(
+        "/v1/recognize-line",
+        files={"file": ("tiny.png", buf.getvalue(), "image/png")},
+    )
+    assert resp.status_code == 400

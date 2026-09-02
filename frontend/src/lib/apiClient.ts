@@ -177,6 +177,12 @@ export class ApiClient {
       const proxyFormData = new FormData();
       proxyFormData.append('file', file, name);
       if (options?.model_type) proxyFormData.append('model_type', options.model_type);
+      if (options?.beam_width !== undefined) {
+        proxyFormData.append('beam_width', String(options.beam_width));
+      }
+      if (options?.rescore !== undefined) {
+        proxyFormData.append('rescore', String(options.rescore));
+      }
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);

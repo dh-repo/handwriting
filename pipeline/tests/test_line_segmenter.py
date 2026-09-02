@@ -101,3 +101,70 @@ def test_blank_image_and_single_line():
     assert len(crops_single) == 1
     assert crops_single[0].line_index == 0
     assert 0.0 <= crops_single[0].bbox[0] < crops_single[0].bbox[2] <= 1.0
+
+
+def test_rejects_ruling_and_hole_punch_bands():
+    """Notebook ruling and binder holes must not become TrOCR line crops."""
+    h, w = 240, 400
+    img = np.full((h, w, 3), 245, dtype=np.uint8)
+    binary = np.zeros((h, w), dtype=np.uint8)
+
+    # Thin ruling across an otherwise empty band
+    binary[40, :] = 255
+    img[40, :] = (80, 80, 80)
+
+    # Hole-punch squares along the next empty band
+    for x in range(30, w - 20, 40):
+        cv2.rectangle(binary, (x, 70), (x + 10, 80), 255, -1)
+        cv2.rectangle(img, (x, 70), (x + 10, 80), (20, 20, 20), -1)
+
+    # One real handwritten-like stroke band
+    cv2.rectangle(binary, (40, 150), (340, 178), 255, -1)
+    cv2.rectangle(img, (40, 150), (340, 178), (20, 30, 90), -1)
+
+    crops = LineSegmenter(min_line_height=12, seam_carving=False).segment(img, binary)
+    assert len(crops) == 1
+    ymin, _, ymax, _ = crops[0].bbox
+    assert 0.50 <= ymin < ymax <= 0.90
+
+
+def test_last_line_does_not_swallow_empty_ruled_rows():
+    """Trailing empty notebook rows after a short signature must be cropped away."""
+    h, w = 400, 360
+    img = np.full((h, w, 3), 250, dtype=np.uint8)
+    binary = np.zeros((h, w), dtype=np.uint8)
+
+    for y in range(30, h, 28):
+        binary[y, :] = 255
+        img[y, :] = (90, 90, 90)
+
+    cv2.rectangle(img, (40, 70), (280, 98), (20, 30, 90), -1)
+    cv2.rectangle(binary, (40, 70), (280, 98), 255, -1)
+    cv2.rectangle(img, (40, 150), (160, 176), (20, 30, 90), -1)
+    cv2.rectangle(binary, (40, 150), (160, 176), 255, -1)
+
+    crops = LineSegmenter(min_line_height=12, seam_carving=True).segment(img, binary)
+    assert 1 <= len(crops) <= 3
+    last = crops[-1]
+    assert last.bbox[2] < 0.70, last.bbox
+
+
+def test_leftover_signature_below_last_hpp_peak():
+    """A short signature under the last HPP peak must still become a crop."""
+    h, w = 420, 360
+    img = np.full((h, w, 3), 250, dtype=np.uint8)
+    binary = np.zeros((h, w), dtype=np.uint8)
+    cv2.rectangle(img, (30, 40), (300, 72), (20, 30, 90), -1)
+    cv2.rectangle(binary, (30, 40), (300, 72), 255, -1)
+    cv2.rectangle(img, (30, 110), (310, 142), (20, 30, 90), -1)
+    cv2.rectangle(binary, (30, 110), (310, 142), 255, -1)
+    cv2.rectangle(img, (40, 330), (90, 350), (20, 30, 90), -1)
+    cv2.rectangle(binary, (40, 330), (90, 350), 255, -1)
+    cv2.rectangle(img, (110, 332), (140, 348), (20, 30, 90), -1)
+    cv2.rectangle(binary, (110, 332), (140, 348), 255, -1)
+
+    crops = LineSegmenter(min_line_height=12, seam_carving=False).segment(img, binary)
+    assert len(crops) >= 3
+    assert crops[-1].bbox[0] >= 0.70, crops[-1].bbox
+    signature_crops = [c for c in crops if c.bbox[0] >= 0.70]
+    assert len(signature_crops) == 1, [c.bbox for c in signature_crops]

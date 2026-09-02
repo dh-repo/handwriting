@@ -12,6 +12,7 @@ export function exportDocumentAsJson(doc: DocumentOCRResult): string {
     mean_confidence: doc.mean_confidence ?? doc.overall_confidence ?? 0,
     processing_time_ms: doc.processing_time_ms,
     model_version: doc.model_version || "trocr-mps-v1",
+    signature_reviews: doc.signature_reviews ?? [],
     pages: doc.pages.map((p) => ({
       page_number: p.page_number,
       width: p.width,

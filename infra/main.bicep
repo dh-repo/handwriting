@@ -11,6 +11,10 @@ param frontendAppName string = 'ca-frontend-playground'
 param deployApps bool = false
 param backendImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 param frontendImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
+param azureOpenAiEndpoint string = 'https://oai-playground-6ecfomdadeubk.openai.azure.com/'
+param azureOpenAiDeployment string = 'gpt-4o'
+@secure()
+param azureOpenAiApiKey string = ''
 
 var tags = {
   Project: 'HandwritingAI'
@@ -68,6 +72,16 @@ module backend 'modules/container-app.bicep' = if (deployApps) {
       { name: 'DEVICE', value: 'cpu' }
       { name: 'USE_MOCK_ENGINE', value: 'false' }
       { name: 'VOCAB_DIR', value: '/app/data/reference_handwriting/vocabularies' }
+      // Teklia-proven winner. Never point these at runs/base_iam_v1 (52.5% CER).
+      { name: 'MODEL_NAME_OR_PATH', value: 'microsoft/trocr-large-handwritten' }
+      { name: 'HTR_MODEL_ID', value: 'microsoft/trocr-large-handwritten' }
+      { name: 'HTR_NUM_BEAMS', value: '4' }
+      { name: 'BEAM_WIDTH', value: '4' }
+      { name: 'ENABLE_RESCORER', value: 'false' }
+      { name: 'ENABLE_VLM_REFINE', value: 'true' }
+      { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
+      { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
+      { name: 'AZURE_OPENAI_API_KEY', value: azureOpenAiApiKey }
     ]
     tags: union(tags, { Tier: 'Backend' })
   }

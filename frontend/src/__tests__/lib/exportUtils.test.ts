@@ -19,6 +19,26 @@ describe('exportUtils', () => {
     expect(parsed.pages[0].lines[0].text).toContain('quick brown fox');
     expect(parsed.pages[0].lines[0].words).toHaveLength(9);
     expect(parsed.pages[0].lines[0].bbox).toHaveLength(4);
+    expect(parsed.signature_reviews).toEqual([]);
+  });
+
+  it('exports human signature decisions without calling them a match', () => {
+    const withReview = {
+      ...SAMPLE_CLEAN_CURSIVE,
+      signature_reviews: [
+        {
+          page_number: 1,
+          line_id: 'p1_l1',
+          kind: 'sign_off_line' as const,
+          decision: 'accepted' as const,
+          decided_at: '2026-08-29T00:00:00Z',
+        },
+      ],
+    };
+    const parsed = JSON.parse(exportDocumentAsJson(withReview));
+    expect(parsed.signature_reviews).toHaveLength(1);
+    expect(parsed.signature_reviews[0].decision).toBe('accepted');
+    expect(JSON.stringify(parsed)).not.toMatch(/verified seal|biometric/i);
   });
 
   it('exports plain text with page break delimiters for multi-page documents', () => {

@@ -30,6 +30,11 @@ from pipeline.preprocessing.line_segmenter import LineCrop
 
 logger = logging.getLogger(__name__)
 
+try:
+    _PIL_BILINEAR = Image.Resampling.BILINEAR
+except AttributeError:  # Pillow < 9.1
+    _PIL_BILINEAR = Image.BILINEAR
+
 
 class DummyTokenizer:
     """Lightweight in-memory tokenizer for offline tests with zero network dependencies."""
@@ -190,6 +195,21 @@ def _resolve_image_path(path_str: Optional[Union[str, Path]]) -> Optional[str]:
     return None
 
 
+def _fast_line_pixels(path_str: Optional[Union[str, Path]], height: int, width: int) -> Optional[torch.Tensor]:
+    """Load a line crop with PIL resize, then one CHW float tensor in TrOCR [-1, 1]."""
+    resolved = _resolve_image_path(path_str)
+    if resolved is None:
+        return None
+    with Image.open(resolved) as im:
+        rgb = im.convert("RGB")
+        if rgb.size != (width, height):
+            rgb = rgb.resize((width, height), _PIL_BILINEAR)
+        arr = np.array(rgb, dtype=np.uint8)
+    pixels = torch.from_numpy(arr).permute(2, 0, 1).to(dtype=torch.float32)
+    pixels.mul_(1.0 / 127.5).sub_(1.0)
+    return pixels
+
+
 class OCRDataset(Dataset):
     """
     Map-style PyTorch Dataset for OCR training and evaluation.
@@ -311,6 +331,19 @@ class OCRDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         item = self.samples[idx]
+        if self.transform is None and isinstance(item, tuple) and len(item) >= 2:
+            target_h, target_w = self.target_size
+            pixels = _fast_line_pixels(item[0], target_h, target_w)
+            if pixels is not None:
+                text = str(item[1] or "")
+                sample_id = str(item[2] or "") if len(item) >= 3 else ""
+                writer_id = str(item[3] or "unknown") if len(item) >= 4 else "unknown"
+                return {
+                    "sample_id": sample_id or f"sample_{idx:06d}",
+                    "pixel_values": pixels,
+                    "text": text,
+                    "writer_id": writer_id or "unknown",
+                }
         img = self._extract_image(item)
         text = self._extract_text(item)
         sample_id = self._extract_id(item, idx)
@@ -432,12 +465,14 @@ class OCRDataset(Dataset):
         processor: Optional[Any] = None,
         max_target_length: int = 128,
         is_training: bool = True,
+        categories: Optional[List[str]] = None,
     ) -> OCRDataset:
         """Create OCRDataset from a medical prescription or generic JSON/CSV manifest using ultra-lightweight tuples."""
         manifest_p = Path(manifest_path)
         if not manifest_p.exists():
             raise FileNotFoundError(f"Manifest not found: {manifest_p}")
 
+        allowed = {c.strip() for c in categories} if categories else None
         tuples: List[Tuple[str, str, str, str]] = []
         if manifest_p.suffix == ".jsonl":
             with open(manifest_p, "r", encoding="utf-8", errors="replace") as f:
@@ -446,6 +481,10 @@ class OCRDataset(Dataset):
                     if not line_s:
                         continue
                     data = json.loads(line_s)
+                    if allowed is not None:
+                        category = str(data.get("category") or "")
+                        if category not in allowed:
+                            continue
                     img_p = data.get("image_path") or data.get("relative_image_path") or ""
                     txt = data.get("text") or data.get("transcription") or data.get("full_text") or ""
                     sid = data.get("sample_id") or ""
@@ -819,13 +858,26 @@ class MMapOCRDataset(Dataset):
                     uint8_arr = np.transpose(uint8_arr, (1, 2, 0))
                 images_mmap[i] = uint8_arr
 
-            # Store input_ids
+            # Store input_ids (tuple fast-path leaves tokenization to the collator)
             if "input_ids" in item and item["input_ids"] is not None:
                 ids = item["input_ids"]
                 if isinstance(ids, torch.Tensor):
                     ids_np = ids.detach().cpu().numpy()
                 else:
                     ids_np = np.asarray(ids)
+                cur_len = min(len(ids_np), max_target_length)
+                labels_mmap[i, :cur_len] = ids_np[:cur_len]
+                labels_mmap[i, cur_len:] = pad_id
+            elif item.get("text") and processor is not None:
+                tok = getattr(processor, "tokenizer", processor)
+                encoded = tok(
+                    item.get("text", ""),
+                    max_length=max_target_length,
+                    truncation=True,
+                    padding=False,
+                    return_tensors="pt",
+                )
+                ids_np = encoded.input_ids.squeeze(0).detach().cpu().numpy()
                 cur_len = min(len(ids_np), max_target_length)
                 labels_mmap[i, :cur_len] = ids_np[:cur_len]
                 labels_mmap[i, cur_len:] = pad_id
@@ -936,9 +988,37 @@ class OCRDataCollator:
 
         # Dynamic Token Padding & -100 Label Masking
         has_input_ids = any("input_ids" in item and item["input_ids"] is not None for item in batch)
+        all_have_ids = all("input_ids" in item and item["input_ids"] is not None for item in batch)
         has_texts = any(bool(item.get("text")) for item in batch)
+        max_target_len = self.max_target_length or 128
+        tok = getattr(self.processor, "tokenizer", self.processor) if self.processor is not None else None
 
-        if has_input_ids or (has_texts and self.processor is not None):
+        if all_have_ids:
+            input_ids_list = []
+            for item in batch:
+                ids = item["input_ids"]
+                if not isinstance(ids, torch.Tensor):
+                    ids = torch.tensor(ids, dtype=torch.long)
+                input_ids_list.append(ids)
+            padded_input_ids = torch.nn.utils.rnn.pad_sequence(
+                input_ids_list, batch_first=True, padding_value=self.pad_token_id
+            )
+            if padded_input_ids.shape[1] > max_target_len:
+                padded_input_ids = padded_input_ids[:, :max_target_len]
+        elif has_texts and tok is not None and hasattr(tok, "__call__"):
+            encoded = tok(
+                texts,
+                max_length=max_target_len,
+                truncation=True,
+                padding=True,
+                return_tensors="pt",
+            )
+            padded_input_ids = encoded.input_ids
+            if padded_input_ids.ndim == 1:
+                padded_input_ids = padded_input_ids.unsqueeze(0)
+            if padded_input_ids.shape[1] > max_target_len:
+                padded_input_ids = padded_input_ids[:, :max_target_len]
+        elif has_input_ids or (has_texts and self.processor is not None):
             input_ids_list = []
             for item in batch:
                 if "input_ids" in item and item["input_ids"] is not None:
@@ -946,30 +1026,27 @@ class OCRDataCollator:
                     if not isinstance(ids, torch.Tensor):
                         ids = torch.tensor(ids, dtype=torch.long)
                     input_ids_list.append(ids)
-                elif self.processor is not None:
-                    tok = getattr(self.processor, "tokenizer", self.processor)
-                    if hasattr(tok, "__call__"):
-                        encoded = tok(
-                            item.get("text", ""),
-                            max_length=self.max_target_length or 128,
-                            truncation=True,
-                            padding=False,
-                            return_tensors="pt",
-                        )
-                        input_ids_list.append(encoded.input_ids.squeeze(0))
-                    else:
-                        input_ids_list.append(torch.tensor([self.pad_token_id], dtype=torch.long))
+                elif tok is not None and hasattr(tok, "__call__"):
+                    encoded = tok(
+                        item.get("text", ""),
+                        max_length=max_target_len,
+                        truncation=True,
+                        padding=False,
+                        return_tensors="pt",
+                    )
+                    input_ids_list.append(encoded.input_ids.squeeze(0))
                 else:
                     input_ids_list.append(torch.tensor([self.pad_token_id], dtype=torch.long))
 
-            max_target_len = self.max_target_length or 128
-            # Fast vectorized sequence padding with pad_sequence
             padded_input_ids = torch.nn.utils.rnn.pad_sequence(
                 input_ids_list, batch_first=True, padding_value=self.pad_token_id
             )
             if padded_input_ids.shape[1] > max_target_len:
                 padded_input_ids = padded_input_ids[:, :max_target_len]
+        else:
+            padded_input_ids = None
 
+        if padded_input_ids is not None:
             labels = padded_input_ids.clone()
             labels[padded_input_ids == self.pad_token_id] = -100
             attention_mask = (padded_input_ids != self.pad_token_id).long()

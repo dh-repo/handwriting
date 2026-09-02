@@ -13,6 +13,8 @@ export async function POST(req: Request | NextRequest) {
     let filename = 'upload.png';
     let modelType = 'trocr-handwritten-mps-v1';
     let options: Record<string, unknown> | null = null;
+    let beamWidth = '4';
+    let rescore = 'false';
 
     const contentType = req.headers?.get('content-type') || '';
 
@@ -42,6 +44,14 @@ export async function POST(req: Request | NextRequest) {
         const modelTypeEntry = formData.get('model_type');
         if (typeof modelTypeEntry === 'string') {
           modelType = modelTypeEntry;
+        }
+        const beamWidthEntry = formData.get('beam_width');
+        if (typeof beamWidthEntry === 'string' && beamWidthEntry.length > 0) {
+          beamWidth = beamWidthEntry;
+        }
+        const rescoreEntry = formData.get('rescore');
+        if (typeof rescoreEntry === 'string' && rescoreEntry.length > 0) {
+          rescore = rescoreEntry;
         }
       } catch (formErr: unknown) {
         console.warn('[API /api/recognize] FormData parsing failed:', formErr);
@@ -80,11 +90,14 @@ export async function POST(req: Request | NextRequest) {
           proxyFormData.append('file', file);
           proxyFormData.append('model_type', modelType);
 
-          const qs = new URLSearchParams({ beam_width: '1', rescore: 'true' }).toString();
+          const qs = new URLSearchParams({
+            beam_width: beamWidth,
+            rescore,
+          }).toString();
           response = await fetch(`${backendUrl}/v1/recognize?${qs}`, {
             method: 'POST',
             body: proxyFormData,
-            signal: AbortSignal.timeout(240000), // 240s timeout
+            signal: AbortSignal.timeout(300000), // 300s timeout
           });
         } else {
           const payload = {
@@ -92,11 +105,16 @@ export async function POST(req: Request | NextRequest) {
             filename,
             options,
           };
-          response = await fetch(`${backendUrl}/v1/recognize`, {
+          const optRecord = options ?? {};
+          const qs = new URLSearchParams({
+            beam_width: String(optRecord.beam_width ?? 4),
+            rescore: String(optRecord.rescore ?? false),
+          }).toString();
+          response = await fetch(`${backendUrl}/v1/recognize?${qs}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(240000), // 240s timeout
+            signal: AbortSignal.timeout(300000), // 300s timeout
           });
         }
 

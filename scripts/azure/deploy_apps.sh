@@ -38,7 +38,7 @@ if [[ "${SKIP_BUILD}" != "true" ]]; then
   mkdir -p "${STAGING_DIR}/backend" "${STAGING_DIR}/pipeline" "${STAGING_DIR}/data/reference_handwriting"
 
   cp -r "${REPO_ROOT}/backend/app" "${REPO_ROOT}/backend/pyproject.toml" "${REPO_ROOT}/backend/__init__.py" "${STAGING_DIR}/backend/"
-  cp -r "${REPO_ROOT}/pipeline/preprocessing" "${REPO_ROOT}/pipeline/rescorer" "${REPO_ROOT}/pipeline/__init__.py" "${STAGING_DIR}/pipeline/"
+  cp -r "${REPO_ROOT}/pipeline/preprocessing" "${REPO_ROOT}/pipeline/rescorer" "${REPO_ROOT}/pipeline/training" "${REPO_ROOT}/pipeline/__init__.py" "${STAGING_DIR}/pipeline/"
   cp -r "${REPO_ROOT}/data/reference_handwriting/vocabularies" "${STAGING_DIR}/data/reference_handwriting/"
   cp "${REPO_ROOT}/README.md" "${STAGING_DIR}/"
   cp "${REPO_ROOT}/backend/Dockerfile" "${STAGING_DIR}/Dockerfile"
@@ -88,6 +88,10 @@ for app in "${BACKEND_APP_NAME}" "${FRONTEND_APP_NAME}"; do
     --identity system
 done
 
+AZURE_OPENAI_ENDPOINT="${AZURE_OPENAI_ENDPOINT:-https://oai-playground-6ecfomdadeubk.openai.azure.com/}"
+AZURE_OPENAI_DEPLOYMENT="${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}"
+AZURE_OPENAI_API_KEY="${AZURE_OPENAI_API_KEY:-$(az cognitiveservices account keys list -g rg-ops-copilot-playground -n oai-playground-6ecfomdadeubk --query key1 -o tsv 2>/dev/null || true)}"
+
 az deployment group create \
   --resource-group "${RESOURCE_GROUP}" \
   --template-file "${REPO_ROOT}/infra/main.bicep" \
@@ -98,7 +102,10 @@ az deployment group create \
     environmentName="${ACA_ENV_NAME}" \
     deployApps=true \
     backendImage="${BACKEND_IMAGE}" \
-    frontendImage="${FRONTEND_IMAGE}"
+    frontendImage="${FRONTEND_IMAGE}" \
+    azureOpenAiEndpoint="${AZURE_OPENAI_ENDPOINT}" \
+    azureOpenAiDeployment="${AZURE_OPENAI_DEPLOYMENT}" \
+    azureOpenAiApiKey="${AZURE_OPENAI_API_KEY}"
 
 az acr update --name "${ACR_NAME}" --admin-enabled false >/dev/null
 

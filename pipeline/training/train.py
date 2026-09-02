@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Subset
 from transformers import (
     AutoProcessor,
     AutoTokenizer,
@@ -106,6 +106,14 @@ def get_autocast_context(device: torch.device, mixed_precision: str = "none"):
         if mp == "bf16":
             return torch.autocast(device_type="cpu", dtype=torch.bfloat16, enabled=True)
     return nullcontext()
+
+
+def _limit_dataloader_worker_threads(_worker_id: int) -> None:
+    """Keep DataLoader workers from each spawning a full BLAS thread pool."""
+    try:
+        torch.set_num_threads(1)
+    except Exception:
+        pass
 
 
 def create_tiny_mock_model(
@@ -437,6 +445,9 @@ class TrOCRTrainer:
         if self.train_dataset is None:
             raise ValueError("train_dataset must be provided to execute training.")
 
+        if hasattr(torch, "set_float32_matmul_precision"):
+            torch.set_float32_matmul_precision("high")
+
         num_workers = self.config.num_workers
         if len(self.train_dataset) < 32 and num_workers > 0:
             num_workers = 0
@@ -451,6 +462,7 @@ class TrOCRTrainer:
         }
         if num_workers > 0:
             train_loader_kwargs["persistent_workers"] = self.config.persistent_workers
+            train_loader_kwargs["worker_init_fn"] = _limit_dataloader_worker_threads
             if self.config.prefetch_factor is not None:
                 train_loader_kwargs["prefetch_factor"] = self.config.prefetch_factor
 
@@ -474,7 +486,8 @@ class TrOCRTrainer:
             # Validation Round
             val_cer, val_wer, val_loss = 0.0, 0.0, 0.0
             if self.val_dataset is not None and len(self.val_dataset) > 0:
-                val_cer, val_wer, val_loss = self.evaluate()
+                generate = self._should_generate_on_eval(epoch)
+                val_cer, val_wer, val_loss = self.evaluate(generate=generate)
 
             # Record metrics
             current_lr = optimizer.param_groups[0]["lr"]
@@ -518,10 +531,8 @@ class TrOCRTrainer:
                 self.save_checkpoint(best_pt_path, epoch, optimizer, scheduler, is_best=True)
                 self._save_hf_model(self.output_dir / "best_model_hf")
 
-            # Clean memory cache
-            self.config.manage_memory(step=self.global_step)
-            if self.device.type == "mps" and hasattr(torch, "mps"):
-                torch.mps.empty_cache()
+            if self.config.empty_cache_steps > 0:
+                self.config.manage_memory(step=self.global_step)
 
             logger.info(
                 f"Epoch {epoch}/{self.config.num_train_epochs} Finished - "
@@ -566,6 +577,15 @@ class TrOCRTrainer:
             "profiler_csv": profiler_csv,
         }
 
+    def _should_generate_on_eval(self, epoch: int) -> bool:
+        """CER/WER generation is the expensive eval. Loss-only is the cheap one."""
+        if not getattr(self.config, "generate_on_eval", True):
+            return False
+        every = getattr(self.config, "cer_eval_every_epochs", 1)
+        if every <= 0:
+            return False
+        return epoch % every == 0 or epoch == self.config.num_train_epochs
+
     def _train_epoch(
         self,
         loader: DataLoader,
@@ -575,11 +595,13 @@ class TrOCRTrainer:
     ) -> float:
         """Run single training epoch with gradient accumulation and clipping."""
         self.model.train()
-        total_loss = 0.0
-        accum_loss = 0.0
+        epoch_loss_t: Optional[torch.Tensor] = None
+        accum_loss_t: Optional[torch.Tensor] = None
+        n_opt = 0
         optimizer.zero_grad(set_to_none=True)
         autocast_ctx = get_autocast_context(self.device, mixed_precision=self.config.mixed_precision)
         trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+        profile = self.profiler is not None
 
         use_prefetcher = getattr(self.config, "use_async_prefetcher", True)
         prefetch_q_size = getattr(self.config, "prefetch_queue_size", 3)
@@ -594,49 +616,54 @@ class TrOCRTrainer:
         else:
             data_iter = loader
 
-        t_data_start = time.perf_counter()
+        t_data_start = time.perf_counter() if profile else 0.0
         try:
             for step, batch in enumerate(data_iter):
-                t_data = time.perf_counter() - t_data_start
-                if self.profiler is not None:
+                if profile:
+                    t_data = time.perf_counter() - t_data_start
                     self.profiler.record_data_wait(t_data)
 
                 if "pixel_values" not in batch or "labels" not in batch:
-                    t_data_start = time.perf_counter()
+                    if profile:
+                        t_data_start = time.perf_counter()
                     continue
 
                 pixel_values = batch["pixel_values"]
                 labels = batch["labels"]
 
-                t_trans_start = time.perf_counter()
+                if profile:
+                    t_trans_start = time.perf_counter()
                 if not use_prefetcher or pixel_values.device != self.device:
                     pixel_values = pixel_values.to(self.device, non_blocking=self.config.non_blocking)
                     labels = labels.to(self.device, non_blocking=self.config.non_blocking)
-                t_transfer = time.perf_counter() - t_trans_start
-
-                t_fwd_start = time.perf_counter()
+                if profile:
+                    t_transfer = time.perf_counter() - t_trans_start
+                    t_fwd_start = time.perf_counter()
                 with autocast_ctx:
                     outputs = self.model(pixel_values=pixel_values, labels=labels)
                     raw_loss = outputs.loss
                     loss = raw_loss / self.config.gradient_accumulation_steps
-                t_fwd = time.perf_counter() - t_fwd_start
-
-                if torch.isnan(loss) or torch.isinf(loss):
+                if profile:
+                    t_fwd = time.perf_counter() - t_fwd_start
+                    t_bwd_start = time.perf_counter()
+                if (step + 1) % max(1, self.config.logging_steps) == 0 and not torch.isfinite(loss):
                     logger.warning(f"Non-finite loss detected at epoch {epoch} step {step}. Skipping gradient update.")
                     optimizer.zero_grad(set_to_none=True)
-                    t_data_start = time.perf_counter()
+                    accum_loss_t = None
+                    if profile:
+                        t_data_start = time.perf_counter()
                     continue
-
-                t_bwd_start = time.perf_counter()
                 if self.scaler is not None and self.scaler.is_enabled():
                     self.scaler.scale(loss).backward()
                 else:
                     loss.backward()
-                t_bwd = time.perf_counter() - t_bwd_start
-                accum_loss += raw_loss.item()
+                if profile:
+                    t_bwd = time.perf_counter() - t_bwd_start
+                accum_loss_t = raw_loss.detach() if accum_loss_t is None else accum_loss_t + raw_loss.detach()
 
-                t_opt_start = time.perf_counter()
                 is_opt_step = ((step + 1) % self.config.gradient_accumulation_steps == 0) or ((step + 1) == len(loader))
+                if profile:
+                    t_opt_start = time.perf_counter()
                 if is_opt_step:
                     if self.scaler is not None and self.scaler.is_enabled():
                         self.scaler.unscale_(optimizer)
@@ -651,11 +678,15 @@ class TrOCRTrainer:
                     scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
                     self.global_step += 1
-                    recent_loss = accum_loss / max(1, (step % self.config.gradient_accumulation_steps + 1))
-                    total_loss += recent_loss
-                    accum_loss = 0.0
+                    denom = max(1, (step % self.config.gradient_accumulation_steps + 1))
+                    step_loss = accum_loss_t / denom if accum_loss_t is not None else None
+                    if step_loss is not None:
+                        epoch_loss_t = step_loss if epoch_loss_t is None else epoch_loss_t + step_loss
+                        n_opt += 1
+                    accum_loss_t = None
 
-                    if self.global_step % self.config.logging_steps == 0:
+                    if self.global_step % self.config.logging_steps == 0 and step_loss is not None:
+                        recent_loss = float(step_loss.item())
                         lr = optimizer.param_groups[0]["lr"]
                         mps_mem = ""
                         if self.device.type == "mps" and hasattr(torch, "mps") and hasattr(torch.mps, "current_allocated_memory"):
@@ -672,17 +703,24 @@ class TrOCRTrainer:
                                 epoch=epoch + (step / max(1, len(loader))),
                             )
 
-                    # Inter-step unified memory cleanup
                     if self.config.empty_cache_steps > 0 and self.global_step % self.config.empty_cache_steps == 0:
                         self.config.manage_memory(step=self.global_step)
+
+                    if (
+                        self.val_dataset is not None
+                        and self.config.eval_steps > 0
+                        and self.global_step % self.config.eval_steps == 0
+                    ):
+                        _, _, mid_loss = self.evaluate(generate=False)
+                        logger.info(f"Mid-eval at step {self.global_step}: val_loss={mid_loss:.4f}")
+                        self.model.train()
 
                     if self.config.max_steps is not None and self.global_step >= self.config.max_steps:
                         break
 
-                t_opt = time.perf_counter() - t_opt_start if is_opt_step else 0.0
-
-                num_samples = len(pixel_values) if hasattr(pixel_values, "__len__") else self.config.batch_size
-                if self.profiler is not None:
+                if profile:
+                    t_opt = time.perf_counter() - t_opt_start if is_opt_step else 0.0
+                    num_samples = len(pixel_values) if hasattr(pixel_values, "__len__") else self.config.batch_size
                     self.profiler.record_step(
                         t_data=t_data,
                         t_transfer=t_transfer,
@@ -691,32 +729,42 @@ class TrOCRTrainer:
                         t_opt=t_opt,
                         num_samples=num_samples,
                     )
-
-                t_data_start = time.perf_counter()
+                    t_data_start = time.perf_counter()
         finally:
             if use_prefetcher and hasattr(data_iter, "close"):
                 data_iter.close()
 
-        num_optimizer_steps = max(1, len(loader) // self.config.gradient_accumulation_steps)
-        return total_loss / num_optimizer_steps
+        if epoch_loss_t is None or n_opt == 0:
+            return 0.0
+        return float((epoch_loss_t / n_opt).item())
 
-    def evaluate(self) -> Tuple[float, float, float]:
+    def evaluate(self, generate: Optional[bool] = None) -> Tuple[float, float, float]:
         """
         Evaluate current model on validation dataset computing CER, WER, and loss.
+        Loss-only eval (generate=False) avoids autoregressive decode — use it mid-run.
         """
         if self.val_dataset is None or len(self.val_dataset) == 0:
             return 0.0, 0.0, 0.0
+        if self.config.max_eval_samples is not None and self.config.max_eval_samples <= 0:
+            return 0.0, 0.0, 0.0
 
+        do_generate = self.config.generate_on_eval if generate is None else generate
         self.model.eval()
 
+        eval_dataset = self.val_dataset
+        limit = self.config.max_eval_samples
+        if limit is not None and len(eval_dataset) > limit:
+            eval_dataset = Subset(eval_dataset, list(range(limit)))
+
         val_loader = DataLoader(
-            self.val_dataset,
+            eval_dataset,
             batch_size=self.config.eval_batch_size,
             shuffle=False,
             collate_fn=self.collator,
         )
 
-        total_val_loss = 0.0
+        val_loss_t: Optional[torch.Tensor] = None
+        n_loss = 0
         predictions: List[str] = []
         references: List[str] = []
         autocast_ctx = get_autocast_context(self.device, mixed_precision=self.config.mixed_precision)
@@ -731,15 +779,25 @@ class TrOCRTrainer:
 
                 with autocast_ctx:
                     if labels is not None:
-                        outputs = self.model(pixel_values=pixel_values, labels=labels.to(self.device, non_blocking=self.config.non_blocking))
-                        total_val_loss += outputs.loss.item()
+                        outputs = self.model(
+                            pixel_values=pixel_values,
+                            labels=labels.to(self.device, non_blocking=self.config.non_blocking),
+                        )
+                        loss_t = outputs.loss.detach()
+                        val_loss_t = loss_t if val_loss_t is None else val_loss_t + loss_t
+                        n_loss += 1
 
-                    # Autoregressive generation
-                    generated_ids = self.model.generate(
-                        pixel_values,
-                        max_new_tokens=64,
-                        num_beams=self.config.num_beams,
-                    )
+                    if do_generate:
+                        generated_ids = self.model.generate(
+                            pixel_values,
+                            max_new_tokens=64,
+                            num_beams=self.config.num_beams,
+                        )
+                    else:
+                        generated_ids = None
+
+                if generated_ids is None:
+                    continue
 
                 if hasattr(self.processor, "batch_decode"):
                     pred_texts = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
@@ -752,14 +810,12 @@ class TrOCRTrainer:
                 predictions.extend([p.strip() for p in pred_texts])
                 references.extend([r.strip() for r in ref_texts])
 
-        # Compute CER and WER
-        if predictions and references:
+        if do_generate and predictions and references:
             try:
                 import jiwer
                 mean_cer = float(jiwer.cer(references, predictions))
                 mean_wer = float(jiwer.wer(references, predictions))
             except Exception:
-                # Fallback simple error calculation
                 cer_scores = []
                 for p, r in zip(predictions, references):
                     if not r:
@@ -768,10 +824,12 @@ class TrOCRTrainer:
                         cer_scores.append(abs(len(p) - len(r)) / max(1, len(r)))
                 mean_cer = float(np.mean(cer_scores)) if cer_scores else 0.0
                 mean_wer = mean_cer
-        else:
+        elif do_generate:
             mean_cer, mean_wer = 0.0, 0.0
+        else:
+            mean_cer, mean_wer = float("inf"), float("inf")
 
-        mean_loss = total_val_loss / max(1, len(val_loader))
+        mean_loss = float((val_loss_t / max(1, n_loss)).item()) if val_loss_t is not None else 0.0
         return mean_cer, mean_wer, mean_loss
 
     def save_checkpoint(
@@ -894,7 +952,20 @@ def main() -> None:
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--mixed-precision", type=str, default="none")
     parser.add_argument("--resume", type=str, default=None)
+    parser.add_argument(
+        "--categories",
+        type=str,
+        default=None,
+        help="Comma-separated manifest categories. Line-level packs only for v3 L1.",
+    )
     args = parser.parse_args()
+
+    if args.config and str(args.config).endswith((".yaml", ".yml")):
+        # Design-doc path. Imported here so legacy TrOCRTrainer tests do not load Seq2SeqTrainer.
+        from pipeline.training.hf_train import load_yaml_config, run_training
+
+        print(run_training(load_yaml_config(args.config)))
+        return
 
     if args.config and os.path.exists(args.config):
         config = TrainingConfig.from_json(args.config)
@@ -919,9 +990,24 @@ def main() -> None:
         train_ds = OCRDataset.from_iam(args.iam_lines, args.iam_root, split="train", processor=processor)
         val_ds = OCRDataset.from_iam(args.iam_lines, args.iam_root, split="val", processor=processor)
     elif args.manifest and os.path.exists(args.manifest):
-        train_ds = OCRDataset.from_manifest(args.manifest, processor=processor, is_training=True)
+        categories = None
+        if args.categories:
+            categories = [c.strip() for c in args.categories.split(",") if c.strip()]
+        elif config.categories:
+            categories = list(config.categories)
+        train_ds = OCRDataset.from_manifest(
+            args.manifest,
+            processor=processor,
+            is_training=True,
+            categories=categories,
+        )
         if args.val_manifest and os.path.exists(args.val_manifest):
-            val_ds = OCRDataset.from_manifest(args.val_manifest, processor=processor, is_training=False)
+            val_ds = OCRDataset.from_manifest(
+                args.val_manifest,
+                processor=processor,
+                is_training=False,
+                categories=categories,
+            )
         else:
             val_ds = None
     else:

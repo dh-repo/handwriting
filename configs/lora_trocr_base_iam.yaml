@@ -1,0 +1,29 @@
+model_name_or_path: microsoft/trocr-base-handwritten
+output_dir: runs/lora_trocr_base_iam
+export_dir: checkpoints/lora_trocr_base_iam
+train_dir: data/iam_line/train
+val_dir: data/iam_line/validation
+test_dir: data/iam_line/test
+test_split_name: Teklia/IAM-line test
+test_num_beams: 4
+
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+target_modules:
+  - q_proj
+  - v_proj
+
+max_target_length: 128
+generation_max_length: 128
+generation_num_beams: 1
+
+per_device_train_batch_size: 16
+per_device_eval_batch_size: 16
+gradient_accumulation_steps: 2
+learning_rate: 3.0e-4
+warmup_steps: 50
+num_train_epochs: 2
+dataloader_num_workers: 2
+bf16: true
+augment: false

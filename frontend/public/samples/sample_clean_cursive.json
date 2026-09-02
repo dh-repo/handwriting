@@ -2,11 +2,11 @@
   "sample_id": "sample_clean_cursive",
   "width": 800,
   "height": 600,
-  "full_text": "The quick brown fox jumps over the lazy dog.\nCareful cursive handwriting practice improves clarity.\nEvery stroke and curve conveys personal character.\nSigned with precision and steady flow.",
+  "full_text": "The quick brown fox jumps over the l\ncareful cursive handwriting practice i\nEvery stroke and curve conveys person\nSigned with precision and steady flow.",
   "lines": [
     {
       "line_index": 0,
-      "text": "The quick brown fox jumps over the lazy dog.",
+      "text": "The quick brown fox jumps over the l",
       "bbox": [
         0.23667,
         0.17875,
@@ -16,7 +16,7 @@
     },
     {
       "line_index": 1,
-      "text": "Careful cursive handwriting practice improves clarity.",
+      "text": "careful cursive handwriting practice i",
       "bbox": [
         0.40333,
         0.1775,
@@ -26,7 +26,7 @@
     },
     {
       "line_index": 2,
-      "text": "Every stroke and curve conveys personal character.",
+      "text": "Every stroke and curve conveys person",
       "bbox": [
         0.57333,
         0.17875,

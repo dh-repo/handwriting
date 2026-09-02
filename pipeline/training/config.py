@@ -87,6 +87,12 @@ class TrainingConfig:
     resume_from_checkpoint: Optional[str] = None
     enable_step_profiling: bool = True
 
+    # Line-level packs only for v3 L1. Word crops (imgur5k, iam_words) stay out of this mix.
+    categories: Optional[List[str]] = None
+    max_eval_samples: Optional[int] = 256
+    generate_on_eval: bool = True
+    cer_eval_every_epochs: int = 1
+
     # Custom / extra attributes
     extra_params: Dict[str, Any] = field(default_factory=dict)
 

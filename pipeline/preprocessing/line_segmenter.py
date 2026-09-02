@@ -16,6 +16,8 @@ import scipy.ndimage as ndi
 from scipy.signal import find_peaks
 from pydantic import BaseModel, ConfigDict
 
+from pipeline.preprocessing.image_enhancement import suppress_ruling_lines
+
 
 # ---------------------------------------------------------------------------
 # Pydantic Interface Models
@@ -177,6 +179,7 @@ class LineSegmenter:
             # Crop vertical band
             patch = np.copy(image[y_min_line:y_max_line + 1, :, :])
             patch_ink = np.copy(ink_mask[y_min_line:y_max_line + 1, :])
+            patch_text = np.copy(hpp_mask[y_min_line:y_max_line + 1, :])
 
             # Mask out pixels outside seam boundaries with clean white
             for col in range(W):
@@ -185,23 +188,51 @@ class LineSegmenter:
                 if t_y > 0:
                     patch[:t_y, col, :] = 255
                     patch_ink[:t_y, col] = 0
+                    patch_text[:t_y, col] = 0
                 if b_y < patch.shape[0] - 1:
                     patch[b_y + 1:, col, :] = 255
                     patch_ink[b_y + 1:, col] = 0
+                    patch_text[b_y + 1:, col] = 0
 
-            # Compute tight ink bounding box
-            y_indices, x_indices = np.where(patch_ink > 0)
-            if len(y_indices) == 0:
+            if not self._has_handwriting(patch_text):
                 continue
 
-            tight_ymin = y_min_line + int(np.min(y_indices))
-            tight_ymax = y_min_line + int(np.max(y_indices))
-            tight_xmin = int(np.min(x_indices))
-            tight_xmax = int(np.max(x_indices))
+            # Tight box from the primary handwriting band so leftover ruling
+            # and empty notebook rows do not inflate the crop.
+            band = self._primary_ink_band(patch_text)
+            if band is None:
+                continue
+            core_top, core_bot = band
+            _, x_indices = np.where(patch_text > 0)
+            if len(x_indices) == 0:
+                continue
 
-            # Add safety margin
-            crop_ymin = max(0, tight_ymin - self.margin)
-            crop_ymax = min(H - 1, tight_ymax + self.margin)
+            core_h = core_bot - core_top + 1
+            vert_margin = max(self.margin, 10)
+            min_body = max(self.min_line_height * 2, 28)
+            if i == num_lines - 1:
+                target_h = min(max(core_h + 24, int(0.10 * H)), int(0.11 * H))
+                mid = (core_top + core_bot) // 2
+                window_top = max(0, mid - target_h // 2)
+                window_bot = min(patch_ink.shape[0] - 1, window_top + target_h)
+            else:
+                window_top = max(0, core_top - vert_margin)
+                window_bot = min(
+                    patch_ink.shape[0] - 1,
+                    max(core_bot + vert_margin, core_top + min_body, core_bot + int(1.6 * core_h)),
+                )
+            local_ink = patch_ink[window_top:window_bot + 1]
+            local_ys, local_xs = np.where(local_ink > 0)
+            if len(local_ys) == 0:
+                local_ys = np.array([core_top, core_bot])
+                local_xs = x_indices
+            tight_ymin = y_min_line + window_top + int(np.min(local_ys))
+            tight_ymax = y_min_line + window_top + int(np.max(local_ys))
+            tight_xmin = int(np.min(local_xs)) if len(local_xs) else int(np.min(x_indices))
+            tight_xmax = int(np.max(local_xs)) if len(local_xs) else int(np.max(x_indices))
+
+            crop_ymin = max(0, tight_ymin - vert_margin)
+            crop_ymax = min(H - 1, tight_ymax + vert_margin)
             crop_xmin = max(0, tight_xmin - self.margin)
             crop_xmax = min(W - 1, tight_xmax + self.margin)
 
@@ -210,7 +241,9 @@ class LineSegmenter:
             rel_xmin = crop_xmin
             rel_xmax = crop_xmax
 
-            cropped_patch = patch[rel_ymin:rel_ymax + 1, rel_xmin:rel_xmax + 1]
+            cropped_patch = suppress_ruling_lines(
+                patch[rel_ymin:rel_ymax + 1, rel_xmin:rel_xmax + 1]
+            )
 
             norm_bbox = [
                 round(float(crop_ymin) / float(H), 5),
@@ -239,6 +272,187 @@ class LineSegmenter:
                 )
             )
 
+        return self._append_leftover_ink(image, ink_mask, hpp_mask, line_crops, H, W)
+
+    def _has_handwriting(self, text_ink: np.ndarray) -> bool:
+        """Reject ruling leftovers, hole-punches, and empty notebook bands."""
+        if text_ink.size == 0:
+            return False
+        ys, xs = np.where(text_ink > 0)
+        if len(ys) < 80:
+            return False
+        height_span = int(ys.max() - ys.min()) + 1
+        if height_span < 8:
+            return False
+
+        row_sums = np.sum(text_ink > 0, axis=1)
+        if row_sums.size:
+            concentrated = float(np.sum(np.sort(row_sums)[-3:]))
+            if concentrated > 0.88 * float(len(ys)) and height_span < 12:
+                return False
+
+        n_labels, _, stats, _ = cv2.connectedComponentsWithStats(
+            (text_ink > 0).astype(np.uint8), connectivity=8
+        )
+        components = [stats[i] for i in range(1, n_labels)]
+        if not components:
+            return False
+        punch_like = [
+            c for c in components
+            if int(c[cv2.CC_STAT_AREA]) < 400 and int(c[cv2.CC_STAT_HEIGHT]) < 22
+        ]
+        if len(components) >= 6 and len(punch_like) == len(components):
+            return False
+        return True
+
+    def _primary_ink_band(self, text_ink: np.ndarray) -> Optional[Tuple[int, int]]:
+        """Return the strongest contiguous handwriting row span in text_ink."""
+        if text_ink.size == 0:
+            return None
+        row_sums = np.sum(text_ink > 0, axis=1).astype(np.float32)
+        if float(np.max(row_sums)) < 8.0:
+            return None
+        if row_sums.size >= 5:
+            kernel = np.ones(5, dtype=np.float32) / 5.0
+            smooth = np.convolve(row_sums, kernel, mode="same")
+        else:
+            smooth = row_sums
+        peak = int(np.argmax(smooth))
+        thresh = max(6.0, 0.18 * float(smooth[peak]))
+        top = peak
+        while top > 0 and smooth[top - 1] >= thresh:
+            top -= 1
+        bot = peak
+        while bot < smooth.size - 1 and smooth[bot + 1] >= thresh:
+            bot += 1
+        if bot - top + 1 < 8:
+            return None
+        return top, bot
+
+    def _has_leftover_handwriting(self, text_ink: np.ndarray) -> bool:
+        """Accept a short signature band that the main HPP pass missed."""
+        if text_ink.size == 0:
+            return False
+        ys, xs = np.where(text_ink > 0)
+        if len(ys) < 40:
+            return False
+        height_span = int(ys.max() - ys.min()) + 1
+        width_span = int(xs.max() - xs.min()) + 1
+        if height_span < 8 or width_span < 24:
+            return False
+        n_labels, _, stats, _ = cv2.connectedComponentsWithStats(
+            (text_ink > 0).astype(np.uint8), connectivity=8
+        )
+        components = [stats[i] for i in range(1, n_labels)]
+        if not components:
+            return False
+        punch_like = [
+            c for c in components
+            if int(c[cv2.CC_STAT_AREA]) < 400 and int(c[cv2.CC_STAT_HEIGHT]) < 22
+        ]
+        if len(components) >= 4 and len(punch_like) == len(components):
+            return False
+        ruling_like = [
+            c for c in components
+            if int(c[cv2.CC_STAT_HEIGHT]) <= 3 and int(c[cv2.CC_STAT_WIDTH]) > 80
+        ]
+        if ruling_like and len(ruling_like) == len(components):
+            return False
+        if not any(
+            int(c[cv2.CC_STAT_HEIGHT]) >= 10 and int(c[cv2.CC_STAT_WIDTH]) >= 16
+            for c in components
+        ):
+            return False
+        return True
+
+    def _append_leftover_ink(
+        self,
+        image: np.ndarray,
+        ink_mask: np.ndarray,
+        hpp_mask: np.ndarray,
+        line_crops: List[LineCrop],
+        H: int,
+        W: int,
+    ) -> List[LineCrop]:
+        """Crop leftover ink below the last accepted line (signatures, short last lines)."""
+        if not line_crops:
+            return line_crops
+        last_ymax = int(round(float(line_crops[-1].bbox[2]) * float(H)))
+        starts = [min(H - 1, last_ymax + 2)]
+        bottom_guess = min(H - 1, int(0.82 * H))
+        if bottom_guess > last_ymax + 2:
+            starts.append(bottom_guess)
+        seen: set[int] = set()
+        for below in starts:
+            if below in seen or below >= H - 8:
+                continue
+            seen.add(below)
+            added = self._crop_leftover_region(image, ink_mask, line_crops, below, H, W)
+            if added:
+                return added
+        return line_crops
+
+    def _crop_leftover_region(
+        self,
+        image: np.ndarray,
+        ink_mask: np.ndarray,
+        line_crops: List[LineCrop],
+        below: int,
+        H: int,
+        W: int,
+    ) -> Optional[List[LineCrop]]:
+        region = ink_mask[below:, :]
+        if not self._has_leftover_handwriting(region):
+            return None
+        band = self._primary_ink_band(region)
+        if band is not None:
+            core_top, core_bot = band
+            band_rows = region[core_top:core_bot + 1]
+            ys, xs = np.where(band_rows > 0)
+            if len(ys) == 0:
+                return None
+            tight_ymin = below + core_top + int(np.min(ys))
+            tight_ymax = below + core_top + int(np.max(ys))
+            tight_xmin = int(np.min(xs))
+            tight_xmax = int(np.max(xs))
+        else:
+            ys, xs = np.where(region > 0)
+            if len(ys) == 0:
+                return None
+            tight_ymin = below + int(np.min(ys))
+            tight_ymax = below + int(np.max(ys))
+            tight_xmin = int(np.min(xs))
+            tight_xmax = int(np.max(xs))
+        vert_margin = max(self.margin, 10)
+        crop_ymin = max(0, tight_ymin - vert_margin)
+        crop_ymax = min(H - 1, tight_ymax + vert_margin)
+        crop_xmin = max(0, tight_xmin - self.margin)
+        crop_xmax = min(W - 1, tight_xmax + self.margin)
+        if crop_ymax <= crop_ymin or crop_xmax <= crop_xmin:
+            return None
+        cropped_patch = suppress_ruling_lines(image[crop_ymin:crop_ymax + 1, crop_xmin:crop_xmax + 1])
+        words = None
+        if self.extract_words:
+            cropped_ink = ink_mask[crop_ymin:crop_ymax + 1, crop_xmin:crop_xmax + 1]
+            words = self.segment_words(
+                cropped_patch,
+                cropped_ink,
+                page_offset=(crop_ymin, crop_xmin),
+                page_shape=(H, W),
+            )
+        line_crops.append(
+            LineCrop(
+                line_index=len(line_crops),
+                image=cropped_patch,
+                bbox=[
+                    round(float(crop_ymin) / float(H), 5),
+                    round(float(crop_xmin) / float(W), 5),
+                    round(float(crop_ymax) / float(H), 5),
+                    round(float(crop_xmax) / float(W), 5),
+                ],
+                words=words,
+            )
+        )
         return line_crops
 
     def _compute_seam(
@@ -390,7 +604,7 @@ class LineSegmenter:
         xmin = max(0, int(np.min(x_indices)) - self.margin)
         xmax = min(W - 1, int(np.max(x_indices)) + self.margin)
 
-        crop = image[ymin:ymax + 1, xmin:xmax + 1]
+        crop = suppress_ruling_lines(image[ymin:ymax + 1, xmin:xmax + 1])
         bbox = [
             round(float(ymin) / float(H), 5),
             round(float(xmin) / float(W), 5),

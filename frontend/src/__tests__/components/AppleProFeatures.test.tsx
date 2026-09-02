@@ -119,13 +119,28 @@ describe('Apple Pro UX & SOTA Features Test Suite', () => {
     });
   });
 
-  describe('6. SignatureInspector & Legal Seal', () => {
-    it('renders signature detection cards with entropy score and verification seal', () => {
+  describe('6. SignatureInspector general-purpose candidates', () => {
+    it('renders review-required signature candidates without a verification seal', () => {
       render(<SignatureInspector page={SAMPLE_LEGAL_CONTRACT.pages[0]} />);
 
       expect(screen.getByTestId('signature-inspector-container')).toBeInTheDocument();
-      expect(screen.getByText(/Signature & Endorsement Verification/i)).toBeInTheDocument();
-      expect(screen.getByText(/Verified Seal/i)).toBeInTheDocument();
+      expect(screen.getByText(/Signature candidates/i)).toBeInTheDocument();
+      expect(screen.getByTestId('signature-review-status')).toHaveTextContent(/pending review/i);
+      expect(screen.queryByText(/Verified Seal/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Biometric/i)).not.toBeInTheDocument();
+    });
+
+    it('records accept as a human decision, not a verified match', () => {
+      const onDecide = vi.fn();
+      render(
+        <SignatureInspector
+          page={SAMPLE_LEGAL_CONTRACT.pages[0]}
+          onDecide={onDecide}
+        />
+      );
+      const accept = screen.getAllByText(/Accept present/i)[0];
+      fireEvent.click(accept);
+      expect(onDecide).toHaveBeenCalledWith(expect.any(String), 'accepted');
     });
   });
 

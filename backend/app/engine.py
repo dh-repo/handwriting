@@ -20,6 +20,30 @@ from PIL import Image
 import torch
 import torch.nn.functional as F
 
+from backend.app.ship_gate import assert_shippable_checkpoint
+from pipeline.training.english_beam import (
+    looks_like_word_crop,
+    pick_crop_hypothesis,
+    strip_word_decoder_punct,
+)
+from pipeline.training.model_contract import (
+    apply_trocr_generation_config,
+    load_htr_model,
+    load_htr_processor,
+)
+from pipeline.training.vlm_refine import (
+    fuse_line,
+    is_page_chrome_line,
+    is_page_crumb_line,
+    is_stray_page_tail,
+    refine_line,
+    repair_line_continuations,
+    should_refine_with_vlm,
+    vlm_refine_available,
+)
+
+HTR_MAX_NEW_TOKENS = 128
+
 if hasattr(torch, "set_num_threads"):
     try:
         torch.set_num_threads(min(4, os.cpu_count() or 4))
@@ -71,6 +95,7 @@ except ImportError:
         PrefixTrie = Any
 
 try:
+    from pipeline.preprocessing.image_enhancement import suppress_ruling_lines
     from pipeline.preprocessing.pipeline import PreprocessingPipeline, PreprocessedPage
     from pipeline.preprocessing.pdf_loader import (
         PDFLoader,
@@ -115,6 +140,50 @@ from backend.app.schemas import (
 logger = logging.getLogger("handwriting_backend.engine")
 
 
+def is_sliver_bbox(bbox: List[float]) -> bool:
+    """True for leftover segmenter crumbs too thin to be a handwritten line."""
+    if len(bbox) < 4:
+        return True
+    ymin, xmin, ymax, xmax = [float(value) for value in bbox[:4]]
+    return (xmax - xmin) < 0.05 or (ymax - ymin) < 0.03
+
+
+def is_page_echo(text: str, page_so_far: str) -> bool:
+    """True when a later crop restates a sentence already read on this page."""
+    candidate = " ".join((text or "").split()).rstrip(".,;:!?")
+    prior = " ".join((page_so_far or "").split()).rstrip(".,;:!?")
+    if not candidate or not prior or len(candidate.split()) < 6:
+        return False
+    if len(prior.split()) < 6:
+        return False
+    return candidate == prior or candidate in prior or prior in candidate
+
+
+def _finalize_page_lines(lines_data: List[LineBox]) -> None:
+    """Drop leftover UI strings first so they cannot steal the final period."""
+    kept: List[LineBox] = []
+    seen: set[str] = set()
+    for line in lines_data:
+        key = line.text.strip()
+        previous = kept[-1].text if kept else ""
+        page_so_far = " ".join(item.text for item in kept)
+        if (
+            is_page_chrome_line(line.text)
+            or is_page_crumb_line(line.text, previous)
+            or is_page_echo(line.text, page_so_far)
+            or is_stray_page_tail(line.text, page_so_far)
+            or not key
+            or key in seen
+        ):
+            continue
+        seen.add(key)
+        kept.append(line)
+    continued = repair_line_continuations([line.text for line in kept])
+    for line, text in zip(kept, continued):
+        line.text = text
+    lines_data[:] = kept
+
+
 class InferenceEngine:
     """
     Unified Handwriting Recognition Engine with Apple Silicon MPS acceleration,
@@ -140,12 +209,20 @@ class InferenceEngine:
     ) -> None:
         settings = get_settings()
         self.mode = execution_mode or settings.resolve_device()
-        self.model_name = model_name_or_path or settings.resolve_model_path()
+        self.model_name = assert_shippable_checkpoint(model_name_or_path or settings.resolve_model_path())
         self.use_fp16 = use_fp16 if use_fp16 is not None else settings.USE_FP16
         self.dpi = dpi or settings.DEFAULT_DPI
 
         # Beam Search & Rescorer configuration
+        if settings.AZURE_OPENAI_ENDPOINT:
+            os.environ.setdefault("AZURE_OPENAI_ENDPOINT", settings.AZURE_OPENAI_ENDPOINT)
+        if settings.AZURE_OPENAI_API_KEY:
+            os.environ.setdefault("AZURE_OPENAI_API_KEY", settings.AZURE_OPENAI_API_KEY)
+        if settings.AZURE_OPENAI_DEPLOYMENT:
+            os.environ.setdefault("AZURE_OPENAI_DEPLOYMENT", settings.AZURE_OPENAI_DEPLOYMENT)
+
         self.enable_rescorer = enable_rescorer if enable_rescorer is not None else settings.ENABLE_RESCORER
+        self.enable_vlm_refine = bool(getattr(settings, "ENABLE_VLM_REFINE", True)) and vlm_refine_available()
         self.beam_width = beam_width if beam_width is not None else settings.BEAM_WIDTH
         self.vocab_dir = vocab_dir or lexicon_path or settings.LEXICON_PATH or settings.VOCAB_DIR
         self.confusion_matrix_path = confusion_matrix_path or settings.CONFUSION_MATRIX_PATH
@@ -240,42 +317,16 @@ class InferenceEngine:
                 if isinstance(state, dict) and "config" in state and isinstance(state["config"], dict):
                     base_model_id = state["config"].get("model_name_or_path", base_model_id)
 
-                try:
-                    self.processor = TrOCRProcessor.from_pretrained(base_model_id)
-                except Exception:
-                    tokenizer = RobertaTokenizer.from_pretrained(base_model_id)
-                    image_processor = ViTImageProcessor.from_pretrained(base_model_id)
-                    self.processor = TrOCRProcessor(image_processor=image_processor, tokenizer=tokenizer)
-
-                try:
-                    self.model = VisionEncoderDecoderModel.from_pretrained(base_model_id, attn_implementation="sdpa")
-                except Exception:
-                    self.model = VisionEncoderDecoderModel.from_pretrained(base_model_id)
+                self.processor = load_htr_processor(base_model_id)
+                self.model = load_htr_model(base_model_id)
                 self.model.load_state_dict(model_state, strict=False)
             else:
-                # Checkpoint directory or HuggingFace repo identifier
-                try:
-                    self.processor = TrOCRProcessor.from_pretrained(self.model_name)
-                except Exception:
-                    logger.warning(f"Default TrOCRProcessor.from_pretrained failed for '{self.model_name}', using fallback tokenizer loading.")
-                    try:
-                        tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
-                    except Exception:
-                        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-                    image_processor = ViTImageProcessor.from_pretrained(self.model_name)
-                    self.processor = TrOCRProcessor(image_processor=image_processor, tokenizer=tokenizer)
+                self.processor = load_htr_processor(self.model_name)
+                self.model = load_htr_model(self.model_name)
 
-                try:
-                    self.model = VisionEncoderDecoderModel.from_pretrained(self.model_name, attn_implementation="sdpa")
-                except Exception:
-                    self.model = VisionEncoderDecoderModel.from_pretrained(self.model_name)
-
-            if hasattr(self.model.config, "_attn_implementation"):
-                self.model.config._attn_implementation = "sdpa"
-            if hasattr(self.model, "encoder") and hasattr(self.model.encoder, "config") and hasattr(self.model.encoder.config, "_attn_implementation"):
-                self.model.encoder.config._attn_implementation = "sdpa"
-            if hasattr(self.model, "decoder") and hasattr(self.model.decoder, "config") and hasattr(self.model.decoder.config, "_attn_implementation"):
-                self.model.decoder.config._attn_implementation = "sdpa"
+            # Do not force SDPA. On TrOCR-Large, flipping _attn_implementation
+            # after load makes generate loop ("I don't think I've I've...") on
+            # both MPS and CPU. Leave the checkpoint's default attention.
 
             for attr in ["max_length", "early_stopping", "no_repeat_ngram_size", "length_penalty", "num_beams"]:
                 if hasattr(self.model.config, attr):
@@ -283,6 +334,14 @@ class InferenceEngine:
                         delattr(self.model.config, attr)
                     except Exception:
                         pass
+
+            if self.processor is not None:
+                apply_trocr_generation_config(
+                    self.model,
+                    self.processor,
+                    max_length=HTR_MAX_NEW_TOKENS,
+                    num_beams=max(1, int(self.beam_width)),
+                )
 
             self.model.to(self.device)
 
@@ -298,6 +357,42 @@ class InferenceEngine:
             self.model = None
             self.processor = None
             self.mode = "mock"
+
+    def recognize_single_crop(self, image: Image.Image, num_beams: int | None = None) -> str:
+        """Same generate path as page recognition, one line crop, no VLM."""
+        if self.model is None or self.processor is None:
+            return ""
+        search_beams = max(1, int(num_beams or self.beam_width or 10))
+        pil = image.convert("RGB")
+        inputs = self.processor(images=pil, return_tensors="pt")
+        pixel_values = inputs.pixel_values.to(self.device)
+        if self.device.type in ("mps", "cuda") and self.use_fp16:
+            pixel_values = pixel_values.half()
+        generate_kwargs: Dict[str, Any] = {
+            "max_new_tokens": HTR_MAX_NEW_TOKENS,
+        }
+        if search_beams > 1:
+            generate_kwargs.update(
+                {
+                    "num_beams": search_beams,
+                    "early_stopping": True,
+                    "return_dict_in_generate": True,
+                    "output_scores": True,
+                    "num_return_sequences": search_beams,
+                }
+            )
+        else:
+            generate_kwargs.update(
+                {
+                    "return_dict_in_generate": True,
+                    "output_scores": True,
+                }
+            )
+        with torch.no_grad():
+            outputs = self.model.generate(pixel_values, **generate_kwargs)
+        sequences = outputs.sequences if hasattr(outputs, "sequences") else outputs
+        texts = [t.strip() for t in self.processor.batch_decode(sequences, skip_special_tokens=True)]
+        return pick_crop_hypothesis(texts, pil.width, pil.height)
 
     def recognize(
         self,
@@ -328,44 +423,54 @@ class InferenceEngine:
 
             # Determine rescoring & beam search parameters
             opt_beam_width = getattr(opts, "beam_width", self.beam_width) or self.beam_width
-            opt_rescore = getattr(opts, "rescore", True)
+            opt_rescore = getattr(opts, "rescore", False)
             effective_rescore = bool(self.enable_rescorer and opt_rescore and (self.rescorer is not None))
-            effective_k = opt_beam_width if effective_rescore else 1
+            search_beams = max(1, int(opt_beam_width))
+            effective_k = search_beams if search_beams > 1 else 1
 
             for page_idx, p_page in enumerate(pages):
                 h, w = p_page.original_image.shape[:2]
                 lines_data: List[LineBox] = []
+                page_text_so_far = ""
 
-                valid_lines = [l for l in p_page.lines if l.image is not None and l.image.size > 0]
+                valid_lines = [
+                    line
+                    for line in p_page.lines
+                    if line.image is not None
+                    and line.image.size > 0
+                    and not is_sliver_bbox(line.bbox)
+                ]
                 batch_size = max(1, self.line_batch_size)
 
                 for b_start in range(0, len(valid_lines), batch_size):
                     b_lines = valid_lines[b_start : b_start + batch_size]
-                    pil_crops = [Image.fromarray(l.image).convert("RGB") for l in b_lines]
+                    pil_crops = [
+                        Image.fromarray(suppress_ruling_lines(l.image)).convert("RGB")
+                        for l in b_lines
+                    ]
 
-                    inputs = self.processor(pil_crops, return_tensors="pt", padding=True)
+                    inputs = self.processor(images=pil_crops, return_tensors="pt")
                     pixel_values = inputs.pixel_values.to(self.device)
 
                     if self.device.type in ("mps", "cuda") and self.use_fp16:
                         pixel_values = pixel_values.half()
 
                     with torch.no_grad():
-                        if effective_k > 1:
-                            outputs = self.model.generate(
-                                pixel_values,
-                                num_beams=effective_k,
-                                num_return_sequences=effective_k,
-                                max_new_tokens=48,
-                                repetition_penalty=1.2,
-                                early_stopping=True,
-                                return_dict_in_generate=True,
-                                output_scores=True,
-                            )
+                        if search_beams > 1:
+                            generate_kwargs: Dict[str, Any] = {
+                                "num_beams": search_beams,
+                                "max_new_tokens": HTR_MAX_NEW_TOKENS,
+                                "early_stopping": True,
+                                "return_dict_in_generate": True,
+                                "output_scores": True,
+                            }
+                            if effective_k > 1:
+                                generate_kwargs["num_return_sequences"] = effective_k
+                            outputs = self.model.generate(pixel_values, **generate_kwargs)
                         else:
                             outputs = self.model.generate(
                                 pixel_values,
-                                max_new_tokens=48,
-                                repetition_penalty=1.2,
+                                max_new_tokens=HTR_MAX_NEW_TOKENS,
                                 return_dict_in_generate=True,
                                 output_scores=True,
                             )
@@ -379,6 +484,7 @@ class InferenceEngine:
 
                     for l_sub_idx, line in enumerate(b_lines):
                         global_l_idx = b_start + l_sub_idx
+                        crop = pil_crops[l_sub_idx]
                         ymin, xmin, ymax, xmax = [max(0.0, min(1.0, float(c))) for c in line.bbox]
                         if ymin >= ymax:
                             ymax = min(1.0, ymin + 0.05)
@@ -394,15 +500,56 @@ class InferenceEngine:
                             ]
                             rescore_res = self.rescorer.rescore_detailed(candidates)
                             text = rescore_res.rescored_text
+                            if looks_like_word_crop(crop.width, crop.height):
+                                text = strip_word_decoder_punct(text)
                             line_conf = max(0.0, min(1.0, float(rescore_res.confidence)))
+                        elif effective_k > 1:
+                            line_beam_texts = [
+                                t.strip()
+                                for t in decoded_texts[l_sub_idx * effective_k : (l_sub_idx + 1) * effective_k]
+                            ]
+                            text = pick_crop_hypothesis(
+                                line_beam_texts,
+                                crop.width,
+                                crop.height,
+                                page_text_so_far,
+                            )
+                            if not text and not self.enable_vlm_refine:
+                                continue
+                            line_conf = 0.9
                         else:
-                            text = decoded_texts[l_sub_idx].strip()
+                            text = pick_crop_hypothesis(
+                                [decoded_texts[l_sub_idx]],
+                                crop.width,
+                                crop.height,
+                            )
                             if hasattr(outputs, "sequences_scores") and outputs.sequences_scores is not None and len(outputs.sequences_scores) > l_sub_idx:
                                 top_s = float(outputs.sequences_scores[l_sub_idx].item())
                                 line_conf = float(1.0 / (1.0 + math.exp(-max(-10.0, min(10.0, top_s)))))
                             else:
                                 line_conf = 0.95
                             line_conf = max(0.0, min(1.0, float(line_conf)))
+
+                        if (
+                            self.enable_vlm_refine
+                            and self.mode != "mock"
+                            and should_refine_with_vlm(text)
+                        ):
+                            try:
+                                vlm_text = refine_line(
+                                    pil_crops[l_sub_idx],
+                                    hypothesis="",
+                                    previous_text=page_text_so_far,
+                                )
+                                fused = fuse_line(text, vlm_text)
+                                if vlm_text and fused != text:
+                                    logger.info("vlm fuse trocr=%r vlm=%r out=%r", text, vlm_text, fused)
+                                text = fused
+                            except Exception:
+                                logger.exception("vlm refine failed")
+
+                        if not text:
+                            continue
 
                         # Build word tokens
                         word_tokens = text.split()
@@ -442,6 +589,12 @@ class InferenceEngine:
                                     )
                                 )
 
+                        if text and lines_data and lines_data[-1].text.strip() == text.strip():
+                            continue
+                        if is_page_echo(text, page_text_so_far):
+                            continue
+                        if text:
+                            page_text_so_far = f"{page_text_so_far} {text}".strip()
                         lines_data.append(
                             LineBox(
                                 line_id=f"p{page_idx+1}_l{global_l_idx+1}",
@@ -456,6 +609,7 @@ class InferenceEngine:
                     if self.device.type == "mps" and hasattr(torch, "mps"):
                         torch.mps.empty_cache()
 
+                _finalize_page_lines(lines_data)
                 full_text = "\n".join(l.text for l in lines_data)
                 mean_conf = float(np.mean([l.confidence for l in lines_data])) if lines_data else 1.0
                 mean_conf = max(0.0, min(1.0, mean_conf))
@@ -616,6 +770,7 @@ class InferenceEngine:
                     )
                 )
 
+            _finalize_page_lines(lines_data)
             full_text = "\n".join(l.text for l in lines_data)
             mean_conf = float(np.mean([l.confidence for l in lines_data])) if lines_data else 1.0
 

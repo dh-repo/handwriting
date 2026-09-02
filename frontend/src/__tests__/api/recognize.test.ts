@@ -106,6 +106,8 @@ describe('/api/recognize Route Handler', () => {
 
     const data = await res.json();
     expect(data.document_id).toBe('doc_backend_live');
+    expect(String(vi.mocked(global.fetch).mock.calls[0][0])).toContain('beam_width=4');
+    expect(String(vi.mocked(global.fetch).mock.calls[0][0])).toContain('rescore=false');
   });
 
   it('returns 502 Bad Gateway when backend proxy encounters connection failure', async () => {

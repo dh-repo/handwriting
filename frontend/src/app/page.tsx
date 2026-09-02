@@ -18,7 +18,9 @@ import { useDocumentContext } from '../context/DocumentContext';
 import { Dropzone } from '../components/Dropzone';
 import { DocumentViewer } from '../components/DocumentViewer';
 import { InlineEditor } from '../components/InlineEditor';
+import { SignatureInspector } from '../components/SignatureInspector';
 import { DocumentOCRResult } from '../types/ocr';
+import { findSignatureCandidates } from '../lib/signatureCandidates';
 import { apiClient } from '../lib/apiClient';
 import {
   exportDocumentAsTxt,
@@ -52,6 +54,7 @@ export default function WorkspacePage() {
     setError,
     updateLineText,
     updateWordText,
+    setSignatureDecision,
     revertAll,
     undo,
     redo,
@@ -84,20 +87,43 @@ export default function WorkspacePage() {
 
   const handleFileAccepted = async (file: File) => {
     setIsProcessing(true);
-    setUploadProgress(20);
+    setUploadProgress(10);
     setProcessingStage('Uploading document to neural recognition pipeline...');
     setError(null);
 
-    try {
-      setUploadProgress(40);
-      setProcessingStage('Segmenting lines & running TrOCR vision-language inference...');
+    const startTime = Date.now();
+    const progressInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      if (elapsed < 3) {
+        setUploadProgress(20);
+        setProcessingStage('Uploading document & preparing preprocessor...');
+      } else if (elapsed < 8) {
+        setUploadProgress(35);
+        setProcessingStage('Preprocessing, deskewing & segmenting line crops...');
+      } else if (elapsed < 18) {
+        setUploadProgress(55);
+        setProcessingStage('ViT vision encoder extracting handwriting stroke tokens...');
+      } else if (elapsed < 35) {
+        setUploadProgress(70);
+        setProcessingStage(`Neural beam-search decoding lines (${elapsed}s elapsed)...`);
+      } else if (elapsed < 60) {
+        setUploadProgress(85);
+        setProcessingStage(`Neural beam-search & language model refinement (${elapsed}s elapsed)...`);
+      } else {
+        setUploadProgress(92);
+        setProcessingStage(`Finalizing line alignments and bounding boxes (${elapsed}s elapsed)...`);
+      }
+    }, 1000);
 
+    try {
       const result: DocumentOCRResult = await apiClient.recognizeFile(file, {
-        beam_width: 2,
-        rescore: true,
+        beam_width: 4,
+        rescore: false,
       });
 
-      setUploadProgress(85);
+      clearInterval(progressInterval);
+
+      setUploadProgress(98);
       setProcessingStage('Formatting transcribed lines...');
 
       if (file.type.startsWith('image/') && result.pages[0]) {
@@ -115,9 +141,11 @@ export default function WorkspacePage() {
       setProcessingStage('Complete');
       setDocument(result);
     } catch (err: unknown) {
+      clearInterval(progressInterval);
       const msg = err instanceof Error ? err.message : 'Failed to process document';
       setError(msg);
     } finally {
+      clearInterval(progressInterval);
       setIsProcessing(false);
       setUploadProgress(0);
     }
@@ -299,6 +327,7 @@ export default function WorkspacePage() {
                     onHoverWord={(wordId) => setHoveredWordId(wordId)}
                     isLoupeActive={isLoupeActive}
                     onToggleLoupe={() => setIsLoupeActive((prev) => !prev)}
+                    signatureLineIds={findSignatureCandidates(activePage).map((row) => row.lineId)}
                   />
                 )}
               </div>
@@ -306,22 +335,34 @@ export default function WorkspacePage() {
               {/* Right Column: Inline Text Editor (5 cols) */}
               <div className="lg:col-span-5 h-full flex flex-col min-h-[500px] overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl">
                 {activePage && (
-                  <InlineEditor
-                    page={activePage}
-                    selectedLineId={selectedLineId}
-                    selectedWordId={selectedWordId}
-                    onSelectLine={(lineId) => setSelectedLineId(lineId)}
-                    onSelectWord={(wordId, parentLineId) => setSelectedWordId(wordId, parentLineId)}
-                    onHoverLine={(lineId) => setHoveredLineId(lineId)}
-                    onHoverWord={(wordId) => setHoveredWordId(wordId)}
-                    onLineChange={(lineId, newText) => updateLineText(lineId, newText)}
-                    onWordChange={(lineId, wordId, newText) => updateWordText(lineId, wordId, newText)}
-                    onUndo={undo}
-                    onRedo={redo}
-                    onRevertAll={revertAll}
-                    canUndo={canUndo}
-                    canRedo={canRedo}
-                  />
+                  <div className="flex h-full min-h-0 flex-col">
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      <InlineEditor
+                        page={activePage}
+                        selectedLineId={selectedLineId}
+                        selectedWordId={selectedWordId}
+                        onSelectLine={(lineId) => setSelectedLineId(lineId)}
+                        onSelectWord={(wordId, parentLineId) => setSelectedWordId(wordId, parentLineId)}
+                        onHoverLine={(lineId) => setHoveredLineId(lineId)}
+                        onHoverWord={(wordId) => setHoveredWordId(wordId)}
+                        onLineChange={(lineId, newText) => updateLineText(lineId, newText)}
+                        onWordChange={(lineId, wordId, newText) => updateWordText(lineId, wordId, newText)}
+                        onUndo={undo}
+                        onRedo={redo}
+                        onRevertAll={revertAll}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                      />
+                    </div>
+                    <SignatureInspector
+                      page={activePage}
+                      reviews={document.signature_reviews}
+                      selectedLineId={selectedLineId}
+                      onSelectLine={(lineId) => setSelectedLineId(lineId)}
+                      onDecide={setSignatureDecision}
+                      className="m-3 mt-0 shrink-0"
+                    />
+                  </div>
                 )}
               </div>
             </div>

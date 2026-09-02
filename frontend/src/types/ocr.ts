@@ -71,6 +71,17 @@ export interface DocumentOCRResult {
   model_version?: string;
   preprocessing_flags?: Record<string, unknown>;
   is_mock?: boolean;
+  signature_reviews?: SignatureReviewRecord[];
+}
+
+export type SignatureDecision = 'pending' | 'accepted' | 'rejected';
+
+export interface SignatureReviewRecord {
+  page_number: number;
+  line_id: string;
+  kind: 'sign_off_line' | 'witness_mark' | 'handwritten_mark';
+  decision: SignatureDecision;
+  decided_at?: string;
 }
 
 // Alias for RecognitionResponse matching backend schema
