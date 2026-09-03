@@ -129,6 +129,23 @@ class Settings(BaseSettings):
     JOB_RETENTION_SECONDS: int = Field(default=3600, description="Async job TTL in seconds")
     MAX_CONCURRENT_JOBS: int = Field(default=4, description="Max concurrent background jobs")
 
+    # Feedback & Self-Tuning Flywheel settings
+    FEEDBACK_DIR: str = Field(default="data/feedback", description="Directory for feedback data and manifests")
+    FEEDBACK_MANIFEST_PATH: str = Field(
+        default="data/feedback/manifest.jsonl",
+        description="Path to append-only feedback manifest JSONL",
+    )
+    FEEDBACK_CROPS_DIR: str = Field(
+        default="data/feedback/crops",
+        description="Directory for saved operator line crops",
+    )
+    CONFUSION_LEARNING_RATE: float = Field(
+        default=0.10,
+        ge=0.0,
+        le=1.0,
+        description="Online learning rate for dynamic confusion adaptation",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -574,3 +574,33 @@ class BeamRescorer:
         """
         res = self.rescore_detailed(hypotheses, context=context)
         return res.rescored_text, res.confidence
+
+    def adapt_confusion_matrix(
+        self,
+        original_prediction: str,
+        operator_correction: str,
+        learning_rate: float = 0.20,
+        min_cost: float = 0.15,
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """
+        Dynamically recalibrate confusion matrix weights from operator correction.
+        Immediately affects subsequent calls to rescore() and rescore_detailed().
+        """
+        return self.confusion_matrix.adapt_from_correction(
+            original_prediction=original_prediction,
+            operator_correction=operator_correction,
+            learning_rate=learning_rate,
+            min_cost=min_cost,
+            **kwargs,
+        )
+
+    def reload_confusion_matrix(
+        self,
+        filepath: Union[str, Path] = "data/feedback/dynamic_confusion_matrix.json",
+    ) -> int:
+        """
+        Reload dynamic confusion matrix state from disk.
+        """
+        return self.confusion_matrix.load_dynamic_state(filepath)
+

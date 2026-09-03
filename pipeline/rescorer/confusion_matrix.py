@@ -11,6 +11,8 @@ import json
 import logging
 import math
 from pathlib import Path
+import threading
+import time
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 logger = logging.getLogger("handwriting.rescorer.confusion_matrix")
@@ -200,6 +202,8 @@ class VisualConfusionMatrix:
         self.default_deletion_cost = default_deletion_cost
         self.default_insertion_cost = default_insertion_cost
         self.default_transposition_cost = default_transposition_cost
+        self._lock = threading.RLock()
+        self._dynamic_updates: Dict[Tuple[str, str], Dict[str, Any]] = {}
         self._matrix: Dict[Tuple[str, str], float] = {}
         self._matrix_11: Dict[str, Dict[str, float]] = {}
         self._matrix_21: Dict[str, Dict[str, float]] = {}
@@ -218,27 +222,28 @@ class VisualConfusionMatrix:
         s = self._normalize_token(source)
         t = self._normalize_token(target)
         c = float(cost)
-        self._matrix[(s, t)] = c
+        with self._lock:
+            self._matrix[(s, t)] = c
 
-        if len(s) == 1 and len(t) == 1:
-            self._matrix_11.setdefault(s, {})[t] = c
-        elif len(s) == 2 and len(t) == 1:
-            self._matrix_21.setdefault(s, {})[t] = c
-        elif len(s) == 1 and len(t) == 2:
-            self._matrix_12.setdefault(s, {})[t] = c
-        elif len(s) == 2 and len(t) == 2:
-            self._matrix_22.setdefault(s, {})[t] = c
+            if len(s) == 1 and len(t) == 1:
+                self._matrix_11.setdefault(s, {})[t] = c
+            elif len(s) == 2 and len(t) == 1:
+                self._matrix_21.setdefault(s, {})[t] = c
+            elif len(s) == 1 and len(t) == 2:
+                self._matrix_12.setdefault(s, {})[t] = c
+            elif len(s) == 2 and len(t) == 2:
+                self._matrix_22.setdefault(s, {})[t] = c
 
-        if symmetric:
-            self._matrix[(t, s)] = c
-            if len(t) == 1 and len(s) == 1:
-                self._matrix_11.setdefault(t, {})[s] = c
-            elif len(t) == 2 and len(s) == 1:
-                self._matrix_21.setdefault(t, {})[s] = c
-            elif len(t) == 1 and len(s) == 2:
-                self._matrix_12.setdefault(t, {})[s] = c
-            elif len(t) == 2 and len(s) == 2:
-                self._matrix_22.setdefault(t, {})[s] = c
+            if symmetric:
+                self._matrix[(t, s)] = c
+                if len(t) == 1 and len(s) == 1:
+                    self._matrix_11.setdefault(t, {})[s] = c
+                elif len(t) == 2 and len(s) == 1:
+                    self._matrix_21.setdefault(t, {})[s] = c
+                elif len(t) == 1 and len(s) == 2:
+                    self._matrix_12.setdefault(t, {})[s] = c
+                elif len(t) == 2 and len(s) == 2:
+                    self._matrix_22.setdefault(t, {})[s] = c
 
     def get_cost(self, source: str, target: str) -> float:
         """
@@ -584,6 +589,164 @@ class VisualConfusionMatrix:
             self.set_cost(s, t, c, symmetric=False)
             count += 1
         return count
+
+    def adapt_from_correction(
+        self,
+        original_prediction: str,
+        operator_correction: str,
+        learning_rate: float = 0.20,
+        min_cost: float = 0.15,
+        auto_persist: bool = False,
+        persist_filepath: Optional[Union[str, Path]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Dynamically recalibrate visual confusion costs based on verified operator corrections.
+
+        1. Runs DP multi-gram alignment between original_prediction and operator_correction.
+        2. Identifies optical confusion operations ('substitution', 'contraction', 'expansion', 'substitution_2_2').
+        3. Lowers visual confusion cost:
+           new_cost = max(effective_min_cost, round(curr_cost * (1.0 - learning_rate), 4))
+           where effective_min_cost >= 0.15 is strictly enforced for clinical safety.
+        4. Sets symmetric costs and logs dynamic update records.
+        5. Optionally persists dynamic updates to disk.
+
+        Returns:
+            List of update dictionaries:
+            [{"operation": ..., "source": ..., "target": ..., "previous_cost": ..., "updated_cost": ..., "old_cost": ..., "new_cost": ...}]
+        """
+        effective_min_cost = max(0.15, float(min_cost))
+        lr = max(0.0, min(1.0, float(learning_rate)))
+
+        if len(original_prediction) > 1000 or len(operator_correction) > 1000:
+            logger.warning("Input string length exceeds 1000 characters; skipping DP alignment for safety.")
+            return []
+
+        with self._lock:
+            alignment = self.align(original_prediction, operator_correction)
+            updates: List[Dict[str, Any]] = []
+
+            for step in alignment.steps:
+                if step.operation in ("substitution", "contraction", "expansion", "substitution_2_2"):
+                    src = self._normalize_token(step.source_chars)
+                    tgt = self._normalize_token(step.target_chars)
+                    if not src or not tgt or src == tgt:
+                        continue
+
+                    curr_cost = self.get_cost(src, tgt)
+                    if math.isinf(curr_cost):
+                        curr_cost = self.default_substitution_cost
+
+                    new_cost = max(effective_min_cost, round(curr_cost * (1.0 - lr), 4))
+                    self.set_cost(src, tgt, new_cost, symmetric=True)
+
+                    canonical_key = tuple(sorted([src, tgt]))
+                    prev_entry = self._dynamic_updates.get(canonical_key, {})
+                    self._dynamic_updates[canonical_key] = {
+                        "source": src,
+                        "target": tgt,
+                        "cost": new_cost,
+                        "previous_cost": curr_cost,
+                        "operation": step.operation,
+                        "update_count": prev_entry.get("update_count", 0) + 1,
+                        "last_updated": time.time(),
+                    }
+
+                    updates.append({
+                        "operation": step.operation,
+                        "source": src,
+                        "target": tgt,
+                        "previous_cost": round(curr_cost, 4),
+                        "updated_cost": round(new_cost, 4),
+                        "old_cost": round(curr_cost, 4),
+                        "new_cost": round(new_cost, 4),
+                    })
+
+            if auto_persist or persist_filepath is not None:
+                path_to_save = persist_filepath or "data/feedback/dynamic_confusion_matrix.json"
+                self.export_dynamic_state(path_to_save)
+
+            return updates
+
+    def export_dynamic_state(
+        self,
+        filepath: Union[str, Path] = "data/feedback/dynamic_confusion_matrix.json",
+    ) -> str:
+        """
+        Export dynamically adapted confusion costs to JSON file.
+        Ensures parent directory is created if missing.
+        """
+        with self._lock:
+            p = Path(filepath)
+            p.parent.mkdir(parents=True, exist_ok=True)
+
+            dynamic_list = [
+                {
+                    "source": val["source"],
+                    "target": val["target"],
+                    "cost": round(val["cost"], 4),
+                    "previous_cost": round(val.get("previous_cost", val["cost"]), 4),
+                    "operation": val.get("operation", "substitution"),
+                    "update_count": val.get("update_count", 1),
+                }
+                for val in self._dynamic_updates.values()
+            ]
+
+            payload = {
+                "version": "1.0",
+                "total_dynamic_pairs": len(dynamic_list),
+                "dynamic_pairs": dynamic_list,
+                "pairs": [
+                    {"source": d["source"], "target": d["target"], "cost": d["cost"]}
+                    for d in dynamic_list
+                ],
+            }
+
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+
+            logger.info(f"Exported {len(dynamic_list)} dynamic confusion pairs to {p}")
+            return str(p)
+
+    def load_dynamic_state(
+        self,
+        filepath: Union[str, Path] = "data/feedback/dynamic_confusion_matrix.json",
+    ) -> int:
+        """
+        Load dynamic confusion matrix state from JSON file and apply symmetric costs.
+        Returns the number of pairs successfully loaded.
+        """
+        with self._lock:
+            p = Path(filepath)
+            if not p.exists():
+                logger.warning(f"Dynamic confusion state file not found: {p}")
+                return 0
+
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            pairs = data.get("dynamic_pairs") or data.get("pairs") or []
+            count = 0
+            for item in pairs:
+                src = item.get("source")
+                tgt = item.get("target")
+                cost = item.get("cost")
+                if src is not None and tgt is not None and cost is not None:
+                    new_c = float(cost)
+                    self.set_cost(src, tgt, new_c, symmetric=True)
+                    canonical_key = tuple(sorted([self._normalize_token(src), self._normalize_token(tgt)]))
+                    self._dynamic_updates[canonical_key] = {
+                        "source": src,
+                        "target": tgt,
+                        "cost": new_c,
+                        "previous_cost": float(item.get("previous_cost", new_c)),
+                        "operation": item.get("operation", "substitution"),
+                        "update_count": int(item.get("update_count", 1)),
+                        "last_updated": time.time(),
+                    }
+                    count += 1
+
+            logger.info(f"Loaded {count} dynamic confusion pairs from {p}")
+            return count
 
     def __len__(self) -> int:
         return len(self._matrix)

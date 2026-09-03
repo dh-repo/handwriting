@@ -13,12 +13,15 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Split,
 } from 'lucide-react';
 import { useDocumentContext } from '../context/DocumentContext';
 import { Dropzone } from '../components/Dropzone';
 import { DocumentViewer } from '../components/DocumentViewer';
 import { InlineEditor } from '../components/InlineEditor';
 import { SignatureInspector } from '../components/SignatureInspector';
+import { DarkroomToolbar, DarkroomSettings } from '../components/DarkroomToolbar';
+import { SplitCurtain } from '../components/SplitCurtain';
 import { DocumentOCRResult } from '../types/ocr';
 import { findSignatureCandidates } from '../lib/signatureCandidates';
 import { apiClient } from '../lib/apiClient';
@@ -66,6 +69,13 @@ export default function WorkspacePage() {
   const activeObjectUrlRef = useRef<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isLoupeActive, setIsLoupeActive] = useState(false);
+  const [viewMode, setViewMode] = useState<'canvas' | 'curtain'>('canvas');
+  const [darkroomSettings, setDarkroomSettings] = useState<DarkroomSettings>({
+    contrast: 1.0,
+    brightness: 1.0,
+    grayscale: false,
+    inverted: false,
+  });
 
   const cleanupObjectURL = useCallback(() => {
     if (activeObjectUrlRef.current) {
@@ -350,27 +360,75 @@ export default function WorkspacePage() {
 
             {/* Split Workspace */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0 overflow-hidden">
-              {/* Left Column: Interactive Document Viewer (7 cols) */}
-              <div className="lg:col-span-7 h-full flex flex-col min-h-[500px] overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl">
-                {activePage && (
-                  <DocumentViewer
-                    page={activePage}
-                    allPages={document.pages}
-                    activePageIndex={activePageIndex}
-                    onPageChange={(idx) => setActivePageIndex(idx)}
-                    selectedLineId={selectedLineId}
-                    selectedWordId={selectedWordId}
-                    hoveredLineId={hoveredLineId}
-                    hoveredWordId={hoveredWordId}
-                    onSelectLine={(lineId) => setSelectedLineId(lineId)}
-                    onSelectWord={(wordId, parentLineId) => setSelectedWordId(wordId, parentLineId)}
-                    onHoverLine={(lineId) => setHoveredLineId(lineId)}
-                    onHoverWord={(wordId) => setHoveredWordId(wordId)}
-                    isLoupeActive={isLoupeActive}
-                    onToggleLoupe={() => setIsLoupeActive((prev) => !prev)}
-                    signatureLineIds={findSignatureCandidates(activePage).map((row) => row.lineId)}
-                  />
-                )}
+              {/* Left Column: Interactive Document Viewer / Split Curtain (7 cols) */}
+              <div className="lg:col-span-7 h-full flex flex-col min-h-[500px] overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl p-3 gap-3">
+                {/* View Mode & Darkroom Controls */}
+                <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
+                  <div className="flex items-center gap-1 bg-white/[0.06] p-1 rounded-xl border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      data-testid="toggle-view-canvas"
+                      onClick={() => setViewMode('canvas')}
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                        viewMode === 'canvas'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Canvas Inspector
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="toggle-view-curtain"
+                      onClick={() => setViewMode('curtain')}
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                        viewMode === 'curtain'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Split Curtain X-Ray
+                    </button>
+                  </div>
+                  {activePage && (
+                    <DarkroomToolbar
+                      settings={darkroomSettings}
+                      onChange={setDarkroomSettings}
+                      className="border-white/10"
+                    />
+                  )}
+                </div>
+
+                {/* Viewer or Curtain */}
+                <div className="flex-1 min-h-0 overflow-hidden rounded-2xl relative">
+                  {activePage && viewMode === 'canvas' && (
+                    <DocumentViewer
+                      page={activePage}
+                      allPages={document.pages}
+                      activePageIndex={activePageIndex}
+                      onPageChange={(idx) => setActivePageIndex(idx)}
+                      selectedLineId={selectedLineId}
+                      selectedWordId={selectedWordId}
+                      hoveredLineId={hoveredLineId}
+                      hoveredWordId={hoveredWordId}
+                      onSelectLine={(lineId) => setSelectedLineId(lineId)}
+                      onSelectWord={(wordId, parentLineId) => setSelectedWordId(wordId, parentLineId)}
+                      onHoverLine={(lineId) => setHoveredLineId(lineId)}
+                      onHoverWord={(wordId) => setHoveredWordId(wordId)}
+                      isLoupeActive={isLoupeActive}
+                      onToggleLoupe={() => setIsLoupeActive((prev) => !prev)}
+                      isInverted={darkroomSettings.inverted}
+                      onToggleInvert={() =>
+                        setDarkroomSettings((prev) => ({ ...prev, inverted: !prev.inverted }))
+                      }
+                      contrastBoost={darkroomSettings.contrast}
+                      signatureLineIds={findSignatureCandidates(activePage).map((row) => row.lineId)}
+                    />
+                  )}
+                  {activePage && viewMode === 'curtain' && (
+                    <SplitCurtain page={activePage} />
+                  )}
+                </div>
               </div>
 
               {/* Right Column: Inline Text Editor (5 cols) */}
@@ -380,6 +438,7 @@ export default function WorkspacePage() {
                     <div className="min-h-0 flex-1 overflow-hidden">
                       <InlineEditor
                         page={activePage}
+                        documentId={document.document_id}
                         selectedLineId={selectedLineId}
                         selectedWordId={selectedWordId}
                         onSelectLine={(lineId) => setSelectedLineId(lineId)}

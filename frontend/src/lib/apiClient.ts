@@ -13,6 +13,8 @@ import {
   HealthResponse,
   ApiErrorResponse,
   SSEEvent,
+  FeedbackSubmissionRequest,
+  FeedbackSubmissionResponse,
 } from '../types/ocr';
 import { runMockOcr } from './mockOcrEngine';
 
@@ -682,6 +684,101 @@ export class ApiClient {
 
   public async getHealth(): Promise<HealthResponse> {
     return this.checkHealth();
+  }
+
+  /**
+   * Submit operator correction feedback for dynamic confusion matrix recalibration
+   * and background LoRA fine-tuning manifest ingestion.
+   */
+  public async submitFeedback(
+    feedback: FeedbackSubmissionRequest
+  ): Promise<FeedbackSubmissionResponse> {
+    const orig = feedback.original_prediction || feedback.original_text || '';
+    const corr = feedback.operator_correction || feedback.corrected_text || '';
+    const payload: FeedbackSubmissionRequest = {
+      ...feedback,
+      original_prediction: orig,
+      operator_correction: corr,
+      original_text: orig,
+      corrected_text: corr,
+      timestamp: feedback.timestamp || new Date().toISOString(),
+    };
+
+    // 1. First attempt direct FastAPI backend endpoint if baseUrl is set
+    if (this.baseUrl) {
+      try {
+        const url = `${this.baseUrl}/v1/feedback`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+          if (res.ok) {
+            return (await res.json()) as FeedbackSubmissionResponse;
+          }
+          if (res.status >= 400 && res.status < 500) {
+            throw await this.parseErrorResponse(res);
+          }
+          throw await this.parseErrorResponse(res);
+        } finally {
+          clearTimeout(timer);
+        }
+      } catch (err: unknown) {
+        if (err instanceof ApiClientError && err.status && err.status >= 400 && err.status < 500) {
+          throw err;
+        }
+        if (!this.enableFallback) {
+          throw err instanceof ApiClientError ? err : new ApiNetworkError(undefined, String(err));
+        }
+      }
+    }
+
+    // 2. Next.js Route Proxy fallback
+    try {
+      const proxyUrl = '/api/feedback';
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          return (await res.json()) as FeedbackSubmissionResponse;
+        }
+        if (res.status >= 400 && res.status < 500) {
+          throw await this.parseErrorResponse(res);
+        }
+        throw await this.parseErrorResponse(res);
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiClientError && err.status && err.status >= 400 && err.status < 500) {
+        throw err;
+      }
+      if (!this.enableFallback) {
+        throw err instanceof ApiClientError ? err : new ApiNetworkError(undefined, String(err));
+      }
+    }
+
+    // 3. Fallback mock acknowledgment for offline / standalone execution
+    return {
+      status: 'persisted',
+      feedback_id: `fb_mock_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      document_id: feedback.document_id,
+      line_id: feedback.line_id,
+      manifest_path: 'data/feedback/manifest.jsonl',
+      crop_path: undefined,
+      confusion_pairs_count: 1,
+      timestamp: payload.timestamp!,
+    };
   }
 }
 

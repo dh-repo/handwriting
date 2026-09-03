@@ -211,9 +211,10 @@ class InferenceEngine:
         confusion_weight: Optional[float] = None,
         max_safe_mg: Optional[float] = None,
         line_batch_size: Optional[int] = None,
+        mode: Optional[str] = None,
     ) -> None:
         settings = get_settings()
-        self.mode = execution_mode or settings.resolve_device()
+        self.mode = execution_mode or mode or settings.resolve_device()
         self.model_name = assert_shippable_checkpoint(model_name_or_path or settings.resolve_model_path())
         self.use_fp16 = use_fp16 if use_fp16 is not None else settings.USE_FP16
         self.dpi = dpi or settings.DEFAULT_DPI
@@ -275,6 +276,11 @@ class InferenceEngine:
             cm = VisualConfusionMatrix(load_defaults=True)
             if self.confusion_matrix_path and Path(self.confusion_matrix_path).exists():
                 cm.load_json(self.confusion_matrix_path)
+
+            dynamic_state_path = Path("data/feedback/dynamic_confusion_matrix.json")
+            if dynamic_state_path.exists():
+                loaded_dynamic = cm.load_dynamic_state(dynamic_state_path)
+                logger.info(f"Loaded {loaded_dynamic} dynamic confusion pairs from {dynamic_state_path}")
 
             self.rescorer = BeamRescorer(
                 trie=trie,
@@ -413,7 +419,7 @@ class InferenceEngine:
         Stream recognition events: metadata -> line events -> complete event.
         Yields JSON-compatible dictionaries suitable for SSE.
         """
-        for item in self._recognize_gen(file_bytes, filename, options):
+        for item in self._recognize_gen(file_bytes, filename, options, is_stream=True):
             event_type = item[0]
             data = item[1]
             extra = item[2:]
@@ -449,6 +455,7 @@ class InferenceEngine:
         file_bytes: bytes,
         filename: str = "document.png",
         options: Optional[RecognitionOptions] = None,
+        is_stream: bool = False,
     ) -> Iterator[Tuple[Any, ...]]:
         t0 = time.time()
 
@@ -531,7 +538,7 @@ class InferenceEngine:
                     and line.image.size > 0
                     and not is_sliver_bbox(line.bbox)
                 ]
-                batch_size = max(1, self.line_batch_size)
+                batch_size = 1 if is_stream else (min(2, max(1, self.line_batch_size)) if self.device.type == "cpu" else max(1, self.line_batch_size))
 
                 for b_start in range(0, len(valid_lines), batch_size):
                     b_lines = valid_lines[b_start : b_start + batch_size]
@@ -960,6 +967,30 @@ class InferenceEngine:
             pages=pages_result,
             processing_time_ms=round(elapsed_ms, 2),
             preprocessing_flags=opts.model_dump(),
+        )
+
+    def adapt_confusion_matrix(
+        self,
+        original_prediction: str,
+        operator_correction: str,
+        learning_rate: float = 0.20,
+        min_cost: float = 0.15,
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """
+        Adapt live visual confusion matrix costs based on human operator correction.
+        Delegates directly to self.rescorer.confusion_matrix.adapt_from_correction() if rescorer is active.
+        """
+        if self.rescorer is None or not hasattr(self.rescorer, "confusion_matrix") or self.rescorer.confusion_matrix is None:
+            logger.warning("BeamRescorer or VisualConfusionMatrix is not active; dynamic adaptation skipped.")
+            return []
+
+        return self.rescorer.confusion_matrix.adapt_from_correction(
+            original_prediction=original_prediction,
+            operator_correction=operator_correction,
+            learning_rate=learning_rate,
+            min_cost=min_cost,
+            **kwargs,
         )
 
 

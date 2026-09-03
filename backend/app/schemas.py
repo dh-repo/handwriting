@@ -7,7 +7,7 @@ from __future__ import annotations
 import math
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 def _validate_bbox_coordinates(v: List[float], label: str = "Bounding box") -> List[float]:
@@ -189,6 +189,97 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error category or exception type name")
     detail: str = Field(..., description="Sanitized, human-readable error description")
     code: Optional[str] = Field(default=None, description="Machine-readable error code")
+    timestamp: str = Field(..., description="ISO-8601 UTC timestamp")
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class ConfusionUpdateRecord(BaseModel):
+    """Record of an online visual confusion cost adjustment."""
+
+    operation: str = Field(..., description="DP alignment operation ('substitution', 'contraction', 'expansion', 'substitution_2_2')")
+    source: str = Field(..., description="Source character(s) or ligature")
+    target: str = Field(..., description="Target character(s) or ligature")
+    previous_cost: float = Field(..., description="Visual confusion cost before adaptation")
+    updated_cost: float = Field(..., description="Visual confusion cost after adaptation")
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class FeedbackCorrectionPayload(BaseModel):
+    """Payload for Darkroom operator corrections and feedback ingestion."""
+
+    document_id: str = Field(..., min_length=1, description="Document identifier, e.g. 'doc_12345678'")
+    line_id: str = Field(..., min_length=1, description="Line identifier, e.g. 'p1_l2'")
+    page_number: int = Field(default=1, ge=1, description="1-indexed page sequence number")
+    original_prediction: str = Field(
+        ...,
+        validation_alias=AliasChoices("original_prediction", "original_text"),
+        max_length=500,
+        description="Original model prediction before operator edit",
+    )
+    operator_correction: str = Field(
+        ...,
+        validation_alias=AliasChoices("operator_correction", "corrected_text"),
+        max_length=500,
+        description="Verified operator correction text",
+    )
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Line/word confidence score in [0.0, 1.0]")
+    bbox: Optional[List[float]] = Field(default=None, description="Normalized bounding box [ymin, xmin, ymax, xmax]")
+    word_id: Optional[str] = Field(default=None, description="Optional word identifier if word-level edit")
+    line_crop_base64: Optional[str] = Field(default=None, description="Base64 encoded PNG/JPEG line crop image")
+    sync_confusion_matrix: bool = Field(default=True, description="Whether to dynamically update live confusion matrix")
+    timestamp: Optional[str] = Field(default=None, description="Optional ISO-8601 UTC timestamp")
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    @field_validator("document_id", "line_id")
+    @classmethod
+    def check_non_empty(cls, v: str, info: Any) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError(f"{info.field_name} must not be empty or whitespace only")
+        return v.strip()
+
+    @field_validator("confidence")
+    @classmethod
+    def check_confidence(cls, v: float) -> float:
+        if math.isnan(v) or math.isinf(v) or not (0.0 <= v <= 1.0):
+            raise ValueError("confidence must be a valid float between 0.0 and 1.0")
+        return v
+
+    @field_validator("bbox")
+    @classmethod
+    def check_bbox(cls, v: Optional[List[float]]) -> Optional[List[float]]:
+        if v is not None:
+            return _validate_bbox_coordinates(v, "Feedback bbox")
+        return v
+
+
+class FeedbackResponse(BaseModel):
+    """Response returned upon successful feedback correction ingestion."""
+
+    feedback_id: str = Field(..., description="Unique generated feedback ID, e.g. 'fb_20260903_143000_a1b2c3'")
+    document_id: Optional[str] = Field(default=None, description="Document identifier echoed from request")
+    line_id: Optional[str] = Field(default=None, description="Line identifier echoed from request")
+    status: str = Field(default="persisted", description="Ingestion status ('persisted')")
+    manifest_path: str = Field(..., description="Absolute or relative path to append-only manifest JSONL")
+    crop_path: Optional[str] = Field(default=None, description="Path to saved crop image file, or None if omitted")
+    confusion_pairs_updated: List[ConfusionUpdateRecord] = Field(
+        default_factory=list,
+        description="Updated confusion pairs from dynamic alignment",
+    )
+    timestamp: str = Field(..., description="ISO-8601 UTC timestamp")
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class FeedbackStatsResponse(BaseModel):
+    """Feedback repository statistics."""
+
+    total_records: int = Field(default=0, ge=0, description="Total feedback records in manifest")
+    total_crops: int = Field(default=0, ge=0, description="Total line crops stored on disk")
+    manifest_path: str = Field(..., description="Path to feedback manifest file")
+    crops_dir: str = Field(..., description="Path to feedback crops directory")
     timestamp: str = Field(..., description="ISO-8601 UTC timestamp")
 
     model_config = ConfigDict(extra="ignore")

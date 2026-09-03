@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 
 from backend.app.config import get_settings
 from backend.app.engine import get_engine
-from backend.app.routes import health, jobs, recognize
+from backend.app.routes import feedback, health, jobs, recognize
 
 logger = logging.getLogger("handwriting_backend")
 logging.basicConfig(
@@ -80,7 +80,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "error": "Validation Error",
                 "detail": str(exc),
@@ -115,6 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/v1", tags=["Health"])
     app.include_router(recognize.router, prefix="/v1", tags=["Recognition"])
     app.include_router(jobs.router, prefix="/v1", tags=["Async Jobs"])
+    app.include_router(feedback.router, prefix="/v1", tags=["Feedback"])
 
     return app
 
