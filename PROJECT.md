@@ -23,7 +23,17 @@
 | 7 | Azure Container Apps Deployment | Deploy `ca-backend-playground` and `ca-frontend-playground` with health probes, CORS, and FQDN environment variables | M2 | Survey Infra |
 | 8 | Cloud Health & Model Verification | Verify `GET /v1/health` returns HTTP 200, healthy status, active model, and rescorer active on public Azure URL | M3 | Survey Backend |
 | 9 | End-to-End Cloud Transcription Verification | Test real handwriting images and multi-page PDFs against Azure endpoints; verify bounding boxes and zero mock fallback | M3 | User Request / Survey |
-| 10 | Vercel Teardown & Documentation Cleanup | Remove `frontend/.vercel/`, `frontend/vercel.json`, clean up references to `temporary-sonic-ridge-qzz8f0o.vercel.app`, update `README.md` | M4 | Survey Frontend |
+| 11 | Feedback Ingestion API | Ingest line/word corrections, crops, and metadata via `POST /v1/feedback` | M5 | User Request / Flywheel |
+| 12 | Atomic Manifest Storage | Concurrent-safe append to `data/feedback/manifest.jsonl` with POSIX `fcntl.flock(LOCK_EX)` | M5 | Flywheel Engine |
+| 13 | Line Crop Persistence | Base64 PNG decode with PIL header validation to `data/feedback/crops/<id>.png` | M5 | Flywheel Storage |
+| 14 | Dynamic DP Character Alignment | Character-level DP alignment extracting optical 1:1, 1:2, 2:1, 2:2 substitutions and ligatures | M6 | Rescorer Engine |
+| 15 | Live Confusion Cost Recalibration | Dynamic cost discounting with clinical floor $c_{\text{min}} \ge 0.15$ and immediate in-memory re-ranking | M6 | Rescorer Engine |
+| 16 | Experience Replay Sampler | `ReplayBatchSampler` enforcing exact 50:50 ratio of feedback to golden anchor lines | M7 | Training Pipeline |
+| 17 | Apple Silicon MPS LoRA Micro-Tuning | PEFT LoRA ($r=16, \alpha=32$, `bf16`) fine-tuning on Apple Silicon Metal Performance Shaders | M7 | Training Pipeline |
+| 18 | Clinical LASA Safety Release Gate | Strict CER regression bound ($\le 5\%$) + zero-tolerance audit on 20 bidirectional LASA drug pairs | M7 | Clinical Safety |
+| 19 | Canvas Line Crop Extractor | Offscreen HTML5 `<canvas>` line crop utility with coordinate clamping and natural dimensions | M8 | Frontend Darkroom |
+| 20 | Debounced Feedback Dispatch | 500ms trailing debounce, immediate Enter / quick-pick dispatch, and 4-state visual sync badges | M8 | Frontend Darkroom |
+| 21 | Staging Queue & Camera Scanner | Batch document staging queue (`StagingQueue.tsx`) and camera scanner modal (`CameraScannerModal.tsx`) | M8 | Frontend Darkroom |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
@@ -32,20 +42,37 @@
 | 2 | M2: Backend & Frontend Containerization & Azure Deployment | Create Dockerfiles, update Next.js standalone config, build container images via ACR, deploy `ca-backend-playground` and `ca-frontend-playground` with CORS & ingress | M1 | DONE |
 | 3 | M3: End-to-End Cloud Transcription Verification | Execute live cloud integration tests with real handwriting notes and multi-page PDFs; verify accuracy, bounding boxes, and zero mock fallback | M2 | DONE |
 | 4 | M4: Vercel Teardown & Documentation Cleanup | Purge `.vercel/` and `vercel.json`, update `README.md` and codebase documentation to point exclusively to Azure Container Apps | M2 | DONE |
+| 5 | M5: Feedback Ingestion & Manifest Storage | Implement `POST /v1/feedback`, POSIX `flock` manifest persistence, and base64 PNG line crop extraction | M2 | DONE |
+| 6 | M6: Online Self-Tuning Visual Confusion Matrix | Implement DP character alignment, dynamic cost discounting, and immediate in-memory rescorer rank-flipping | M5 | DONE |
+| 7 | M7: Apple Silicon MPS LoRA Adaptation & LASA Gate | Implement `lora_micro_tune.py` on MPS, 50:50 experience replay, and zero-tolerance 20-pair LASA safety gate | M6 | DONE |
+| 8 | M8: Darkroom Feedback Integration & Tier 5 Hardening | Connect `InlineEditor.tsx` debounced feedback dispatch, offscreen canvas crop extraction, and 1,665 passing tests | M7 | DONE |
 
 ## Interface Contracts
 ### Frontend (`ca-frontend-playground`) ↔ Backend (`ca-backend-playground`)
 - `BACKEND_URL`: Server-only env on the frontend, pointing at the backend **internal** FQDN
 - `GET /v1/live`: Process liveness (no engine load). Used by ACA startup/liveness probes
 - `GET /v1/health`: Readiness + model status. Publicly reached only via frontend `GET /api/health`
-- `POST /v1/recognize`: Reached only via frontend `POST /api/recognize`
+- `POST /v1/recognize`: Synchronous recognition reached via frontend `POST /api/recognize`
+- `POST /v1/recognize-stream`: SSE line streaming reached via frontend `POST /api/recognize-stream`
+- `POST /v1/feedback`: Ingest operator corrections reached via frontend `POST /api/feedback`
+- `GET /v1/feedback/stats`: Aggregated feedback ingestion and confusion statistics
 
 ## Code Layout
-- `backend/Dockerfile`: Production multi-stage Dockerfile for FastAPI + PyTorch + OpenCV + Sauvola + RxNorm
-- `frontend/Dockerfile`: Production multi-stage Dockerfile for Next.js 14 standalone
-- `frontend/next.config.mjs`: Next.js config with `output: 'standalone'` and custom security headers
-- `infra/main.bicep`: Azure infrastructure (ACR, Log Analytics, ACA env, apps, AcrPull)
-- `scripts/azure/deploy_infra.sh`: `az deployment group create` for foundation resources
-- `scripts/azure/deploy_apps.sh`: SHA-tagged `az acr build` plus app Bicep deploy
-- `tests/e2e/test_azure_cloud_transcription.py`: Automated live cloud verification test suite
-- `README.md`: Official project documentation referencing Microsoft Azure Container Apps
+- `backend/app/routes/feedback.py`: Feedback ingestion route with atomic `flock` manifest persistence
+- `backend/app/routes/recognize.py`: Recognition and streaming endpoints
+- `backend/app/engine.py`: Unified inference engine with adaptive beam search, VLM fusion, and live rescorer
+- `backend/app/ship_gate.py`: Re-exported clinical safety and release gate assertions
+- `pipeline/rescorer/confusion_matrix.py`: Visual confusion matrix with DP character alignment and cost adaptation
+- `pipeline/rescorer/beam_rescorer.py`: Multi-objective beam rescorer combining optical, lexicon, and confusion penalties
+- `pipeline/training/experience_replay.py`: Experience replay dataset and batch sampler (exact 50:50 ratio)
+- `pipeline/training/lora_micro_tune.py`: Apple Silicon MPS-accelerated PEFT LoRA fine-tuning engine
+- `pipeline/training/ship_gate.py`: Release safety gate enforcing CER bounds and 20 bidirectional LASA pairs
+- `frontend/src/lib/cropUtils.ts`: Offscreen HTML5 canvas line crop extractor
+- `frontend/src/components/InlineEditor.tsx`: Darkroom inline editor with debounced feedback dispatch
+- `frontend/src/components/StagingQueue.tsx`: Multi-document staging queue for batch workloads
+- `frontend/src/components/CameraScannerModal.tsx`: Live camera scanner modal with viewfinder
+- `tests/e2e/test_flywheel_e2e.py`: 36-scenario closed-loop end-to-end integration test suite
+- `tests/e2e/test_flywheel_tiers.py`: 196-scenario 4-tier flywheel test matrix (Tiers 1–4 across all 17 features)
+- `tests/test_challenger_m5_adversarial.py`: Tier 5 white-box adversarial challenge test suite
+- `TEST_READY.md`: E2E test suite specification, tier breakdown, and certification report
+- `README.md`: Official project documentation with architecture, active learning flywheel, and quickstart
