@@ -90,7 +90,7 @@ def _line_prompt(hypothesis: str = "", previous_text: str = "") -> str:
 
 
 def should_refine_with_vlm(text: str) -> bool:
-    """True when TrOCR looks unfinished or starts with a known first-word miss."""
+    """True when TrOCR looks unfinished, starts with a confusable first word, or is a signature/name line."""
     cleaned = (text or "").strip()
     if not cleaned:
         return True
@@ -100,6 +100,10 @@ def should_refine_with_vlm(text: str) -> bool:
     if tokens[0].lower() in CONFUSABLE_FIRST_WORDS:
         return True
     if re.search(r'[\"“”]', cleaned):
+        return True
+    # Always verify short signature / name lines to defeat OCR diminutive/name hallucinations
+    from pipeline.training.english_beam import looks_like_name
+    if len(tokens) <= 3 and any(looks_like_name(t) or is_initial(t) for t in tokens):
         return True
     return any(
         not is_english_word(token) and not is_name_or_title(token) for token in tokens
@@ -611,6 +615,16 @@ def _equal_length_near_miss(trocr_tokens: list[str], vlm_tokens: list[str]) -> b
 
 def _prefer_visual_token(trocr_token: str, vlm_token: str) -> str:
     """Take the VLM spelling unless that would replace real English or a name with junk."""
+    from pipeline.training.english_beam import looks_like_name
+
+    t_low, v_low = trocr_token.lower(), vlm_token.lower()
+    if looks_like_name(trocr_token) or looks_like_name(vlm_token):
+        # Defeat diminutive suffixes (Dick vs Dickie, Dan vs Danny): prefer the exact shorter name root
+        if t_low.startswith(v_low) and t_low[len(v_low):] in ("ie", "y", "s"):
+            return vlm_token
+        if v_low.startswith(t_low) and v_low[len(t_low):] in ("ie", "y", "s"):
+            return trocr_token
+
     if is_english_word(trocr_token) and not is_english_word(vlm_token):
         return trocr_token
     if is_english_word(trocr_token) and is_english_word(vlm_token):

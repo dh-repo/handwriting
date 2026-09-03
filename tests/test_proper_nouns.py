@@ -48,12 +48,18 @@ def test_prefer_visual_token_protects_proper_nouns():
     assert _prefer_visual_token("D.", "Dickie") == "D."
     assert _prefer_visual_token("J.", "John") == "J."
 
-    # 2. Distinct proper names must not be swapped
+    # 2. Distinct proper names must not be swapped, and diminutive extensions are defeated
     assert _prefer_visual_token("Dick", "Dickie") == "Dick"
+    assert _prefer_visual_token("Dickie", "Dick") == "Dick"
     assert _prefer_visual_token("Jon", "John") == "Jon"
     assert _prefer_visual_token("Hasak", "Hassle") == "Hasak"
 
-    # 3. Common first-word confusions CAN still be refined if not a name
+    # 3. Short signature lines always trigger VLM verification
+    from pipeline.training.vlm_refine import should_refine_with_vlm
+    assert should_refine_with_vlm("Dickie D.") is True
+    assert should_refine_with_vlm("Dick D.") is True
+
+    # 4. Common first-word confusions CAN still be refined if not a name
     assert _prefer_visual_token("open", "pen") == "pen"
 
 
