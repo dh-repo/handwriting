@@ -129,6 +129,44 @@ class Settings(BaseSettings):
     JOB_RETENTION_SECONDS: int = Field(default=3600, description="Async job TTL in seconds")
     MAX_CONCURRENT_JOBS: int = Field(default=4, description="Max concurrent background jobs")
 
+    # Azure Cloud Storage & Feedback Sink settings
+    AZURE_STORAGE_CONNECTION_STRING: Optional[str] = Field(
+        default=None,
+        description="Azure Blob Storage connection string for feedback and line crops",
+    )
+    AZURE_STORAGE_ACCOUNT_NAME: Optional[str] = Field(
+        default=None,
+        description="Azure Storage Account Name (uses DefaultAzureCredential if connection string is omitted)",
+    )
+    AZURE_STORAGE_CONTAINER_CROPS: str = Field(
+        default="feedback-crops",
+        description="Azure Blob container for operator feedback line crop PNGs",
+    )
+    AZURE_STORAGE_CONTAINER_MANIFESTS: str = Field(
+        default="feedback-manifests",
+        description="Azure Blob container for append-only JSONL manifests",
+    )
+    FEEDBACK_STORAGE_BACKEND: str = Field(
+        default="auto",
+        description="Feedback storage backend: 'auto' (Azure if configured, else local), 'azure_blob', or 'local'",
+    )
+
+    # ONNX Runtime Cloud Serving Engine settings
+    USE_ONNX_ENGINE: bool = Field(
+        default=False,
+        description="Enable ONNX Runtime CPU execution engine instead of PyTorch",
+    )
+    ONNX_MODEL_DIR: Optional[str] = Field(
+        default="export/trocr_base_iam_onnx",
+        description="Path to exported ONNX model directory containing encoder and decoder onnx files",
+    )
+    ONNX_NUM_THREADS: int = Field(
+        default=4,
+        ge=1,
+        le=32,
+        description="Intra-op thread count for ONNX Runtime CPU inference",
+    )
+
     # Feedback & Self-Tuning Flywheel settings
     FEEDBACK_DIR: str = Field(default="data/feedback", description="Directory for feedback data and manifests")
     FEEDBACK_MANIFEST_PATH: str = Field(
@@ -187,20 +225,14 @@ class Settings(BaseSettings):
         """
         Resolve model path in prioritized order:
         1. Explicitly configured path if exists on disk
-        2. Local fine-tuned LoRA base checkpoint (checkpoints/lora_trocr_base_iam)
-        3. Configured MODEL_NAME_OR_PATH or HuggingFace ID
-        4. Stage 2 doctor specialization checkpoint
-        5. Fallback root checkpoint
-        6. Default ('microsoft/trocr-base-handwritten')
+        2. Stage 2 doctor specialization checkpoint
+        3. Fallback root checkpoint
+        4. Stage 1 general adaptation checkpoint
+        5. Configured MODEL_NAME_OR_PATH or HuggingFace ID
+        6. Local fine-tuned LoRA base checkpoint (checkpoints/lora_trocr_base_iam)
+        7. Default ('microsoft/trocr-base-handwritten')
         """
         if self.MODEL_NAME_OR_PATH and Path(self.MODEL_NAME_OR_PATH).exists():
-            return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH)
-
-        lora_base = Path("checkpoints/lora_trocr_base_iam")
-        if lora_base.exists() and (lora_base / "config.json").exists():
-            return assert_shippable_checkpoint(str(lora_base))
-
-        if self.MODEL_NAME_OR_PATH:
             return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH)
 
         candidates = [
@@ -217,6 +249,13 @@ class Settings(BaseSettings):
                     return assert_shippable_checkpoint(f"{cand}_hf")
                 if Path(f"{cand}.pt").exists():
                     return assert_shippable_checkpoint(f"{cand}.pt")
+
+        if self.MODEL_NAME_OR_PATH:
+            return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH)
+
+        lora_base = Path("checkpoints/lora_trocr_base_iam")
+        if lora_base.exists() and (lora_base / "config.json").exists():
+            return assert_shippable_checkpoint(str(lora_base))
 
         return assert_shippable_checkpoint("microsoft/trocr-base-handwritten")
 

@@ -30,6 +30,7 @@ export interface WordToken {
   candidate_tokens?: WordCandidate[];
   is_low_confidence?: boolean;
   is_edited?: boolean;
+  is_proper_noun?: boolean;
 }
 
 export interface LineItem {
@@ -100,6 +101,7 @@ export interface LowConfidenceWordItem {
   bbox: BoundingBoxTuple;
   page_image_url?: string;
   alternatives?: (WordCandidate | string)[];
+  is_proper_noun?: boolean;
 }
 
 export type ExportFormat = 'json' | 'txt' | 'csv';

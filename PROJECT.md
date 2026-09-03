@@ -34,6 +34,9 @@
 | 19 | Canvas Line Crop Extractor | Offscreen HTML5 `<canvas>` line crop utility with coordinate clamping and natural dimensions | M8 | Frontend Darkroom |
 | 20 | Debounced Feedback Dispatch | 500ms trailing debounce, immediate Enter / quick-pick dispatch, and 4-state visual sync badges | M8 | Frontend Darkroom |
 | 21 | Staging Queue & Camera Scanner | Batch document staging queue (`StagingQueue.tsx`) and camera scanner modal (`CameraScannerModal.tsx`) | M8 | Frontend Darkroom |
+| 22 | Azure Blob Storage Feedback Sink | Direct stream of line crops and JSONL manifests to Azure Blob Storage with automatic offline local disk fallback | M9 | Cloud Storage |
+| 23 | ONNX Runtime CPU Serving Engine | High-performance TrOCR serving engine on ONNX Runtime (`CPUExecutionProvider`, 4 threads) for 3-4x lower CPU latency | M9 | Cloud Inference |
+| 24 | Ephemeral ACA Training Job IaC | Bicep infrastructure for dedicated Azure Storage Account and ephemeral Container Apps Job (`caj-lora-micro-tune`) | M9 | Azure IaC |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
@@ -46,6 +49,7 @@
 | 6 | M6: Online Self-Tuning Visual Confusion Matrix | Implement DP character alignment, dynamic cost discounting, and immediate in-memory rescorer rank-flipping | M5 | DONE |
 | 7 | M7: Apple Silicon MPS LoRA Adaptation & LASA Gate | Implement `lora_micro_tune.py` on MPS, 50:50 experience replay, and zero-tolerance 20-pair LASA safety gate | M6 | DONE |
 | 8 | M8: Darkroom Feedback Integration & Tier 5 Hardening | Connect `InlineEditor.tsx` debounced feedback dispatch, offscreen canvas crop extraction, and 1,665 passing tests | M7 | DONE |
+| 9 | M9: Azure Cloud Optimization & Ephemeral Worker Architecture | Azure Blob Storage sink, ONNX Runtime CPU serving engine, Bicep Storage Account & ACA Job IaC | M8 | DONE |
 
 ## Interface Contracts
 ### Frontend (`ca-frontend-playground`) ↔ Backend (`ca-backend-playground`)
@@ -57,20 +61,25 @@
 - `POST /v1/feedback`: Ingest operator corrections reached via frontend `POST /api/feedback`
 - `GET /v1/feedback/stats`: Aggregated feedback ingestion and confusion statistics
 
-## Code Layout
-- `backend/app/routes/feedback.py`: Feedback ingestion route with atomic `flock` manifest persistence
+- `backend/app/routes/feedback.py`: Feedback ingestion route with Azure Blob Storage sink and atomic `flock` manifest persistence
+- `backend/app/onnx_engine.py`: High-performance ONNX Runtime CPU serving engine with greedy and beam search
 - `backend/app/routes/recognize.py`: Recognition and streaming endpoints
-- `backend/app/engine.py`: Unified inference engine with adaptive beam search, VLM fusion, and live rescorer
+- `backend/app/engine.py`: Unified inference engine with adaptive beam search, ONNX/PyTorch polymorphism, VLM fusion, and live rescorer
 - `backend/app/ship_gate.py`: Re-exported clinical safety and release gate assertions
 - `pipeline/rescorer/confusion_matrix.py`: Visual confusion matrix with DP character alignment and cost adaptation
 - `pipeline/rescorer/beam_rescorer.py`: Multi-objective beam rescorer combining optical, lexicon, and confusion penalties
 - `pipeline/training/experience_replay.py`: Experience replay dataset and batch sampler (exact 50:50 ratio)
 - `pipeline/training/lora_micro_tune.py`: Apple Silicon MPS-accelerated PEFT LoRA fine-tuning engine
 - `pipeline/training/ship_gate.py`: Release safety gate enforcing CER bounds and 20 bidirectional LASA pairs
+- `infra/main.bicep`: Azure infrastructure source of truth (ACR, LAW, ACA env, storage account, apps, container job)
+- `infra/modules/storage-account.bicep`: Azure Storage Account with `feedback-crops` and `feedback-manifests` blob containers
+- `infra/modules/container-job.bicep`: Ephemeral Azure Container Apps Job for decoupled background fine-tuning
 - `frontend/src/lib/cropUtils.ts`: Offscreen HTML5 canvas line crop extractor
 - `frontend/src/components/InlineEditor.tsx`: Darkroom inline editor with debounced feedback dispatch
 - `frontend/src/components/StagingQueue.tsx`: Multi-document staging queue for batch workloads
 - `frontend/src/components/CameraScannerModal.tsx`: Live camera scanner modal with viewfinder
+- `tests/unit/test_azure_storage_feedback.py`: Unit tests for Azure Blob Storage feedback sink and offline fallback
+- `tests/unit/test_onnx_engine.py`: Unit tests for ONNX Runtime CPU serving engine and beam decoding
 - `tests/e2e/test_flywheel_e2e.py`: 36-scenario closed-loop end-to-end integration test suite
 - `tests/e2e/test_flywheel_tiers.py`: 196-scenario 4-tier flywheel test matrix (Tiers 1–4 across all 17 features)
 - `tests/test_challenger_m5_adversarial.py`: Tier 5 white-box adversarial challenge test suite

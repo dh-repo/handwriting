@@ -15,6 +15,7 @@ from PIL import Image
 
 from pipeline.training.english_beam import (
     is_english_word,
+    is_initial,
     is_name_or_title,
     is_title_token,
     score_english_hypothesis,
@@ -74,14 +75,17 @@ def vlm_refine_available() -> bool:
 
 def _line_prompt(hypothesis: str = "", previous_text: str = "") -> str:
     user = (
-        "Transcribe this single line of English handwriting exactly. "
-        "Keep the writer's spelling and punctuation. "
-        "Output only the line text."
+        "Transcribe this single line of English handwriting exactly as written. "
+        "Pay extreme attention to proper nouns, names, initials, and signatures. "
+        "Do NOT autocorrect unusual spellings, surnames, or uncommon names to standard words "
+        "(e.g. preserve 'Jon' vs 'John', 'Dick D.' vs 'Dickie'). "
+        "Keep the writer's exact spelling, capitalization, and punctuation. "
+        "Output only the line text with no extra commentary."
     )
     if hypothesis.strip():
         user += f" A first-pass OCR guessed: {hypothesis.strip()!r}."
     if previous_text.strip():
-        user += f" Previous lines: {previous_text.strip()}"
+        user += f" Previous lines context: {previous_text.strip()}"
     return user
 
 
@@ -615,10 +619,12 @@ def _prefer_visual_token(trocr_token: str, vlm_token: str) -> str:
             return trocr_token
         if left.endswith("ing") and right.endswith("ing") and left != right:
             return trocr_token
-    if is_name_or_title(trocr_token) and not _token_near_miss(trocr_token, vlm_token):
-        if is_name_or_title(vlm_token) and trocr_token.lower() != vlm_token.lower():
+    if is_name_or_title(trocr_token):
+        if is_initial(trocr_token) and not is_initial(vlm_token):
             return trocr_token
         if not is_name_or_title(vlm_token):
+            return trocr_token
+        if is_name_or_title(vlm_token) and trocr_token.lower() != vlm_token.lower():
             return trocr_token
     return vlm_token
 

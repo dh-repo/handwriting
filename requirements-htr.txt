@@ -18,3 +18,5 @@ optimum
 fastapi
 uvicorn
 python-multipart
+azure-storage-blob
+azure-identity

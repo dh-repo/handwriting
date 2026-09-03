@@ -96,4 +96,39 @@ describe('InlineEditor Component', () => {
     fireEvent.click(revertBtn);
     expect(onRevertAll).toHaveBeenCalled();
   });
+
+  it('renders proper noun chips with name badges and data-proper-noun attribute', () => {
+    const mockPage = {
+      page_number: 1,
+      width: 800,
+      height: 1000,
+      confidence: 0.95,
+      full_text: 'Dr. Penelope Harrington Dick D.',
+      lines: [
+        {
+          line_id: 'p1_l1',
+          text: 'Dr. Penelope Harrington Dick D.',
+          confidence: 0.95,
+          bbox: [0.1, 0.1, 0.2, 0.9] as [number, number, number, number],
+          words: [
+            { word_id: 'w1', text: 'Dr.', confidence: 0.95, bbox: [0.1, 0.1, 0.2, 0.2] as [number, number, number, number] },
+            { word_id: 'w2', text: 'Penelope', confidence: 0.95, bbox: [0.1, 0.2, 0.2, 0.4] as [number, number, number, number], is_proper_noun: true },
+            { word_id: 'w3', text: 'Harrington', confidence: 0.95, bbox: [0.1, 0.4, 0.2, 0.6] as [number, number, number, number], is_proper_noun: true },
+            { word_id: 'w4', text: 'Dick', confidence: 0.82, bbox: [0.1, 0.6, 0.2, 0.8] as [number, number, number, number], is_proper_noun: true },
+            { word_id: 'w5', text: 'D.', confidence: 0.78, bbox: [0.1, 0.8, 0.2, 0.9] as [number, number, number, number], is_proper_noun: true },
+          ],
+        },
+      ],
+    };
+
+    render(<InlineEditor page={mockPage} />);
+
+    const penelopeChip = screen.getByTestId('word-chip-w2');
+    expect(penelopeChip).toHaveAttribute('data-proper-noun', 'true');
+    expect(screen.getByTestId('proper-noun-tag-w2')).toHaveTextContent('name');
+
+    const dickChip = screen.getByTestId('word-chip-w4');
+    expect(dickChip).toHaveAttribute('data-proper-noun', 'true');
+    expect(screen.getByTestId('proper-noun-tag-w4')).toHaveTextContent('name');
+  });
 });

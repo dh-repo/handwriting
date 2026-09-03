@@ -21,8 +21,14 @@ from PIL import Image
 import torch
 import torch.nn.functional as F
 
+from backend.app.onnx_engine import (
+    is_onnx_available,
+    load_onnx_htr_model,
+    ONNXRUNTIME_AVAILABLE,
+)
 from backend.app.ship_gate import assert_shippable_checkpoint
 from pipeline.training.english_beam import (
+    is_name_or_title,
     looks_like_word_crop,
     pick_crop_hypothesis,
     strip_word_decoder_punct,
@@ -313,8 +319,22 @@ class InferenceEngine:
         return torch.device("cpu")
 
     def _load_model(self) -> None:
-        """Load TrOCR processor and VisionEncoderDecoderModel with polymorphic checkpoint support."""
+        """Load TrOCR processor and VisionEncoderDecoderModel (or ONNX Runtime Engine) with polymorphic checkpoint support."""
         try:
+            settings = get_settings()
+            onnx_dir = getattr(settings, "ONNX_MODEL_DIR", "export/trocr_base_iam_onnx")
+            use_onnx = getattr(settings, "USE_ONNX_ENGINE", False) or self.mode in ("onnx", "cpu_onnx")
+
+            if use_onnx and onnx_dir and is_onnx_available(onnx_dir):
+                logger.info(f"Loading ONNX Runtime TrOCR model from '{onnx_dir}' (threads={settings.ONNX_NUM_THREADS})...")
+                self.model, self.processor = load_onnx_htr_model(
+                    onnx_dir,
+                    num_threads=getattr(settings, "ONNX_NUM_THREADS", 4),
+                )
+                self.device = torch.device("cpu")
+                logger.info(f"Successfully loaded ONNX Runtime TrOCR engine from {onnx_dir}.")
+                return
+
             logger.info(f"Loading TrOCR model '{self.model_name}' on device '{self.device}'...")
 
             if self.device.type == "mps":
@@ -742,6 +762,7 @@ class InferenceEngine:
                                         text=w_text,
                                         confidence=round(line_conf, 3),
                                         bbox=[w_ymin, w_xmin, w_ymax, w_xmax],
+                                        is_proper_noun=is_name_or_title(w_text),
                                     )
                                 )
                         else:
@@ -758,6 +779,7 @@ class InferenceEngine:
                                         text=wt,
                                         confidence=round(line_conf, 3),
                                         bbox=[ymin, w_xmin, ymax, w_xmax],
+                                        is_proper_noun=is_name_or_title(wt),
                                     )
                                 )
 
@@ -931,6 +953,7 @@ class InferenceEngine:
                             text=w_str,
                             confidence=w_conf,
                             bbox=[ymin, w_xmin, ymax, w_xmax],
+                            is_proper_noun=is_name_or_title(w_str),
                         )
                     )
 

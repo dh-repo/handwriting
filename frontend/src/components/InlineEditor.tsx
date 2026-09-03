@@ -129,12 +129,18 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const [speedSuggestions, setSpeedSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const speedInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync low-confidence words for Speed Review
+  // Sync low-confidence words and unverified proper nouns for Speed Review
   useEffect(() => {
     const queue: LowConfidenceWordItem[] = [];
     page.lines.forEach((line: LineItem) => {
       line.words?.forEach((word: WordToken) => {
-        if (word.confidence < confidenceThreshold) {
+        const isProper = Boolean(
+          word.is_proper_noun ||
+            /^[A-Z][a-zA-Z'\-]*\.?$/.test(word.text || '') ||
+            /^[A-Z]\.?$/.test(word.text || '')
+        );
+        // Include words below general threshold OR proper nouns below high-confidence safety threshold (0.90)
+        if (word.confidence < confidenceThreshold || (isProper && word.confidence < 0.90)) {
           queue.push({
             page_index: page.page_number - 1,
             line_id: line.line_id,
@@ -145,10 +151,13 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             bbox: word.bbox,
             page_image_url: page.image_url,
             alternatives: word.alternatives,
+            is_proper_noun: isProper,
           });
         }
       });
     });
+
+
     setSpeedQueue(queue);
     if (speedIndex >= queue.length) setSpeedIndex(0);
   }, [page, confidenceThreshold, speedIndex]);
@@ -761,6 +770,12 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                         const isWordHovered = hoveredWordId === word.word_id;
                         const isLowConfidence = word.confidence < 0.85;
                         const isEditingThisWord = editingWordId === word.word_id;
+                        const isProperNoun = Boolean(
+                          word.is_proper_noun ||
+                            /^[A-Z][a-zA-Z'\-]*\.?$/.test(word.text || '') ||
+                            /^[A-Z]\.?$/.test(word.text || '')
+                        );
+                        const isUncertainProperNoun = isProperNoun && word.confidence < 0.90;
 
                         return (
                           <div key={word.word_id} className="relative inline-block">
@@ -835,6 +850,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                 type="button"
                                 data-testid={`word-chip-${word.word_id}`}
                                 data-confidence-low={isLowConfidence ? 'true' : 'false'}
+                                data-proper-noun={isProperNoun ? 'true' : 'false'}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onSelectWord?.(word.word_id, line.line_id);
@@ -849,21 +865,36 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                     ? 'bg-indigo-600 text-white font-bold ring-2 ring-indigo-400 shadow-md'
                                     : isWordHovered
                                     ? 'bg-amber-500/30 text-amber-900 dark:text-amber-100 ring-2 ring-amber-400 border border-amber-400 shadow-sm shadow-amber-500/20'
+                                    : isUncertainProperNoun
+                                    ? 'bg-amber-100/90 dark:bg-amber-950 text-amber-950 dark:text-amber-100 border-2 border-amber-500 shadow-sm shadow-amber-500/30 font-semibold'
                                     : isLowConfidence
                                     ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-600/60 hover:bg-amber-100 dark:hover:bg-amber-900/40'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                                 title={
-                                  isLowConfidence
+                                  isUncertainProperNoun
+                                    ? `Unverified proper noun / name: ${(word.confidence * 100).toFixed(0)}% confidence • Click to verify exact spelling`
+                                    : isLowConfidence
                                     ? `Low confidence token: ${(word.confidence * 100).toFixed(0)}% • Click to correct`
                                     : `${(word.confidence * 100).toFixed(0)}% confidence`
                                 }
                               >
                                 <span className="inline-flex items-center gap-1">
-                                  {isLowConfidence && !isWordSelected && (
+                                  {isUncertainProperNoun && !isWordSelected && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping flex-shrink-0" title="Verify name/proper noun" />
+                                  )}
+                                  {isLowConfidence && !isUncertainProperNoun && !isWordSelected && (
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
                                   )}
                                   <span>{word.text}</span>
+                                  {isProperNoun && (
+                                    <span
+                                      data-testid={`proper-noun-tag-${word.word_id}`}
+                                      className="text-[9px] uppercase px-1 py-0.2 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-sans font-semibold tracking-wider"
+                                    >
+                                      name
+                                    </span>
+                                  )}
                                 </span>
                               </button>
                             )}

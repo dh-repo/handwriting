@@ -70,7 +70,11 @@ def tokenize_english(text: str) -> list[str]:
     return [m.group(0) for m in _TOKEN_RE.finditer(text or "")]
 
 
-_TITLES = frozenset({"sir", "mr", "mrs", "ms", "dr", "mp"})
+_TITLES = frozenset({
+    "sir", "mr", "mrs", "ms", "dr", "mp", "prof", "professor",
+    "rev", "reverend", "judge", "capt", "cpt", "sgt", "gen",
+    "sen", "senator", "rep", "father", "officer", "esq", "pres", "gov",
+})
 _CLOSED_CLASS = frozenset(
     {
         "a", "an", "and", "but", "been", "even", "for", "given", "in", "is",
@@ -82,13 +86,26 @@ _CLOSED_CLASS = frozenset(
 )
 
 
+def is_initial(token: str) -> bool:
+    """True for a single capital letter, optionally followed by a period (e.g. 'D.', 'J', 'A.')."""
+    clean = (token or "").strip()
+    return bool(re.match(r"^[A-Z]\.?$", clean))
+
+
 def looks_like_name(token: str) -> bool:
-    """True for a capitalized word that is long enough to be a person or place."""
-    lower = (token or "").lower().rstrip(".")
+    """True for a capitalized word that is a person, place, surname, or initial."""
+    clean = (token or "").strip()
+    if not clean:
+        return False
+    if is_initial(clean):
+        return True
+    lower = clean.lower().rstrip(".")
     if lower in _TITLES or lower.rstrip("s") in _TITLES or lower in _CLOSED_CLASS:
         return False
-    letters = re.sub(r"[^A-Za-z]", "", token or "")
-    return len(letters) >= 3 and token[0].isupper()
+    if re.match(r"^[A-Z][a-zA-Z'\-]*\.?$", clean):
+        letters = re.sub(r"[^A-Za-z]", "", clean)
+        return len(letters) >= 2
+    return False
 
 
 def is_title_token(token: str) -> bool:
@@ -97,7 +114,7 @@ def is_title_token(token: str) -> bool:
 
 
 def is_name_or_title(token: str) -> bool:
-    return looks_like_name(token) or is_title_token(token)
+    return looks_like_name(token) or is_title_token(token) or is_initial(token)
 
 
 def repair_near_miss_tokens(text: str) -> str:

@@ -32,6 +32,7 @@ class WordBox(BaseModel):
     text: str = Field(..., description="Transcribed token text")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Recognition confidence score in [0.0, 1.0]")
     bbox: List[float] = Field(..., description="Normalized bounding box [ymin, xmin, ymax, xmax] in [0.0, 1.0]")
+    is_proper_noun: bool = Field(default=False, description="Whether token is recognized as a proper noun, name, or initial")
 
     model_config = ConfigDict(extra="ignore")
 

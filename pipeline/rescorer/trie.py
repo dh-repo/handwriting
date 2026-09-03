@@ -385,12 +385,57 @@ class PrefixTrie:
         logger.info(f"Loaded {count} Latin Sig codes from {p}")
         return count
 
+    def load_customer_gazetteer(
+        self,
+        filepath: Union[str, Path],
+        default_weight: float = 4.0,
+    ) -> int:
+        """
+        Load customer entity gazetteer (proper nouns, names, signatures, clients).
+        Supports JSON catalogs (with 'entities' or 'names') or plain text rosters.
+        """
+        p = Path(filepath)
+        if not p.exists():
+            raise FileNotFoundError(f"Customer gazetteer not found: {p}")
+
+        count = 0
+        if p.suffix.lower() == ".json":
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            entities = data.get("entities", [])
+            if not entities and "names" in data:
+                entities = [{"name": n} for n in data["names"]]
+
+            for ent in entities:
+                name = ent.get("name") if isinstance(ent, dict) else str(ent)
+                if not name or not name.strip():
+                    continue
+                weight = ent.get("confidence_prior", default_weight) if isinstance(ent, dict) else default_weight
+                metadata = {"type": "customer_proper_noun", "entity": ent if isinstance(ent, dict) else {"name": name}}
+                self.insert(name.strip(), metadata=metadata, weight=weight)
+                count += 1
+        else:
+            with open(p, "r", encoding="utf-8") as f:
+                for line in f:
+                    clean = line.strip()
+                    if clean and not clean.startswith("#"):
+                        self.insert(
+                            clean,
+                            metadata={"type": "customer_proper_noun", "entity": {"name": clean}},
+                            weight=default_weight,
+                        )
+                        count += 1
+
+        logger.info(f"Loaded {count} customer proper noun entities from {p}")
+        return count
+
     def load_vocabularies(
         self,
         vocab_dir: Optional[Union[str, Path]] = None,
     ) -> Dict[str, int]:
         """
-        Convenience method to load all clinical vocabularies in directory.
+        Convenience method to load all clinical & customer vocabularies in directory.
         """
         vdir = Path(vocab_dir) if vocab_dir else Path("data/reference_handwriting/vocabularies")
         stats: Dict[str, int] = {}
@@ -400,6 +445,9 @@ class PrefixTrie:
         sig_path = vdir / "latin_sig_codes.json"
         if sig_path.exists():
             stats["latin_sigs"] = self.load_latin_sigs_json(sig_path)
+        cust_path = vdir / "customer_names.json"
+        if cust_path.exists():
+            stats["customer_names"] = self.load_customer_gazetteer(cust_path)
         return stats
 
     def __len__(self) -> int:

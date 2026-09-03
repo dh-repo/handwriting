@@ -19,6 +19,13 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from PIL import Image
 
+try:
+    from azure.storage.blob import BlobServiceClient
+    from azure.identity import DefaultAzureCredential
+    AZURE_STORAGE_AVAILABLE = True
+except ImportError:
+    AZURE_STORAGE_AVAILABLE = False
+
 from backend.app.config import Settings, get_settings
 from backend.app.engine import get_engine
 from backend.app.schemas import (
@@ -33,9 +40,125 @@ logger = logging.getLogger("handwriting_backend.feedback")
 router = APIRouter()
 
 
-def _save_line_crop(crop_b64: str, feedback_id: str, crops_dir: Path) -> str:
+class AzureBlobStorageSink:
+    """
+    Azure Blob Storage sink for operator feedback manifests and line crops.
+    Supports connection string and Managed Identity (DefaultAzureCredential).
+    Falls back gracefully to local disk when offline or unconfigured.
+    """
+
+    def __init__(
+        self,
+        connection_string: Optional[str] = None,
+        account_name: Optional[str] = None,
+        container_crops: str = "feedback-crops",
+        container_manifests: str = "feedback-manifests",
+    ):
+        self.connection_string = connection_string
+        self.account_name = account_name
+        self.container_crops = container_crops
+        self.container_manifests = container_manifests
+        self._client: Optional[Any] = None
+        self._initialized = False
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.connection_string or self.account_name)
+
+    def get_client(self) -> Optional[Any]:
+        if not self._initialized:
+            self._client = self._init_client()
+            self._initialized = True
+        return self._client
+
+    def _init_client(self) -> Optional[Any]:
+        if not AZURE_STORAGE_AVAILABLE:
+            logger.debug("azure-storage-blob library not installed; using local disk sink.")
+            return None
+        try:
+            if self.connection_string:
+                return BlobServiceClient.from_connection_string(self.connection_string)
+            elif self.account_name:
+                account_url = f"https://{self.account_name}.blob.core.windows.net"
+                credential = DefaultAzureCredential()
+                return BlobServiceClient(account_url=account_url, credential=credential)
+        except Exception as exc:
+            logger.warning(f"Failed to initialize Azure BlobServiceClient: {exc}")
+            return None
+        return None
+
+    def upload_crop(self, feedback_id: str, image_bytes: bytes) -> Optional[str]:
+        """Upload line crop bytes to Azure Blob Storage. Returns blob URL or None."""
+        client = self.get_client()
+        if not client:
+            return None
+        try:
+            container = client.get_container_client(self.container_crops)
+            try:
+                container.create_container()
+            except Exception:
+                pass  # Container already exists
+            blob_name = f"crops/{feedback_id}.png"
+            blob_client = container.get_blob_client(blob_name)
+            blob_client.upload_blob(image_bytes, overwrite=True, content_type="image/png")
+            return str(blob_client.url)
+        except Exception as exc:
+            logger.warning(f"Azure Blob crop upload failed ({exc}); falling back to local disk.")
+            return None
+
+    def append_manifest_record(self, record: dict[str, Any]) -> Optional[str]:
+        """Append feedback JSON record to Azure Blob Storage. Returns blob URI or None."""
+        client = self.get_client()
+        if not client:
+            return None
+        try:
+            container = client.get_container_client(self.container_manifests)
+            try:
+                container.create_container()
+            except Exception:
+                pass  # Container already exists
+            blob_name = "manifest.jsonl"
+            blob_client = container.get_blob_client(blob_name)
+            record_bytes = (json.dumps(record, ensure_ascii=False) + "\n").encode("utf-8")
+
+            # Try append_block first (if Append Blob exists or can be created)
+            try:
+                if not blob_client.exists():
+                    blob_client.create_append_blob()
+                blob_client.append_block(record_bytes)
+                return str(blob_client.url)
+            except Exception:
+                # Fallback to block blob download-append-upload
+                existing = b""
+                if blob_client.exists():
+                    existing = blob_client.download_blob().readall()
+                blob_client.upload_blob(existing + record_bytes, overwrite=True)
+                return str(blob_client.url)
+        except Exception as exc:
+            logger.warning(f"Azure Blob manifest append failed ({exc}); falling back to local disk.")
+            return None
+
+
+def _get_azure_sink(settings: Settings) -> AzureBlobStorageSink:
+    return AzureBlobStorageSink(
+        connection_string=settings.AZURE_STORAGE_CONNECTION_STRING,
+        account_name=settings.AZURE_STORAGE_ACCOUNT_NAME,
+        container_crops=settings.AZURE_STORAGE_CONTAINER_CROPS,
+        container_manifests=settings.AZURE_STORAGE_CONTAINER_MANIFESTS,
+    )
+
+
+def _save_line_crop(
+    crop_b64: str,
+    feedback_id: str,
+    crops_dir: Path,
+    azure_sink: Optional[AzureBlobStorageSink] = None,
+    storage_mode: str = "auto",
+) -> str:
     """
     Decode a base64 line crop image (raw or Data URL) and persist it as a PNG file.
+    If Azure Blob Storage is configured and enabled, streams crop bytes to Azure Blob container.
+    Always creates a local copy for local caching/durability.
     Raises HTTPException(422) if decoding, size/dimension limits, or image parsing fails.
     """
     data_str = crop_b64.strip()
@@ -88,24 +211,36 @@ def _save_line_crop(crop_b64: str, feedback_id: str, crops_dir: Path) -> str:
         )
 
     crops_dir.mkdir(parents=True, exist_ok=True)
-    crop_path = crops_dir / f"{feedback_id}.png"
+    local_crop_path = crops_dir / f"{feedback_id}.png"
 
     try:
-        image.save(crop_path, format="PNG")
+        image.save(local_crop_path, format="PNG")
     except Exception as exc:
-        logger.error(f"Failed to save line crop to {crop_path}: {exc}")
+        logger.error(f"Failed to save line crop to {local_crop_path}: {exc}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to persist decoded line crop image.",
         ) from exc
 
-    return str(crop_path)
+    # Attempt upload to Azure Blob Storage if configured
+    if azure_sink and azure_sink.is_configured and storage_mode != "local":
+        azure_url = azure_sink.upload_crop(feedback_id, img_bytes)
+        if azure_url:
+            return azure_url
+
+    return str(local_crop_path)
 
 
-def _append_to_manifest(manifest_path: Path, record: dict[str, Any]) -> None:
+def _append_to_manifest(
+    manifest_path: Path,
+    record: dict[str, Any],
+    azure_sink: Optional[AzureBlobStorageSink] = None,
+    storage_mode: str = "auto",
+) -> Optional[str]:
     """
     Thread-safe and process-safe atomic append of a feedback record to JSONL manifest
     using POSIX advisory file locking (fcntl.flock).
+    If Azure Blob Storage is configured and enabled, also uploads/appends to Azure Blob container.
     """
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     record_line = json.dumps(record, ensure_ascii=False) + "\n"
@@ -118,6 +253,12 @@ def _append_to_manifest(manifest_path: Path, record: dict[str, Any]) -> None:
             os.fsync(f.fileno())
         finally:
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+    azure_manifest_url = None
+    if azure_sink and azure_sink.is_configured and storage_mode != "local":
+        azure_manifest_url = azure_sink.append_manifest_record(record)
+
+    return azure_manifest_url
 
 
 def _trigger_dynamic_confusion_update(
@@ -180,8 +321,8 @@ async def submit_feedback(
     Ingest human operator corrections from the Darkroom UI.
 
     - Validates correction payload and bounding boxes.
-    - Decodes and persists line crop image (PNG) if provided.
-    - Atomically appends feedback metadata to append-only JSONL manifest.
+    - Decodes and persists line crop image (PNG) locally and to Azure Blob Storage if configured.
+    - Atomically appends feedback metadata to append-only JSONL manifest (locally + Azure Blob).
     - Dynamically adapts live confusion matrix substitution/ligature costs.
     """
     ts_now = datetime.now(timezone.utc)
@@ -189,11 +330,19 @@ async def submit_feedback(
     feedback_id = f"fb_{ts_str}_{uuid.uuid4().hex[:8]}"
     timestamp = payload.timestamp or ts_now.isoformat()
 
-    # 1. Line crop storage
+    azure_sink = _get_azure_sink(settings)
+
+    # 1. Line crop storage (local + Azure Blob if configured)
     crop_path: Optional[str] = None
     if payload.line_crop_base64:
         crops_dir = Path(settings.FEEDBACK_CROPS_DIR)
-        crop_path = _save_line_crop(payload.line_crop_base64, feedback_id, crops_dir)
+        crop_path = _save_line_crop(
+            payload.line_crop_base64,
+            feedback_id,
+            crops_dir,
+            azure_sink=azure_sink,
+            storage_mode=settings.FEEDBACK_STORAGE_BACKEND,
+        )
 
     # 2. Dynamic confusion matrix adaptation hook
     confusion_pairs_updated: List[ConfusionUpdateRecord] = []
@@ -221,15 +370,22 @@ async def submit_feedback(
         "alignment_operations": [u.model_dump() for u in confusion_pairs_updated],
     }
 
-    # 4. Atomic append to JSONL manifest
-    _append_to_manifest(manifest_path, record)
+    # 4. Atomic append to JSONL manifest (local + Azure Blob if configured)
+    azure_manifest_url = _append_to_manifest(
+        manifest_path,
+        record,
+        azure_sink=azure_sink,
+        storage_mode=settings.FEEDBACK_STORAGE_BACKEND,
+    )
+
+    reported_manifest_path = azure_manifest_url or str(manifest_path)
 
     return FeedbackResponse(
         feedback_id=feedback_id,
         document_id=payload.document_id,
         line_id=payload.line_id,
         status="persisted",
-        manifest_path=str(manifest_path),
+        manifest_path=reported_manifest_path,
         crop_path=crop_path,
         confusion_pairs_updated=confusion_pairs_updated,
         timestamp=timestamp,

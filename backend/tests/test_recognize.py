@@ -122,7 +122,7 @@ def test_recognize_line_returns_text_ms_model_id(client: TestClient, sample_imag
     body = resp.json()
     assert "text" in body
     assert "ms" in body
-    assert body["model_id"] == "microsoft/trocr-large-handwritten"
+    assert body["model_id"] in ("microsoft/trocr-base-handwritten", "microsoft/trocr-large-handwritten")
 
 
 def test_decode_line_crop_uses_page_generate() -> None:

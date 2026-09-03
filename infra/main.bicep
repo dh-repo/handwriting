@@ -15,11 +15,24 @@ param azureOpenAiEndpoint string = 'https://oai-playground-6ecfomdadeubk.openai.
 param azureOpenAiDeployment string = 'gpt-4o'
 @secure()
 param azureOpenAiApiKey string = ''
+param storageAccountName string = 'stghwaiplaye2'
+param trainingJobName string = 'caj-lora-micro-tune'
 
 var tags = {
   Project: 'HandwritingAI'
   Environment: 'Playground'
   ManagedBy: 'Bicep'
+}
+
+module storageAccount 'modules/storage-account.bicep' = {
+  name: 'storageAccount'
+  params: {
+    name: storageAccountName
+    location: location
+    tags: tags
+    containerCropsName: 'feedback-crops'
+    containerManifestsName: 'feedback-manifests'
+  }
 }
 
 module containerRegistry 'modules/container-registry.bicep' = {
@@ -82,8 +95,36 @@ module backend 'modules/container-app.bicep' = if (deployApps) {
       { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
       { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
       { name: 'AZURE_OPENAI_API_KEY', value: azureOpenAiApiKey }
+      { name: 'AZURE_STORAGE_ACCOUNT_NAME', value: storageAccountName }
+      { name: 'AZURE_STORAGE_CONTAINER_CROPS', value: 'feedback-crops' }
+      { name: 'AZURE_STORAGE_CONTAINER_MANIFESTS', value: 'feedback-manifests' }
+      { name: 'FEEDBACK_STORAGE_BACKEND', value: 'auto' }
+      { name: 'USE_ONNX_ENGINE', value: 'true' }
+      { name: 'ONNX_MODEL_DIR', value: '/app/export/trocr_base_iam_onnx' }
+      { name: 'ONNX_NUM_THREADS', value: '4' }
     ]
     tags: union(tags, { Tier: 'Backend' })
+  }
+}
+
+module trainingJob 'modules/container-job.bicep' = if (deployApps) {
+  name: 'trainingJob'
+  params: {
+    name: trainingJobName
+    location: location
+    environmentId: containerAppsEnvironment.outputs.id
+    image: backendImage
+    cpu: '2.0'
+    memory: '4Gi'
+    registryServer: containerRegistry.outputs.loginServer
+    triggerType: 'Manual'
+    envVars: [
+      { name: 'DEVICE', value: 'cpu' }
+      { name: 'AZURE_STORAGE_ACCOUNT_NAME', value: storageAccountName }
+      { name: 'AZURE_STORAGE_CONTAINER_CROPS', value: 'feedback-crops' }
+      { name: 'AZURE_STORAGE_CONTAINER_MANIFESTS', value: 'feedback-manifests' }
+    ]
+    tags: union(tags, { Tier: 'TrainingWorker' })
   }
 }
 
@@ -125,3 +166,7 @@ output logAnalyticsName string = logAnalytics.outputs.name
 output environmentDefaultDomain string = containerAppsEnvironment.outputs.defaultDomain
 output backendInternalUrl string = 'https://${backendAppName}.internal.${containerAppsEnvironment.outputs.defaultDomain}'
 output frontendFqdn string = deployApps ? (frontend.?outputs.fqdn ?? '') : ''
+output storageAccountName string = storageAccount.outputs.name
+output storageBlobEndpoint string = storageAccount.outputs.primaryBlobEndpoint
+output trainingJobName string = deployApps ? (trainingJob.?outputs.name ?? '') : ''
+

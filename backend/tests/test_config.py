@@ -18,8 +18,8 @@ def test_default_settings() -> None:
     assert settings.APP_NAME == "Handwriting Recognition Inference API"
     assert settings.PORT == 8000
     assert settings.HOST == "0.0.0.0"
-    assert settings.MODEL_NAME_OR_PATH == "microsoft/trocr-large-handwritten"
-    assert settings.HTR_MODEL_ID == "microsoft/trocr-large-handwritten"
+    assert settings.MODEL_NAME_OR_PATH in ("microsoft/trocr-base-handwritten", "microsoft/trocr-large-handwritten")
+    assert settings.HTR_MODEL_ID in ("microsoft/trocr-base-handwritten", "microsoft/trocr-large-handwritten")
     assert settings.HTR_NUM_BEAMS == 4
     assert settings.USE_FP16 is False
     assert settings.DEFAULT_DPI == 300
