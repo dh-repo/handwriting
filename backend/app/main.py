@@ -33,6 +33,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Resolved execution device: {device} (USE_MOCK_ENGINE={settings.USE_MOCK_ENGINE})")
 
+    if device == "cpu":
+        try:
+            torch.set_num_threads(4)
+        except Exception as e:
+            logger.warning(f"Could not set intra-op threads: {e}")
+        try:
+            torch.set_num_interop_threads(2)
+        except Exception:
+            pass
+        logger.info(f"Configured PyTorch CPU threads: {torch.get_num_threads()} intra-op, {torch.get_num_interop_threads()} inter-op")
+
     # Warm up engine singleton on startup
     try:
         engine = get_engine()

@@ -844,11 +844,20 @@ class TestTier1F9AppleSiliconLoRA:
 
     def test_t1_f9_04_mps_empty_cache_hook(self) -> None:
         dev = resolve_device_target("auto")
-        if dev.type == "mps" and hasattr(torch.mps, "empty_cache"):
+        if dev.type == "mps" and torch.backends.mps.is_available():
+            assert hasattr(torch, "mps"), "PyTorch missing mps module"
+            assert hasattr(torch.mps, "empty_cache"), "torch.mps missing empty_cache function"
+            assert callable(torch.mps.empty_cache), "torch.mps.empty_cache is not callable"
+            t = torch.randn(500, 500, device=dev)
+            mem_before = torch.mps.current_allocated_memory()
+            assert mem_before > 0, "Expected non-zero MPS memory allocation"
+            del t
             torch.mps.empty_cache()
-        elif dev.type == "cuda":
-            torch.cuda.empty_cache()
-        assert True
+            mem_after = torch.mps.current_allocated_memory()
+            assert mem_after < mem_before, f"Expected memory reclamation, got before={mem_before}, after={mem_after}"
+        else:
+            assert dev.type in ("cpu", "cuda"), f"Expected cpu or cuda fallback, got {dev.type}"
+            assert hasattr(torch, "device")
 
     def test_t1_f9_05_adapter_checkpoint_saved(self, tmp_path: Path) -> None:
         if not PEFT_AVAILABLE:
@@ -1088,27 +1097,59 @@ class TestTier1F16DarkroomComponentMounting:
     """Feature F16: Darkroom Component Mounting."""
 
     def test_t1_f16_01_split_curtain_renders_with_page_image(self) -> None:
-        props = {"imageUrl": "/samples/page1.png", "dividerPosition": 50}
-        assert props["imageUrl"] is not None
-        assert 0 <= props["dividerPosition"] <= 100
+        sc_file = _REPO_ROOT / "frontend" / "src" / "components" / "SplitCurtain.tsx"
+        assert sc_file.is_file(), f"SplitCurtain.tsx not found at {sc_file}"
+        code = sc_file.read_text(encoding="utf-8")
+        assert "export interface SplitCurtainProps" in code
+        assert "export const SplitCurtain: React.FC<SplitCurtainProps>" in code
+        assert "page: PageResult" in code
+        assert 'data-testid="split-curtain-container"' in code
+        assert 'data-testid="split-typeset-overlay"' in code
+        assert "page.image_url ?" in code
 
     def test_t1_f16_02_split_curtain_divider_dragging(self) -> None:
-        divider_pct = min(100, max(0, 72.5))
-        assert divider_pct == 72.5
+        sc_file = _REPO_ROOT / "frontend" / "src" / "components" / "SplitCurtain.tsx"
+        assert sc_file.is_file()
+        code = sc_file.read_text(encoding="utf-8")
+        assert "updateSplitFromClientX" in code
+        assert "Math.max(5, Math.min(95," in code
+        assert "splitPercent" in code
+        assert "polygon(${splitPercent}% 0, 100% 0, 100% 100%, ${splitPercent}% 100%)" in code
 
     def test_t1_f16_03_darkroom_toolbar_contrast_brightness(self) -> None:
-        contrast = 1.3
-        brightness = 1.1
-        css_filter = f"contrast({contrast}) brightness({brightness})"
-        assert "contrast(1.3)" in css_filter
+        dt_file = _REPO_ROOT / "frontend" / "src" / "components" / "DarkroomToolbar.tsx"
+        assert dt_file.is_file(), f"DarkroomToolbar.tsx not found at {dt_file}"
+        code = dt_file.read_text(encoding="utf-8")
+        assert "export interface DarkroomSettings" in code
+        assert "contrast: number;" in code
+        assert "brightness: number;" in code
+        assert 'min="0.5"' in code
+        assert 'max="3.0"' in code
+        assert 'step="0.1"' in code
+        assert 'min="0.5"' in code
+        assert 'max="2.0"' in code
 
     def test_t1_f16_04_darkroom_toolbar_preset_application(self) -> None:
-        presets = {"faded_ink": {"contrast": 1.4, "brightness": 1.1}}
-        assert presets["faded_ink"]["contrast"] == 1.4
+        dt_file = _REPO_ROOT / "frontend" / "src" / "components" / "DarkroomToolbar.tsx"
+        assert dt_file.is_file()
+        code = dt_file.read_text(encoding="utf-8")
+        presets = ["original", "faded", "pencil", "blueprint", "laser"]
+        for p in presets:
+            assert f"case '{p}':" in code, f"Preset '{p}' missing from handlePreset"
+        assert "contrast: 2.2" in code
+        assert "brightness: 1.15" in code
+        assert "grayscale: true" in code
 
     def test_t1_f16_05_components_mounted_in_workspace(self) -> None:
-        mounted = {"split_curtain": True, "toolbar": True, "active_line": "l1"}
-        assert all(mounted.values())
+        page_file = _REPO_ROOT / "frontend" / "src" / "app" / "page.tsx"
+        assert page_file.is_file(), f"page.tsx not found at {page_file}"
+        code = page_file.read_text(encoding="utf-8")
+        assert "import { SplitCurtain } from '../components/SplitCurtain';" in code
+        assert "import { DarkroomToolbar, DarkroomSettings } from '../components/DarkroomToolbar';" in code
+        assert "<SplitCurtain page={activePage} />" in code
+        assert "<DarkroomToolbar" in code
+        assert "settings={darkroomSettings}" in code
+        assert "onChange={setDarkroomSettings}" in code
 
 
 @pytest.mark.tier1
@@ -1124,17 +1165,53 @@ class TestTier1F17LocalProofAppleSilicon:
         assert dev.type in ("mps", "cpu", "cuda")
 
     def test_t1_f17_03_mps_cache_clearing_available(self) -> None:
-        if torch.backends.mps.is_available() and hasattr(torch.mps, "empty_cache"):
+        assert isinstance(torch.backends.mps.is_available(), bool)
+        assert isinstance(torch.backends.mps.is_built(), bool)
+        if torch.backends.mps.is_available():
+            assert hasattr(torch, "mps"), "torch missing mps module"
+            assert hasattr(torch.mps, "empty_cache"), "torch.mps missing empty_cache"
+            assert callable(torch.mps.empty_cache)
+            mem_pre = torch.mps.current_allocated_memory()
             torch.mps.empty_cache()
-        assert True
+            mem_post = torch.mps.current_allocated_memory()
+            assert mem_post <= mem_pre
+        else:
+            assert resolve_device_target("auto").type in ("cpu", "cuda")
 
-    def test_t1_f17_04_manifest_and_crop_files_created(self, tmp_path: Path) -> None:
-        fb_file = tmp_path / "fb.jsonl"
-        crop_file = tmp_path / "crop.png"
-        fb_file.write_text("{}\n", encoding="utf-8")
-        Image.new("RGB", (10, 10)).save(crop_file)
-        assert fb_file.is_file()
-        assert crop_file.is_file()
+    def test_t1_f17_04_manifest_and_crop_files_created(self, isolated_feedback_env: Dict[str, Any]) -> None:
+        client: TestClient = isolated_feedback_env["client"]
+        manifest_path: Path = isolated_feedback_env["manifest_path"]
+        crops_dir: Path = isolated_feedback_env["crops_dir"]
+
+        crop_b64 = create_test_png_b64(64, 32)
+        payload = {
+            "document_id": "doc_f17_verify",
+            "page_number": 1,
+            "line_id": "line_f17_01",
+            "original_prediction": "cydindamycfn",
+            "operator_correction": "clindamycin",
+            "confidence": 0.82,
+            "bbox": [0.1, 0.1, 0.2, 0.5],
+            "line_crop_base64": f"data:image/png;base64,{crop_b64}",
+        }
+        resp = client.post("/v1/feedback", json=payload)
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+        data = resp.json()
+        feedback_id = data["feedback_id"]
+
+        assert manifest_path.is_file(), f"Manifest missing at {manifest_path}"
+        lines = [line.strip() for line in manifest_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        assert len(lines) >= 1
+        record = json.loads(lines[-1])
+        assert record["feedback_id"] == feedback_id
+        assert record["operator_correction"] == "clindamycin"
+
+        crop_file = crops_dir / f"{feedback_id}.png"
+        assert crop_file.is_file(), f"Crop image not created at {crop_file}"
+        assert crop_file.stat().st_size > 0
+        with Image.open(crop_file) as img:
+            assert img.format == "PNG"
+            assert img.size == (64, 32)
 
     def test_t1_f17_05_zero_unhandled_exceptions(self) -> None:
         cm = VisualConfusionMatrix(load_defaults=True)
@@ -1503,12 +1580,24 @@ class TestTier2F9AppleSiliconLoRABoundary:
 
     def test_t2_f9_03_mps_oom_cache_recovery(self) -> None:
         dev = resolve_device_target("auto")
-        if dev.type == "mps" and hasattr(torch.mps, "empty_cache"):
-            # Allocate and clear
-            t = torch.randn(100, 100, device=dev)
-            del t
+        if dev.type == "mps" and torch.backends.mps.is_available():
             torch.mps.empty_cache()
-        assert True
+            mem_base = torch.mps.current_allocated_memory()
+            tensors = [torch.randn(1000, 1000, device=dev) for _ in range(4)]
+            mem_high = torch.mps.current_allocated_memory()
+            assert mem_high > mem_base
+            assert mem_high >= 16 * 1000 * 1000
+            del tensors
+            torch.mps.empty_cache()
+            mem_cleared = torch.mps.current_allocated_memory()
+            assert mem_cleared < mem_high
+            assert mem_cleared <= mem_base
+        else:
+            t = torch.randn(1000, 1000, device=dev)
+            assert t.numel() == 1000000
+            del t
+            import gc
+            assert gc.collect() >= 0
 
     def test_t2_f9_04_cpu_fallback_when_mps_forced_off(self) -> None:
         dev = resolve_device_target("cpu")
@@ -1775,32 +1864,54 @@ class TestTier2F16DarkroomComponentBoundary:
     """Feature F16 Darkroom UI Boundaries."""
 
     def test_t2_f16_01_split_curtain_clamp_zero_and_hundred(self) -> None:
-        assert min(100, max(0, -15)) == 0
-        assert min(100, max(0, 115)) == 100
+        sc_file = _REPO_ROOT / "frontend" / "src" / "components" / "SplitCurtain.tsx"
+        assert sc_file.is_file()
+        code = sc_file.read_text(encoding="utf-8")
+        clamp_match = re.search(r"Math\.max\((\d+),\s*Math\.min\((\d+),", code)
+        assert clamp_match is not None, "Boundary clamp formula missing in SplitCurtain.tsx"
+        min_clamp, max_clamp = int(clamp_match.group(1)), int(clamp_match.group(2))
+        assert min_clamp == 5, f"Expected lower clamp 5%, got {min_clamp}"
+        assert max_clamp == 95, f"Expected upper clamp 95%, got {max_clamp}"
 
     def test_t2_f16_02_darkroom_toolbar_extreme_contrast(self) -> None:
-        max_contrast = 3.0
-        applied = min(max_contrast, max(0.5, 9.9))
-        assert applied == 3.0
+        dt_file = _REPO_ROOT / "frontend" / "src" / "components" / "DarkroomToolbar.tsx"
+        assert dt_file.is_file()
+        code = dt_file.read_text(encoding="utf-8")
+        pos_start = code.find("Contrast Slider")
+        pos_end = code.find("Brightness Slider")
+        assert pos_start != -1 and pos_end != -1
+        contrast_block = code[pos_start:pos_end]
+        assert 'min="0.5"' in contrast_block
+        assert 'max="3.0"' in contrast_block
+        assert 'title="Adjust Contrast"' in contrast_block
 
     def test_t2_f16_03_darkroom_toolbar_reset_to_natural(self) -> None:
-        state = {"contrast": 2.5, "brightness": 1.8}
-        defaults = {"contrast": 1.0, "brightness": 1.0}
-        state.update(defaults)
-        assert state["contrast"] == 1.0
-        assert state["brightness"] == 1.0
+        dt_file = _REPO_ROOT / "frontend" / "src" / "components" / "DarkroomToolbar.tsx"
+        assert dt_file.is_file()
+        code = dt_file.read_text(encoding="utf-8")
+        match = re.search(r"case\s+'original':\s*onChange\(\{([^}]+)\}\)", code)
+        assert match is not None, "'original' reset case not found in DarkroomToolbar.tsx"
+        body = match.group(1)
+        assert "contrast: 1.0" in body
+        assert "brightness: 1.0" in body
+        assert "grayscale: false" in body
+        assert "inverted: false" in body
 
     def test_t2_f16_04_rapid_tab_switching(self) -> None:
-        tabs = ["structured", "raw", "speed_review"]
-        active = tabs[0]
-        for t in tabs:
-            active = t
-        assert active == "speed_review"
+        editor_file = _REPO_ROOT / "frontend" / "src" / "components" / "InlineEditor.tsx"
+        assert editor_file.is_file()
+        code = editor_file.read_text(encoding="utf-8")
+        assert "activeTab === 'speed_review'" in code
+        assert "activeTab === 'structured'" in code
+        assert "activeTab === 'raw'" in code
+        assert 'data-testid="speed-review-panel"' in code
 
     def test_t2_f16_05_missing_image_url_in_split_curtain(self) -> None:
-        url = None
-        display = url or "/placeholders/missing_doc.png"
-        assert display == "/placeholders/missing_doc.png"
+        sc_file = _REPO_ROOT / "frontend" / "src" / "components" / "SplitCurtain.tsx"
+        assert sc_file.is_file()
+        code = sc_file.read_text(encoding="utf-8")
+        assert "page.image_url ?" in code
+        assert "[Original Document Image]" in code
 
 
 @pytest.mark.tier2
@@ -1809,9 +1920,24 @@ class TestTier2F17LocalProofBoundary:
 
     def test_t2_f17_01_simulated_mps_memory_spike(self) -> None:
         dev = resolve_device_target("auto")
-        if dev.type == "mps" and hasattr(torch.mps, "empty_cache"):
+        if dev.type == "mps" and torch.backends.mps.is_available():
             torch.mps.empty_cache()
-        assert True
+            mem_initial = torch.mps.current_allocated_memory()
+            spike = torch.empty((2500, 1000), dtype=torch.float32, device=dev)
+            mem_spiked = torch.mps.current_allocated_memory()
+            assert mem_spiked > mem_initial
+            assert mem_spiked >= 10 * 1000 * 1000
+            del spike
+            torch.mps.empty_cache()
+            mem_recovered = torch.mps.current_allocated_memory()
+            assert mem_recovered < mem_spiked
+            assert mem_recovered <= mem_initial
+        else:
+            spike = torch.empty((2500, 1000), dtype=torch.float32, device="cpu")
+            assert spike.numel() == 2500000
+            del spike
+            import gc
+            assert gc.collect() >= 0
 
     def test_t2_f17_02_empty_feedback_directory_initialization(self, tmp_path: Path) -> None:
         non_existent = tmp_path / "fresh_fb_dir"
@@ -1821,11 +1947,51 @@ class TestTier2F17LocalProofBoundary:
 
     def test_t2_f17_03_concurrent_backend_and_training(self, tmp_path: Path) -> None:
         manifest_path = tmp_path / "concurrent_fb.jsonl"
-        # Background training reads while backend writes
-        for i in range(5):
-            _append_to_manifest(manifest_path, {"rec": i})
-        lines = [line for line in manifest_path.read_text(encoding="utf-8").split("\n") if line.strip()]
-        assert len(lines) == 5
+        num_writes = 20
+        errors: List[Exception] = []
+        read_snapshots: List[int] = []
+
+        def _concurrent_writer(idx: int) -> None:
+            try:
+                _append_to_manifest(manifest_path, {
+                    "feedback_id": f"fb_concur_{idx}",
+                    "document_id": f"doc_{idx % 4}",
+                    "line_id": f"line_{idx}",
+                    "operator_correction": f"correction_{idx}",
+                    "confidence": 0.85,
+                })
+            except Exception as e:
+                errors.append(e)
+
+        def _concurrent_reader() -> int:
+            try:
+                if manifest_path.is_file():
+                    content = manifest_path.read_text(encoding="utf-8")
+                    return len([line for line in content.splitlines() if line.strip()])
+                return 0
+            except Exception as e:
+                errors.append(e)
+                return -1
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = []
+            for i in range(num_writes):
+                futures.append(pool.submit(_concurrent_writer, i))
+                if i % 3 == 0:
+                    futures.append(pool.submit(_concurrent_reader))
+            for f in futures:
+                res = f.result()
+                if isinstance(res, int) and res >= 0:
+                    read_snapshots.append(res)
+
+        assert len(errors) == 0, f"Concurrency errors encountered: {errors}"
+        assert manifest_path.is_file()
+        raw_lines = [line.strip() for line in manifest_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        assert len(raw_lines) == num_writes, f"Expected {num_writes} lines, got {len(raw_lines)}"
+
+        records = [json.loads(line) for line in raw_lines]
+        feedback_ids = {r["feedback_id"] for r in records}
+        assert len(feedback_ids) == num_writes, "Duplicate feedback IDs detected during concurrent append"
 
     def test_t2_f17_04_corrupt_manifest_line_during_training(self, tmp_path: Path) -> None:
         mf = tmp_path / "manifest.jsonl"
@@ -1834,11 +2000,22 @@ class TestTier2F17LocalProofBoundary:
         assert len(ds.feedback_samples) == 1
 
     def test_t2_f17_05_process_sigterm_handling(self) -> None:
-        # Simulate clean shutdown logic
-        dev = resolve_device_target("auto")
-        if dev.type == "mps" and hasattr(torch.mps, "empty_cache"):
-            torch.mps.empty_cache()
-        assert True
+        import signal
+        sigterm_handled = False
+
+        def _sigterm_shutdown(signum: int, frame: Any) -> None:
+            nonlocal sigterm_handled
+            sigterm_handled = True
+            dev = resolve_device_target("auto")
+            if dev.type == "mps" and torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+
+        old_handler = signal.signal(signal.SIGTERM, _sigterm_shutdown)
+        try:
+            os.kill(os.getpid(), signal.SIGTERM)
+            assert sigterm_handled is True, "SIGTERM handler failed to trigger shutdown hook"
+        finally:
+            signal.signal(signal.SIGTERM, old_handler)
 
 
 # ===========================================================================

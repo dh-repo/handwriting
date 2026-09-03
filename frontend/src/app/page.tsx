@@ -148,7 +148,7 @@ export default function WorkspacePage() {
       const result: DocumentOCRResult = await apiClient.recognizeFileStream(
         file,
         {
-          beam_width: 4,
+          beam_width: 1,
           rescore: false,
           adaptive: true,
         },

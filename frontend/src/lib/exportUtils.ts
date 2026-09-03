@@ -188,3 +188,65 @@ export function downloadFile(content: string, filename: string, mimeType: string
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Exports document text formatted cleanly as structured Markdown.
+ */
+export function exportDocumentAsMarkdown(doc: DocumentOCRResult): string {
+  const parts: string[] = [];
+  parts.push(`# ${doc.filename || 'Handwriting Transcription'}`);
+  parts.push(`*Mean Confidence: ${((doc.mean_confidence ?? doc.overall_confidence ?? 0.95) * 100).toFixed(1)}%*`);
+  parts.push(`*Total Pages: ${doc.total_pages || doc.pages?.length || 1}*\n`);
+
+  doc.pages.forEach((page) => {
+    if (doc.pages.length > 1) {
+      parts.push(`## Page ${page.page_number}`);
+    }
+    const pageLines = page.lines.map((l) => l.text).filter(Boolean);
+    parts.push(pageLines.join('\n'));
+    parts.push('');
+  });
+
+  return parts.join('\n').trim();
+}
+
+/**
+ * Combines multiple batch documents into a single consolidated Markdown file.
+ */
+export function exportBatchDocumentsAsMarkdown(docs: DocumentOCRResult[]): string {
+  const parts: string[] = [
+    '# Consolidated Batch Handwriting Transcription',
+    `*Generated on ${new Date().toLocaleDateString()} • Total Documents: ${docs.length}*\n`,
+    '---\n',
+  ];
+
+  docs.forEach((doc, idx) => {
+    parts.push(`## Document ${idx + 1}: ${doc.filename || `Document_${idx + 1}`}`);
+    parts.push(exportDocumentAsMarkdown(doc));
+    parts.push('\n---\n');
+  });
+
+  return parts.join('\n').trim();
+}
+
+/**
+ * Combines multiple batch documents into a single plain text file.
+ */
+export function exportBatchDocumentsAsTxt(docs: DocumentOCRResult[]): string {
+  return docs
+    .map((doc, idx) => `=== DOCUMENT ${idx + 1}: ${doc.filename || `doc_${idx + 1}`} ===\n\n${exportDocumentAsTxt(doc)}`)
+    .join('\n\n========================================\n\n');
+}
+
+/**
+ * Combines multiple batch documents into a structured batch JSON result.
+ */
+export function exportBatchDocumentsAsJson(docs: DocumentOCRResult[]): string {
+  const payload = {
+    batch_export_timestamp: new Date().toISOString(),
+    total_documents: docs.length,
+    documents: docs.map((doc) => JSON.parse(exportDocumentAsJson(doc))),
+  };
+  return JSON.stringify(payload, null, 2);
+}
+

@@ -67,7 +67,7 @@ The **Self-Tuning and Active Learning Flywheel** establishes a closed-loop learn
 | **F14** | Debounced InlineEditor Dispatch | `frontend/src/components/InlineEditor.tsx` | R4 | 5 | 5 | ✓ | ✓ | 500ms trailing-edge keystroke debounce; immediate dispatch on `Enter`, suggestion 1-5, and `onBlur`. |
 | **F15** | Optimistic UI & Visual Status Badges | `frontend/src/components/InlineEditor.tsx`<br>`frontend/src/types/ocr.ts` | R4 | 5 | 5 | ✓ | ✓ | Immediate in-memory text update; 4-state lifecycle (`debouncing` $\to$ `syncing` $\to$ `synced` $\to$ `error`). |
 | **F16** | Darkroom Component Mounting | `frontend/src/components/SplitCurtain.tsx`<br>`frontend/src/app/page.tsx` | R4 | 5 | 5 | ✓ | ✓ | Mounts `SplitCurtain` X-Ray slider and `DarkroomToolbar` image enhancement filters linked to active page. |
-| **F17** | Local Proof on Apple Silicon | Full Test Suites (`pytest`, `npm test`) | R5 | 5 | 5 | ✓ | ✓ | Complete end-to-end integration verified locally on Mac Studio; 0 test failures; 0 unhandled promise rejections. |
+| **F17** | Local Proof on Apple Silicon | Full Test Suites (`pytest`, `npm test`) | R5 | 5 | 5 | ✓ | ✓ | Complete end-to-end integration verified locally on Mac Studio; 232 pytest tests passed (36 e2e + 196 tiers); 405 vitest tests passed; 0 failures; 0 unhandled promise rejections. |
 
 ---
 
@@ -178,28 +178,31 @@ Validates authentic operational use cases:
 
 ### Primary Test Suite Invocations
 ```bash
-# 1. Execute the comprehensive Flywheel E2E integration test suite
+# 1. Execute the complete 232-test Flywheel E2E and 4-Tier Matrix test suites
+.venv/bin/pytest tests/e2e/test_flywheel_e2e.py tests/e2e/test_flywheel_tiers.py -v
+
+# 2. Execute the 4-Tier Matrix specification suite (196 tests)
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -v
+
+# 3. Execute the Flywheel E2E integration test suite (36 tests)
 .venv/bin/pytest tests/e2e/test_flywheel_e2e.py -v
 
-# 2. Execute with detailed output and short traceback on failure
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -v --tb=short
+# 4. Execute targeted Tier markers across the 4-Tier Matrix
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -m tier1 -v   # 85 Tier 1 tests
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -m tier2 -v   # 85 Tier 2 tests
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -m tier3 -v   # 17 Tier 3 tests
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -m tier4 -v   # 9 Tier 4 tests
 
-# 3. Execute targeted Tier markers
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -m tier1 -v
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -m tier2 -v
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -m tier3 -v
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -m tier4 -v
+# 5. Execute targeted feature tests by keyword
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -k "rescorer" -v
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -k "lasa" -v
+.venv/bin/pytest tests/e2e/test_flywheel_tiers.py -k "feedback" -v
 
-# 4. Execute targeted feature tests by name
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -k "rescorer" -v
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -k "lasa" -v
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -k "feedback" -v
+# 6. Run rapid CI checks without GPU / slow training tests
+.venv/bin/pytest tests/e2e/test_flywheel_e2e.py tests/e2e/test_flywheel_tiers.py -m "not gpu and not slow" -v
 
-# 5. Run without GPU / long training tests for rapid CI checks
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -m "not gpu and not slow" -v
-
-# 6. Run Apple Silicon MPS hardware acceleration tests
-.venv/bin/pytest tests/e2e/test_flywheel_e2e.py -m gpu -v
+# 7. Run Apple Silicon MPS hardware acceleration tests
+.venv/bin/pytest tests/e2e/test_flywheel_e2e.py tests/e2e/test_flywheel_tiers.py -m gpu -v
 ```
 
 ### Full Multi-Track Test Commands
@@ -213,7 +216,7 @@ Validates authentic operational use cases:
 # Run clinical vocabulary and ship safety gate tests
 .venv/bin/pytest pipeline/tests/test_clinical_vocabularies.py pipeline/tests/test_htr_ship_gate.py -v
 
-# Run frontend Darkroom Vitest suite (313 tests)
+# Run frontend Darkroom Vitest suite (405 tests across 37 test files)
 cd frontend && npm test
 
 # Run master E2E runner CLI with JSON reporting
@@ -225,8 +228,8 @@ cd frontend && npm test
 ## 5. Pass/Fail Criteria & Quality Gates
 
 1. **Test Execution & Exit Code**:
-   - Every test in `tests/e2e/test_flywheel_e2e.py` must pass with exit code `0`.
-   - Zero test failures, zero regressions across existing backend tests (93 tests) and frontend tests (313 tests).
+   - Every test in `tests/e2e/test_flywheel_e2e.py` (36 tests) and `tests/e2e/test_flywheel_tiers.py` (196 tests) must pass with exit code `0` (232 total passing tests).
+   - Zero test failures, zero regressions across existing backend tests (72 tests) and frontend tests (405 tests across 37 test files).
 2. **Dynamic Confusion Recalibration Gate**:
    - Confusion cost reduction must satisfy $c_{\text{new}} \le c_{\text{curr}} \times (1 - \eta) + 1\text{e-}4$.
    - Effective minimum cost must strictly obey $c_{\text{new}} \ge 0.15$.

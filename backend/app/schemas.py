@@ -166,7 +166,7 @@ class RecognitionOptions(BaseModel):
     binarization_method: str = Field(default="sauvola", description="Binarization algorithm ('sauvola' | 'otsu' | 'none')")
     extract_words: bool = Field(default=True, description="Enable word segmentation within line crops")
     dpi: int = Field(default=300, ge=72, le=600, description="DPI resolution for PDF rasterization")
-    beam_width: int = Field(default=4, ge=1, le=16, description="Beam search candidate width")
+    beam_width: int = Field(default=1, ge=1, le=16, description="Beam search candidate width")
     rescore: bool = Field(default=False, description="Enable RxNorm beam rescoring")
     adaptive: bool = Field(default=True, description="Enable adaptive fast 2-pass decoding")
 
