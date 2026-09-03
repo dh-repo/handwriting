@@ -66,15 +66,49 @@ def load_lasa_catalog(
     return sorted(list(unique_pairs))
 
 
+def _levenshtein_distance(s1: str, s2: str) -> int:
+    """Dynamic programming Levenshtein edit distance between two strings."""
+    m, n = len(s1), len(s2)
+    if m == 0:
+        return n
+    if n == 0:
+        return m
+    prev = list(range(n + 1))
+    curr = [0] * (n + 1)
+    for i in range(1, m + 1):
+        curr[0] = i
+        c1 = s1[i - 1]
+        for j in range(1, n + 1):
+            c2 = s2[j - 1]
+            if c1 == c2:
+                curr[j] = prev[j - 1]
+            else:
+                curr[j] = 1 + min(prev[j], curr[j - 1], prev[j - 1])
+        prev, curr = curr, prev
+    return prev[n]
+
+
 def audit_lasa_safety(
     references: Sequence[str],
     hypotheses: Sequence[str],
     lasa_pairs: Optional[List[Tuple[str, str]]] = None,
+    *,
+    near_miss_distance: int = 0,
+    detect_multi_drug: bool = False,
 ) -> LasaAuditResult:
     """
     Scan model hypotheses against references for dangerous LASA medication substitutions.
 
     Zero tolerance: passed=True ONLY if len(violations) == 0.
+
+    Parameters:
+    - references: Ground truth prescription lines.
+    - hypotheses: Model transcribed lines.
+    - lasa_pairs: Optional explicit catalog of confusable pairs. Defaults to canonical 20 pairs.
+    - near_miss_distance: Maximum Levenshtein edit distance to flag near-miss misspellings
+      of the confusable counterpart (default 0 = exact word boundary match).
+    - detect_multi_drug: When True, checks multi-drug context notes where both confusable
+      drugs appear in reference for count imbalances / substitutions.
     """
     if lasa_pairs is None:
         lasa_pairs = load_lasa_catalog()
@@ -91,6 +125,7 @@ def audit_lasa_safety(
     for idx, (ref, hyp) in enumerate(zip(references, hypotheses)):
         ref_str = str(ref)
         hyp_str = str(hyp)
+        hyp_tokens = re.findall(r"[A-Za-z0-9]+", hyp_str) if near_miss_distance > 0 else []
 
         for drug_a, drug_b, pat_a, pat_b in compiled_pairs:
             has_a_ref = bool(pat_a.search(ref_str))
@@ -122,8 +157,96 @@ def audit_lasa_safety(
                     }
                 )
 
+            # Multi-drug context: both drugs mentioned in reference, but one was replaced
+            elif detect_multi_drug and has_a_ref and has_b_ref:
+                count_a_ref = len(pat_a.findall(ref_str))
+                count_b_ref = len(pat_b.findall(ref_str))
+                count_a_hyp = len(pat_a.findall(hyp_str))
+                count_b_hyp = len(pat_b.findall(hyp_str))
+
+                if count_a_hyp < count_a_ref and count_b_hyp > count_b_ref:
+                    violations.append(
+                        {
+                            "index": idx,
+                            "reference": ref_str,
+                            "hypothesis": hyp_str,
+                            "prescribed_drug": drug_a,
+                            "confused_drug": drug_b,
+                            "context": "multi_drug_substitution",
+                        }
+                    )
+                elif count_b_hyp < count_b_ref and count_a_hyp > count_a_ref:
+                    violations.append(
+                        {
+                            "index": idx,
+                            "reference": ref_str,
+                            "hypothesis": hyp_str,
+                            "prescribed_drug": drug_b,
+                            "confused_drug": drug_a,
+                            "context": "multi_drug_substitution",
+                        }
+                    )
+
+            # Near-miss check: catch slight misspellings of the confusable partner
+            if near_miss_distance > 0:
+                if has_a_ref and not has_b_ref and not has_b_hyp:
+                    for tok in hyp_tokens:
+                        tok_lower = tok.lower()
+                        d_b = _levenshtein_distance(tok_lower, drug_b.lower())
+                        d_a = _levenshtein_distance(tok_lower, drug_a.lower())
+                        if 1 <= d_b <= near_miss_distance and d_b < d_a:
+                            violations.append(
+                                {
+                                    "index": idx,
+                                    "reference": ref_str,
+                                    "hypothesis": hyp_str,
+                                    "prescribed_drug": drug_a,
+                                    "confused_drug": drug_b,
+                                    "near_miss_token": tok,
+                                }
+                            )
+                            break
+                elif has_b_ref and not has_a_ref and not has_a_hyp:
+                    for tok in hyp_tokens:
+                        tok_lower = tok.lower()
+                        d_a = _levenshtein_distance(tok_lower, drug_a.lower())
+                        d_b = _levenshtein_distance(tok_lower, drug_b.lower())
+                        if 1 <= d_a <= near_miss_distance and d_a < d_b:
+                            violations.append(
+                                {
+                                    "index": idx,
+                                    "reference": ref_str,
+                                    "hypothesis": hyp_str,
+                                    "prescribed_drug": drug_b,
+                                    "confused_drug": drug_a,
+                                    "near_miss_token": tok,
+                                }
+                            )
+                            break
+
     passed = len(violations) == 0
     return LasaAuditResult(total_evaluated=total, violations=violations, passed=passed)
+
+
+def audit_lasa_safety_hardened(
+    references: Sequence[str],
+    hypotheses: Sequence[str],
+    lasa_pairs: Optional[List[Tuple[str, str]]] = None,
+    *,
+    near_miss_distance: int = 2,
+    detect_multi_drug: bool = True,
+) -> LasaAuditResult:
+    """
+    Hardened clinical LASA safety gate audit enabling both near-miss confusable
+    detection (Levenshtein distance <= 2) and multi-drug prescription context substitution detection.
+    """
+    return audit_lasa_safety(
+        references=references,
+        hypotheses=hypotheses,
+        lasa_pairs=lasa_pairs,
+        near_miss_distance=near_miss_distance,
+        detect_multi_drug=detect_multi_drug,
+    )
 
 
 def check_cer_regression(

@@ -39,6 +39,8 @@ export interface InlineEditorProps {
   onPageUpdate?: (updatedPage: PageResult) => void;
   selectedLineId?: string | null;
   selectedWordId?: string | null;
+  hoveredLineId?: string | null;
+  hoveredWordId?: string | null;
   onSelectLine?: (lineId: string) => void;
   onSelectWord?: (wordId: string, parentLineId?: string) => void;
   onHoverLine?: (lineId: string | null) => void;
@@ -64,6 +66,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   onPageUpdate,
   selectedLineId,
   selectedWordId,
+  hoveredLineId,
+  hoveredWordId,
   onSelectLine,
   onSelectWord,
   onHoverLine,
@@ -94,6 +98,16 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       Object.values(debounceTimersRef.current).forEach((t) => clearTimeout(t));
     };
   }, []);
+
+  // Synchronize selection scroll into view
+  useEffect(() => {
+    if (selectedWordId && typeof document !== 'undefined') {
+      const el = document.querySelector(`[data-testid="word-chip-${selectedWordId}"]`);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [selectedWordId]);
 
   // Active word editing state in structured mode
   const [editingWordId, setEditingWordId] = useState<string | null>(null);
@@ -674,6 +688,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
           <div data-testid="structured-lines-list" className="space-y-3">
             {page.lines.map((line: LineItem, idx: number) => {
               const isSelected = selectedLineId === line.line_id;
+              const isHovered = hoveredLineId === line.line_id;
               const colorStyle = getConfidenceColor(line.confidence);
 
               return (
@@ -686,6 +701,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                   className={`p-3.5 rounded-xl border transition-all duration-150 relative ${
                     isSelected
                       ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                      : isHovered
+                      ? 'border-blue-400/80 bg-blue-50/30 dark:bg-blue-950/30 ring-1 ring-blue-400/30'
                       : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/60'
                   }`}
                 >
@@ -741,6 +758,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                     <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                       {line.words.map((word: WordToken) => {
                         const isWordSelected = selectedWordId === word.word_id;
+                        const isWordHovered = hoveredWordId === word.word_id;
+                        const isLowConfidence = word.confidence < 0.85;
                         const isEditingThisWord = editingWordId === word.word_id;
 
                         return (
@@ -815,6 +834,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                               <button
                                 type="button"
                                 data-testid={`word-chip-${word.word_id}`}
+                                data-confidence-low={isLowConfidence ? 'true' : 'false'}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onSelectWord?.(word.word_id, line.line_id);
@@ -826,13 +846,25 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                 onMouseLeave={() => onHoverWord?.(null)}
                                 className={`cursor-pointer px-2 py-0.5 rounded-md text-xs font-mono transition-all text-left ${
                                   isWordSelected
-                                    ? 'bg-indigo-600 text-white font-bold'
-                                    : word.confidence < 0.70
-                                    ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
+                                    ? 'bg-indigo-600 text-white font-bold ring-2 ring-indigo-400 shadow-md'
+                                    : isWordHovered
+                                    ? 'bg-amber-500/30 text-amber-900 dark:text-amber-100 ring-2 ring-amber-400 border border-amber-400 shadow-sm shadow-amber-500/20'
+                                    : isLowConfidence
+                                    ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-600/60 hover:bg-amber-100 dark:hover:bg-amber-900/40'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
+                                title={
+                                  isLowConfidence
+                                    ? `Low confidence token: ${(word.confidence * 100).toFixed(0)}% • Click to correct`
+                                    : `${(word.confidence * 100).toFixed(0)}% confidence`
+                                }
                               >
-                                <span>{word.text}</span>
+                                <span className="inline-flex items-center gap-1">
+                                  {isLowConfidence && !isWordSelected && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                                  )}
+                                  <span>{word.text}</span>
+                                </span>
                               </button>
                             )}
 

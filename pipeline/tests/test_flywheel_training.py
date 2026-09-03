@@ -29,6 +29,7 @@ from pipeline.training.ship_gate import (
     LasaAuditResult,
     assert_shippable_checkpoint,
     audit_lasa_safety,
+    audit_lasa_safety_hardened,
     check_cer_regression,
     decide_ship,
     load_lasa_catalog,
@@ -342,6 +343,34 @@ def test_audit_lasa_safety_bidirectional():
     assert len(result.violations) == 1
     assert result.violations[0]["prescribed_drug"] == "Hydroxyzine"
     assert result.violations[0]["confused_drug"] == "Hydralazine"
+
+
+def test_audit_lasa_safety_hardened_near_miss_and_multi_drug():
+    """Verify hardened clinical safety gate intercepts near-miss typos and multi-drug substitutions."""
+    # Near-miss typo of confusable drug
+    nm_refs = ["Administer Hydralazine 25mg PO"]
+    nm_hyps = ["Administer Hydroxyzn 25mg PO"]
+    nm_res = audit_lasa_safety_hardened(nm_refs, nm_hyps)
+    assert nm_res.passed is False
+    assert len(nm_res.violations) == 1
+    assert nm_res.violations[0]["confused_drug"] == "Hydroxyzine"
+    assert nm_res.violations[0]["near_miss_token"] == "Hydroxyzn"
+
+    # Multi-drug context substitution
+    multi_refs = ["Discontinue Hydroxyzine, start Hydralazine 25mg daily"]
+    multi_hyps = ["Discontinue Hydroxyzine, start Hydroxyzine 25mg daily"]
+    multi_res = audit_lasa_safety_hardened(multi_refs, multi_hyps)
+    assert multi_res.passed is False
+    assert len(multi_res.violations) == 1
+    assert multi_res.violations[0]["confused_drug"] == "Hydroxyzine"
+    assert multi_res.violations[0]["context"] == "multi_drug_substitution"
+
+    # Safe controls
+    clean_refs = ["Discontinue Hydroxyzine, start Hydralazine 25mg daily"]
+    clean_hyps = ["Discontinue Hydroxyzine, start Hydralazine 25mg daily"]
+    clean_res = audit_lasa_safety_hardened(clean_refs, clean_hyps)
+    assert clean_res.passed is True
+    assert len(clean_res.violations) == 0
 
 
 # ---------------------------------------------------------------------------

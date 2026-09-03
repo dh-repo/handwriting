@@ -9,6 +9,7 @@ from typing import Any, List, Optional, Sequence, Tuple
 from pipeline.training.ship_gate import (
     LasaAuditResult,
     audit_lasa_safety,
+    audit_lasa_safety_hardened,
     check_cer_regression,
     decide_ship,
     load_lasa_catalog,
@@ -40,6 +41,7 @@ __all__ = [
     "assert_shippable_checkpoint",
     "load_lasa_catalog",
     "audit_lasa_safety",
+    "audit_lasa_safety_hardened",
     "check_cer_regression",
     "decide_ship",
     "LasaAuditResult",

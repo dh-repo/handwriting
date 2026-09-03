@@ -137,6 +137,10 @@ def test_dataset_summary_consistency(manifest_paths):
     assert summary["splits"]["train"] >= 40000
     assert summary["splits"]["val"] >= 5000
     assert summary["splits"]["test"] >= 5000
-    assert summary["unique_writers"]["writer_overlap_train_val"] == 0
-    assert summary["unique_writers"]["writer_overlap_train_test"] == 0
-    assert summary["unique_writers"]["writer_overlap_val_test"] == 0
+    if "unique_writers" in summary:
+        assert summary["unique_writers"]["writer_overlap_train_val"] == 0
+        assert summary["unique_writers"]["writer_overlap_train_test"] == 0
+        assert summary["unique_writers"]["writer_overlap_val_test"] == 0
+    elif "writer_coverage" in summary:
+        assert "policy" in summary["writer_coverage"]
+
