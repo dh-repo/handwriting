@@ -21,11 +21,15 @@ htmlcov
 .LSOverride
 
 # Large datasets & heavy checkpoint files
-data/*
-!data/reference_handwriting
-data/reference_handwriting/*
-!data/reference_handwriting/vocabularies
+runs
+runs/**
+export
+export/**
 checkpoints
+checkpoints/**
+data/**
+!data/reference_handwriting/vocabularies
+!data/reference_handwriting/vocabularies/**
 *.pt
 *.bin
 *.safetensors

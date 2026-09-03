@@ -1,8 +1,19 @@
-"""Refuse Azure/backend checkpoints that failed the Teklia-pack accuracy bar."""
+"""Refuse Azure/backend checkpoints that failed the Teklia-pack accuracy bar or violated clinical safety."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, List, Optional, Sequence, Tuple
+
+# Re-export pipeline flywheel safety gate components for backend access
+from pipeline.training.ship_gate import (
+    LasaAuditResult,
+    audit_lasa_safety,
+    audit_lasa_safety_hardened,
+    check_cer_regression,
+    decide_ship,
+    load_lasa_catalog,
+)
 
 FORBIDDEN_SUBSTRINGS = (
     "runs/base_iam_v1",
@@ -23,3 +34,15 @@ def assert_shippable_checkpoint(model_id: str) -> str:
     if path.exists() and "base_iam_v1" in str(path.resolve()):
         raise ValueError(f"refusing to load {model_id}: base_iam_v1 is not a ship candidate")
     return model_id
+
+
+__all__ = [
+    "FORBIDDEN_SUBSTRINGS",
+    "assert_shippable_checkpoint",
+    "load_lasa_catalog",
+    "audit_lasa_safety",
+    "audit_lasa_safety_hardened",
+    "check_cer_regression",
+    "decide_ship",
+    "LasaAuditResult",
+]

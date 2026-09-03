@@ -7,9 +7,13 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
+import json
 import logging
+import threading
 import time
-from typing import Any, Optional
+from typing import Any, AsyncIterator, Optional, Tuple
+
+from starlette.responses import StreamingResponse
 
 from fastapi import (
     APIRouter,
@@ -78,26 +82,20 @@ def _decode_line_crop(engine: InferenceEngine, image: Image.Image) -> str:
     return engine.recognize_single_crop(image, num_beams=4)
 
 
-@router.post("/recognize", response_model=RecognitionResponse)
-async def recognize_document(
+async def _extract_recognition_inputs(
     request: Request,
-    file: Optional[UploadFile] = File(default=None),
-    deskew: bool = Query(default=True),
-    enhance_contrast: bool = Query(default=True),
-    binarization_method: str = Query(default="sauvola"),
-    extract_words: bool = Query(default=True),
-    dpi: int = Query(default=300),
-    beam_width: int = Query(default=4, ge=1, le=16),
-    rescore: bool = Query(default=False),
-    settings: Settings = Depends(get_settings),
-) -> RecognitionResponse:
-    """
-    Synchronously transcribe a single/multi-page image or PDF.
-    Accepts both multipart/form-data (`file` field) and JSON (`file_base64` field).
-    """
-    engine = get_engine()
+    file: Optional[UploadFile],
+    deskew: bool,
+    enhance_contrast: bool,
+    binarization_method: str,
+    extract_words: bool,
+    dpi: int,
+    beam_width: int,
+    rescore: bool,
+    adaptive: bool,
+    settings: Settings,
+) -> Tuple[bytes, str, RecognitionOptions]:
     content_type = request.headers.get("content-type", "")
-
     file_bytes: Optional[bytes] = None
     filename: str = "document.png"
     options = RecognitionOptions(
@@ -108,9 +106,9 @@ async def recognize_document(
         dpi=dpi,
         beam_width=beam_width,
         rescore=rescore,
+        adaptive=adaptive,
     )
 
-    # 1. Check if request is JSON body with base64 payload
     if "application/json" in content_type:
         try:
             body = await request.json()
@@ -132,14 +130,10 @@ async def recognize_document(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Failed to parse JSON body: {e}",
             )
-
-    # 2. Check if multipart/form-data
     elif file is not None:
         filename = file.filename or "upload.png"
         file_bytes = await file.read()
-
     else:
-        # Check raw form fields if UploadFile injection was bypassed
         try:
             form = await request.form()
             upload_item = form.get("file")
@@ -152,21 +146,18 @@ async def recognize_document(
         except Exception:
             pass
 
-    # 3. Validate presence of file payload
     if file_bytes is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Missing file. Please provide a file upload or file_base64 JSON payload.",
         )
 
-    # 4. Validate non-empty payload
     if len(file_bytes) == 0:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="InvalidImageError: Input image is empty (0 bytes).",
         )
 
-    # 5. Validate file size
     max_bytes = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024
     if len(file_bytes) > max_bytes:
         raise HTTPException(
@@ -174,7 +165,33 @@ async def recognize_document(
             detail=f"File exceeds maximum allowed size ({settings.MAX_IMAGE_SIZE_MB}MB).",
         )
 
-    # 6. Execute inference
+    return file_bytes, filename, options
+
+
+@router.post("/recognize", response_model=RecognitionResponse)
+async def recognize_document(
+    request: Request,
+    file: Optional[UploadFile] = File(default=None),
+    deskew: bool = Query(default=True),
+    enhance_contrast: bool = Query(default=True),
+    binarization_method: str = Query(default="sauvola"),
+    extract_words: bool = Query(default=True),
+    dpi: int = Query(default=300),
+    beam_width: int = Query(default=1, ge=1, le=16),
+    rescore: bool = Query(default=False),
+    adaptive: bool = Query(default=True),
+    settings: Settings = Depends(get_settings),
+) -> RecognitionResponse:
+    """
+    Synchronously transcribe a single/multi-page image or PDF.
+    Accepts both multipart/form-data (`file` field) and JSON (`file_base64` field).
+    """
+    engine = get_engine()
+    file_bytes, filename, options = await _extract_recognition_inputs(
+        request, file, deskew, enhance_contrast, binarization_method,
+        extract_words, dpi, beam_width, rescore, adaptive, settings
+    )
+
     try:
         response = await asyncio.to_thread(
             engine.recognize,
@@ -193,4 +210,66 @@ async def recognize_document(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e),
         )
+
+
+@router.post("/recognize/stream")
+async def recognize_document_stream(
+    request: Request,
+    file: Optional[UploadFile] = File(default=None),
+    deskew: bool = Query(default=True),
+    enhance_contrast: bool = Query(default=True),
+    binarization_method: str = Query(default="sauvola"),
+    extract_words: bool = Query(default=True),
+    dpi: int = Query(default=300),
+    beam_width: int = Query(default=1, ge=1, le=16),
+    rescore: bool = Query(default=False),
+    adaptive: bool = Query(default=True),
+    settings: Settings = Depends(get_settings),
+) -> StreamingResponse:
+    """
+    Stream real-time Server-Sent Events (SSE) as lines are recognized.
+    Emits 'metadata', 'line', and 'complete' events.
+    """
+    engine = get_engine()
+    file_bytes, filename, options = await _extract_recognition_inputs(
+        request, file, deskew, enhance_contrast, binarization_method,
+        extract_words, dpi, beam_width, rescore, adaptive, settings
+    )
+
+    async def _event_generator() -> AsyncIterator[str]:
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue = asyncio.Queue()
+
+        def _worker() -> None:
+            try:
+                for item in engine.recognize_stream(file_bytes, filename=filename, options=options):
+                    loop.call_soon_threadsafe(queue.put_nowait, item)
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+            except Exception as err:
+                logger.exception("Streaming recognition worker failed: %s", err)
+                loop.call_soon_threadsafe(
+                    queue.put_nowait,
+                    {"event": "error", "data": {"error": str(err)}},
+                )
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+        while True:
+            event = await queue.get()
+            if event is None:
+                break
+            ev_name = event.get("event", "message")
+            ev_data = json.dumps(event.get("data", {}))
+            yield f"event: {ev_name}\ndata: {ev_data}\n\n"
+
+    return StreamingResponse(
+        _event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 

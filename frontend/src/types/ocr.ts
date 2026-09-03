@@ -86,6 +86,9 @@ export interface SignatureReviewRecord {
 
 // Alias for RecognitionResponse matching backend schema
 export type RecognitionResponse = DocumentOCRResult;
+export type PageOCRResult = PageResult;
+export type LineOCRResult = LineItem;
+export type WordOCRResult = WordToken;
 
 export interface LowConfidenceWordItem {
   page_index: number;
@@ -111,6 +114,7 @@ export interface RecognitionOptions {
   dpi?: number;
   beam_width?: number;
   rescore?: boolean;
+  adaptive?: boolean;
   model_type?: string;
 }
 
@@ -181,3 +185,38 @@ export interface SSEEvent<T = unknown> {
 }
 
 export type StreamingEvent = SSEEvent;
+
+export interface FeedbackSubmissionRequest {
+  document_id: string;
+  page_number?: number;
+  line_id: string;
+  word_id?: string;
+  original_prediction?: string;
+  operator_correction?: string;
+  original_text?: string;
+  corrected_text?: string;
+  confidence?: number;
+  bbox?: BoundingBoxTuple; // [ymin, xmin, ymax, xmax]
+  line_crop_base64?: string; // data:image/png;base64,...
+  timestamp?: string; // ISO-8601 UTC
+}
+
+export interface FeedbackSubmissionResponse {
+  status: 'persisted' | 'queued' | 'acknowledged';
+  feedback_id: string;
+  document_id?: string;
+  line_id?: string;
+  manifest_path?: string;
+  crop_path?: string;
+  confusion_pairs_count?: number;
+  confusion_pairs_updated?: Array<{
+    source: string;
+    target: string;
+    old_cost?: number;
+    new_cost?: number;
+  }>;
+  timestamp: string;
+}
+
+export type FeedbackSyncStatus = 'idle' | 'debouncing' | 'syncing' | 'synced' | 'error';
+

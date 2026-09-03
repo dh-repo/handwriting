@@ -188,3 +188,167 @@ export function downloadFile(content: string, filename: string, mimeType: string
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Exports document text formatted cleanly as structured Markdown.
+ */
+export function exportDocumentAsMarkdown(doc: DocumentOCRResult): string {
+  const parts: string[] = [];
+  parts.push(`# ${doc.filename || 'Handwriting Transcription'}`);
+  parts.push(`*Mean Confidence: ${((doc.mean_confidence ?? doc.overall_confidence ?? 0.95) * 100).toFixed(1)}%*`);
+  parts.push(`*Total Pages: ${doc.total_pages || doc.pages?.length || 1}*\n`);
+
+  doc.pages.forEach((page) => {
+    if (doc.pages.length > 1) {
+      parts.push(`## Page ${page.page_number}`);
+    }
+    const pageLines = page.lines.map((l) => l.text).filter(Boolean);
+    parts.push(pageLines.join('\n'));
+    parts.push('');
+  });
+
+  return parts.join('\n').trim();
+}
+
+/**
+ * Combines multiple batch documents into a single consolidated Markdown file.
+ */
+export function exportBatchDocumentsAsMarkdown(docs: DocumentOCRResult[]): string {
+  const parts: string[] = [
+    '# Consolidated Batch Handwriting Transcription',
+    `*Generated on ${new Date().toLocaleDateString()} • Total Documents: ${docs.length}*\n`,
+    '---\n',
+  ];
+
+  docs.forEach((doc, idx) => {
+    parts.push(`## Document ${idx + 1}: ${doc.filename || `Document_${idx + 1}`}`);
+    parts.push(exportDocumentAsMarkdown(doc));
+    parts.push('\n---\n');
+  });
+
+  return parts.join('\n').trim();
+}
+
+/**
+ * Combines multiple batch documents into a single plain text file.
+ */
+export function exportBatchDocumentsAsTxt(docs: DocumentOCRResult[]): string {
+  return docs
+    .map((doc, idx) => `=== DOCUMENT ${idx + 1}: ${doc.filename || `doc_${idx + 1}`} ===\n\n${exportDocumentAsTxt(doc)}`)
+    .join('\n\n========================================\n\n');
+}
+
+/**
+ * Combines multiple batch documents into a structured batch JSON result.
+ */
+export function exportBatchDocumentsAsJson(docs: DocumentOCRResult[]): string {
+  const payload = {
+    batch_export_timestamp: new Date().toISOString(),
+    total_documents: docs.length,
+    documents: docs.map((doc) => JSON.parse(exportDocumentAsJson(doc))),
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+/**
+ * Generates an invisible OCR text layer aligned 1:1 over the high-res scans,
+ * creating an interactive Searchable PDF document that can be selected, searched (Cmd+F),
+ * or saved via browser print.
+ */
+export function exportDocumentAsSearchableHtml(doc: DocumentOCRResult): string {
+  const pagesHtml = doc.pages
+    .map((page) => {
+      const wordsOverlay = page.lines
+        .flatMap((line) => line.words || [])
+        .map((word) => {
+          const [ymin, xmin, ymax, xmax] = word.bbox;
+          const topPct = (ymin * 100).toFixed(3);
+          const leftPct = (xmin * 100).toFixed(3);
+          const widthPct = ((xmax - xmin) * 100).toFixed(3);
+          const heightPct = ((ymax - ymin) * 100).toFixed(3);
+
+          return `<span class="ocr-token" style="top:${topPct}%;left:${leftPct}%;width:${widthPct}%;height:${heightPct}%;">${word.text}</span>`;
+        })
+        .join('\n');
+
+      return `
+      <div class="page-container" style="position:relative; width:${page.width || 800}px; height:${page.height || 1100}px; margin: 0 auto 32px auto; page-break-after: always; background:#fff;">
+        ${page.image_url ? `<img src="${page.image_url}" alt="Page ${page.page_number}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none;" />` : ''}
+        <div class="ocr-layer" style="position:absolute; inset:0; width:100%; height:100%;">
+          ${wordsOverlay}
+        </div>
+      </div>
+      `;
+    })
+    .join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${doc.filename || 'Searchable Document'} - OCR Transcription</title>
+  <style>
+    @page { size: auto; margin: 0mm; }
+    body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; }
+    .page-container { box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden; }
+    .ocr-layer { position: absolute; inset: 0; pointer-events: auto; }
+    .ocr-token {
+      position: absolute;
+      color: transparent;
+      opacity: 0.01;
+      font-size: 14px;
+      line-height: 1;
+      user-select: text;
+      white-space: nowrap;
+      cursor: text;
+    }
+    .ocr-token::selection {
+      background: rgba(59, 130, 246, 0.45);
+      color: transparent;
+    }
+    @media print {
+      body { background: transparent; padding: 0; }
+      .page-container { box-shadow: none; margin: 0; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  ${pagesHtml}
+</body>
+</html>`;
+}
+
+/**
+ * Opens a print dialog to save the document as a Searchable PDF.
+ */
+export function openSearchablePdfPrint(doc: DocumentOCRResult): void {
+  if (typeof window === 'undefined') return;
+  const html = exportDocumentAsSearchableHtml(doc);
+
+  try {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        try {
+          printWindow.print();
+        } catch {
+          // fallback
+        }
+      }, 500);
+      return;
+    }
+  } catch {
+    // Popup blocker fallback
+  }
+
+  downloadFile(
+    html,
+    `${doc.filename ? doc.filename.replace(/\.[^/.]+$/, '') : 'document'}_searchable_pdf.html`,
+    'text/html;charset=utf-8'
+  );
+}
+
+

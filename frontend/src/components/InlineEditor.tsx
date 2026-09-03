@@ -13,9 +13,20 @@ import {
   Pill,
   Clock,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
-import { PageResult, LineItem, WordToken, LowConfidenceWordItem } from '../types/ocr';
+import {
+  PageResult,
+  LineItem,
+  WordToken,
+  LowConfidenceWordItem,
+  FeedbackSubmissionRequest,
+  FeedbackSubmissionResponse,
+  FeedbackSyncStatus,
+} from '../types/ocr';
 import { getConfidenceColor } from '../lib/colorUtils';
+import { extractLineCropBase64 } from '../lib/cropUtils';
+import { apiClient, ApiClient } from '../lib/apiClient';
 import {
   searchMedicalLexicon,
   AutocompleteSuggestion,
@@ -24,9 +35,12 @@ import {
 
 export interface InlineEditorProps {
   page: PageResult;
+  documentId?: string;
   onPageUpdate?: (updatedPage: PageResult) => void;
   selectedLineId?: string | null;
   selectedWordId?: string | null;
+  hoveredLineId?: string | null;
+  hoveredWordId?: string | null;
   onSelectLine?: (lineId: string) => void;
   onSelectWord?: (wordId: string, parentLineId?: string) => void;
   onHoverLine?: (lineId: string | null) => void;
@@ -38,14 +52,22 @@ export interface InlineEditorProps {
   canRedo?: boolean;
   onLineChange?: (lineId: string, newText: string) => void;
   onWordChange?: (lineId: string, wordId: string, newText: string) => void;
+  onFeedbackDispatched?: (
+    request: FeedbackSubmissionRequest,
+    response?: FeedbackSubmissionResponse
+  ) => void;
+  apiClientInstance?: ApiClient;
   className?: string;
 }
 
 export const InlineEditor: React.FC<InlineEditorProps> = ({
   page,
+  documentId,
   onPageUpdate,
   selectedLineId,
   selectedWordId,
+  hoveredLineId,
+  hoveredWordId,
   onSelectLine,
   onSelectWord,
   onHoverLine,
@@ -57,10 +79,35 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   canRedo = false,
   onLineChange,
   onWordChange,
+  onFeedbackDispatched,
+  apiClientInstance,
   className = '',
 }) => {
   const [activeTab, setActiveTab] = useState<'structured' | 'raw' | 'speed_review'>('structured');
   const [confidenceThreshold] = useState(0.70);
+
+  // Local optimistic text map and Flywheel feedback sync status
+  const [localLineTexts, setLocalLineTexts] = useState<Record<string, string>>({});
+  const [feedbackStatusMap, setFeedbackStatusMap] = useState<Record<string, FeedbackSyncStatus>>({});
+  const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const latestEditsRef = useRef<Record<string, string>>({});
+
+  // Cleanup pending debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimersRef.current).forEach((t) => clearTimeout(t));
+    };
+  }, []);
+
+  // Synchronize selection scroll into view
+  useEffect(() => {
+    if (selectedWordId && typeof document !== 'undefined') {
+      const el = document.querySelector(`[data-testid="word-chip-${selectedWordId}"]`);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [selectedWordId]);
 
   // Active word editing state in structured mode
   const [editingWordId, setEditingWordId] = useState<string | null>(null);
@@ -78,6 +125,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const [speedQueue, setSpeedQueue] = useState<LowConfidenceWordItem[]>([]);
   const [speedIndex, setSpeedIndex] = useState(0);
   const [speedInput, setSpeedInput] = useState('');
+  const [speedInputTouched, setSpeedInputTouched] = useState(false);
   const [speedSuggestions, setSpeedSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const speedInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,6 +158,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     if (activeTab === 'speed_review' && speedQueue[speedIndex]) {
       const activeWord = speedQueue[speedIndex];
       setSpeedInput(activeWord.text);
+      setSpeedInputTouched(false);
       onSelectLine?.(activeWord.line_id);
       onSelectWord?.(activeWord.word_id, activeWord.line_id);
 
@@ -142,6 +191,113 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     }
   }, [editingWordId, editingWordText]);
 
+  const dispatchFeedbackForLine = useCallback(
+    async (lineId: string, textOverride?: string) => {
+      if (debounceTimersRef.current[lineId]) {
+        clearTimeout(debounceTimersRef.current[lineId]);
+        delete debounceTimersRef.current[lineId];
+      }
+
+      const line = page.lines.find((l) => l.line_id === lineId);
+      if (!line) return;
+
+      const currentText =
+        textOverride !== undefined
+          ? textOverride
+          : latestEditsRef.current[lineId] ?? localLineTexts[lineId] ?? line.text;
+
+      const originalText = line.original_text || line.text || '';
+      if (currentText === originalText && !line.is_edited) {
+        setFeedbackStatusMap((prev) => ({ ...prev, [lineId]: 'idle' }));
+        return;
+      }
+
+      setFeedbackStatusMap((prev) => ({ ...prev, [lineId]: 'syncing' }));
+
+      let cropBase64: string | undefined;
+      try {
+        cropBase64 = await extractLineCropBase64(page.image_url, line.bbox);
+      } catch {
+        cropBase64 = undefined;
+      }
+
+      const payload: FeedbackSubmissionRequest = {
+        document_id: documentId || (page as any).document_id || `doc_p${page.page_number}`,
+        page_number: page.page_number,
+        line_id: lineId,
+        original_prediction: originalText,
+        operator_correction: currentText,
+        original_text: originalText,
+        corrected_text: currentText,
+        confidence: line.confidence,
+        bbox: line.bbox,
+        line_crop_base64: cropBase64,
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        const client = apiClientInstance || apiClient;
+        const response = await client.submitFeedback(payload);
+        setFeedbackStatusMap((prev) => ({ ...prev, [lineId]: 'synced' }));
+        onFeedbackDispatched?.(payload, response);
+      } catch (err) {
+        console.error('[InlineEditor] Line feedback dispatch failed:', err);
+        setFeedbackStatusMap((prev) => ({ ...prev, [lineId]: 'error' }));
+      }
+    },
+    [page, documentId, apiClientInstance, onFeedbackDispatched, localLineTexts]
+  );
+
+  const dispatchFeedbackForWord = useCallback(
+    async (args: {
+      line_id: string;
+      word_id?: string;
+      original_text: string;
+      corrected_text: string;
+      confidence?: number;
+      bbox?: [number, number, number, number];
+    }) => {
+      const { line_id, word_id, original_text, corrected_text, confidence, bbox } = args;
+      if (original_text === corrected_text) return;
+
+      setFeedbackStatusMap((prev) => ({ ...prev, [line_id]: 'syncing' }));
+
+      let cropBase64: string | undefined;
+      try {
+        const line = page.lines.find((l) => l.line_id === line_id);
+        cropBase64 = await extractLineCropBase64(page.image_url, bbox || line?.bbox);
+      } catch {
+        cropBase64 = undefined;
+      }
+
+      const payload: FeedbackSubmissionRequest = {
+        document_id: documentId || (page as any).document_id || `doc_p${page.page_number}`,
+        page_number: page.page_number,
+        line_id,
+        word_id,
+        original_prediction: original_text,
+        operator_correction: corrected_text,
+        original_text,
+        corrected_text,
+        confidence,
+        bbox,
+        line_crop_base64: cropBase64,
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        const client = apiClientInstance || apiClient;
+        const response = await client.submitFeedback(payload);
+        setFeedbackStatusMap((prev) => ({ ...prev, [line_id]: 'synced' }));
+        onFeedbackDispatched?.(payload, response);
+      } catch (err) {
+        console.error('[InlineEditor] Word feedback dispatch failed:', err);
+        setFeedbackStatusMap((prev) => ({ ...prev, [line_id]: 'error' }));
+      }
+    },
+    [page, documentId, apiClientInstance, onFeedbackDispatched]
+  );
+
   const handleLineTextChange = (lineId: string, newText: string) => {
     if (onLineChange) {
       onLineChange(lineId, newText);
@@ -162,6 +318,22 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         full_text: updatedLines.map((l: LineItem) => l.text).join('\n'),
       });
     }
+  };
+
+  const handleLineInputChange = (lineId: string, newText: string) => {
+    setLocalLineTexts((prev) => ({ ...prev, [lineId]: newText }));
+    latestEditsRef.current[lineId] = newText;
+    handleLineTextChange(lineId, newText);
+
+    if (debounceTimersRef.current[lineId]) {
+      clearTimeout(debounceTimersRef.current[lineId]);
+    }
+
+    setFeedbackStatusMap((prev) => ({ ...prev, [lineId]: 'debouncing' }));
+
+    debounceTimersRef.current[lineId] = setTimeout(() => {
+      dispatchFeedbackForLine(lineId, newText);
+    }, 500);
   };
 
   const handleWordTextChange = useCallback(
@@ -201,10 +373,23 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
 
   const handleApplySuggestion = (suggestion: AutocompleteSuggestion) => {
     if (editingLineId && editingWordId) {
+      const line = page.lines.find((l) => l.line_id === editingLineId);
+      const word = line?.words.find((w) => w.word_id === editingWordId);
+      const origText = word?.original_text || word?.text || editingWordText;
+
       handleWordTextChange(editingLineId, editingWordId, suggestion.entry.term);
       setEditingWordText(suggestion.entry.term);
       setShowPopover(false);
       setEditingWordId(null);
+
+      dispatchFeedbackForWord({
+        line_id: editingLineId,
+        word_id: editingWordId,
+        original_text: origText,
+        corrected_text: suggestion.entry.term,
+        confidence: word?.confidence,
+        bbox: word?.bbox,
+      });
     }
   };
 
@@ -214,6 +399,16 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     const textToApply = customText !== undefined ? customText : speedInput;
     handleWordTextChange(current.line_id, current.word_id, textToApply);
 
+    dispatchFeedbackForWord({
+      line_id: current.line_id,
+      word_id: current.word_id,
+      original_text: current.original_text || current.text,
+      corrected_text: textToApply,
+      confidence: current.confidence,
+      bbox: current.bbox,
+    });
+
+    setSpeedInputTouched(false);
     if (speedIndex < speedQueue.length - 1) {
       setSpeedIndex((prev) => prev + 1);
     } else {
@@ -222,6 +417,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   };
 
   const handleSpeedSkip = () => {
+    setSpeedInputTouched(false);
     if (speedIndex < speedQueue.length - 1) {
       setSpeedIndex((prev) => prev + 1);
     } else {
@@ -230,8 +426,79 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   };
 
   const handleSpeedPrev = () => {
+    setSpeedInputTouched(false);
     if (speedIndex > 0) {
       setSpeedIndex((prev) => prev - 1);
+    }
+  };
+
+  const handleRevertAll = () => {
+    Object.values(debounceTimersRef.current).forEach((t) => clearTimeout(t));
+    debounceTimersRef.current = {};
+    setFeedbackStatusMap({});
+    setLocalLineTexts({});
+    latestEditsRef.current = {};
+    onRevertAll?.();
+  };
+
+  const renderFeedbackStatusBadge = (lineId: string) => {
+    const status = feedbackStatusMap[lineId];
+    if (!status || status === 'idle') return null;
+
+    switch (status) {
+      case 'debouncing':
+        return (
+          <span
+            data-testid={`feedback-status-${lineId}`}
+            className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 animate-pulse"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping mr-0.5" />
+            Staged...
+          </span>
+        );
+      case 'syncing':
+        return (
+          <span
+            data-testid={`feedback-status-${lineId}`}
+            className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
+          >
+            <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />
+            Syncing...
+          </span>
+        );
+      case 'synced':
+        return (
+          <span
+            data-testid={`feedback-status-${lineId}`}
+            className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+          >
+            <Check className="w-3 h-3 text-emerald-500" />
+            Flywheel Saved
+          </span>
+        );
+      case 'error':
+        return (
+          <span
+            data-testid={`feedback-status-${lineId}`}
+            className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+          >
+            <AlertTriangle className="w-3 h-3 text-rose-500" />
+            <span>Sync Failed</span>
+            <button
+              type="button"
+              data-testid={`retry-feedback-${lineId}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatchFeedbackForLine(lineId);
+              }}
+              className="ml-1 underline font-bold hover:text-rose-700 dark:hover:text-rose-300"
+            >
+              Retry
+            </button>
+          </span>
+        );
+      default:
+        return null;
     }
   };
 
@@ -367,12 +634,14 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             <button
               type="button"
               data-testid="btn-revert-all"
-              onClick={onRevertAll}
+              onClick={handleRevertAll}
               disabled={editedCount === 0}
               title="Revert all edits"
               className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 disabled:opacity-30 disabled:pointer-events-none"
             >
-              <RotateCcw className="w-4 h-4" />
+              <span data-testid="revert-all-btn" className="inline-flex items-center justify-center pointer-events-none">
+                <RotateCcw className="w-4 h-4" />
+              </span>
             </button>
           )}
         </div>
@@ -419,6 +688,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
           <div data-testid="structured-lines-list" className="space-y-3">
             {page.lines.map((line: LineItem, idx: number) => {
               const isSelected = selectedLineId === line.line_id;
+              const isHovered = hoveredLineId === line.line_id;
               const colorStyle = getConfidenceColor(line.confidence);
 
               return (
@@ -431,6 +701,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                   className={`p-3.5 rounded-xl border transition-all duration-150 relative ${
                     isSelected
                       ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                      : isHovered
+                      ? 'border-blue-400/80 bg-blue-50/30 dark:bg-blue-950/30 ring-1 ring-blue-400/30'
                       : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/60'
                   }`}
                 >
@@ -452,14 +724,32 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                           Edited
                         </span>
                       )}
+                      {renderFeedbackStatusBadge(line.line_id)}
                     </div>
                   </div>
 
                   <input
                     type="text"
                     data-testid={`line-input-${line.line_id}`}
-                    value={line.text}
-                    onChange={(e) => handleLineTextChange(line.line_id, e.target.value)}
+                    value={localLineTexts[line.line_id] ?? line.text}
+                    onChange={(e) => handleLineInputChange(line.line_id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (debounceTimersRef.current[line.line_id]) {
+                          clearTimeout(debounceTimersRef.current[line.line_id]);
+                          delete debounceTimersRef.current[line.line_id];
+                        }
+                        dispatchFeedbackForLine(line.line_id, e.currentTarget.value);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (debounceTimersRef.current[line.line_id]) {
+                        clearTimeout(debounceTimersRef.current[line.line_id]);
+                        delete debounceTimersRef.current[line.line_id];
+                        dispatchFeedbackForLine(line.line_id, e.currentTarget.value);
+                      }
+                    }}
                     className="w-full text-sm font-medium px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
 
@@ -468,6 +758,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                     <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                       {line.words.map((word: WordToken) => {
                         const isWordSelected = selectedWordId === word.word_id;
+                        const isWordHovered = hoveredWordId === word.word_id;
+                        const isLowConfidence = word.confidence < 0.85;
                         const isEditingThisWord = editingWordId === word.word_id;
 
                         return (
@@ -497,9 +789,20 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                     if (showPopover && suggestions[selectedSuggestionIndex]) {
                                       handleApplySuggestion(suggestions[selectedSuggestionIndex]);
                                     } else {
+                                      const origText = word.original_text || word.text;
                                       handleWordTextChange(line.line_id, word.word_id, editingWordText);
                                       setEditingWordId(null);
                                       setShowPopover(false);
+                                      if (editingWordText !== origText) {
+                                        dispatchFeedbackForWord({
+                                          line_id: line.line_id,
+                                          word_id: word.word_id,
+                                          original_text: origText,
+                                          corrected_text: editingWordText,
+                                          confidence: word.confidence,
+                                          bbox: word.bbox,
+                                        });
+                                      }
                                     }
                                   } else if (e.key === 'Escape') {
                                     setShowPopover(false);
@@ -508,9 +811,20 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                 }}
                                 onBlur={() => {
                                   setTimeout(() => {
+                                    const origText = word.original_text || word.text;
                                     handleWordTextChange(line.line_id, word.word_id, editingWordText);
                                     setEditingWordId(null);
                                     setShowPopover(false);
+                                    if (editingWordText !== origText) {
+                                      dispatchFeedbackForWord({
+                                        line_id: line.line_id,
+                                        word_id: word.word_id,
+                                        original_text: origText,
+                                        corrected_text: editingWordText,
+                                        confidence: word.confidence,
+                                        bbox: word.bbox,
+                                      });
+                                    }
                                   }, 200);
                                 }}
                                 autoFocus
@@ -520,6 +834,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                               <button
                                 type="button"
                                 data-testid={`word-chip-${word.word_id}`}
+                                data-confidence-low={isLowConfidence ? 'true' : 'false'}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onSelectWord?.(word.word_id, line.line_id);
@@ -531,13 +846,25 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                 onMouseLeave={() => onHoverWord?.(null)}
                                 className={`cursor-pointer px-2 py-0.5 rounded-md text-xs font-mono transition-all text-left ${
                                   isWordSelected
-                                    ? 'bg-indigo-600 text-white font-bold'
-                                    : word.confidence < 0.70
-                                    ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
+                                    ? 'bg-indigo-600 text-white font-bold ring-2 ring-indigo-400 shadow-md'
+                                    : isWordHovered
+                                    ? 'bg-amber-500/30 text-amber-900 dark:text-amber-100 ring-2 ring-amber-400 border border-amber-400 shadow-sm shadow-amber-500/20'
+                                    : isLowConfidence
+                                    ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-600/60 hover:bg-amber-100 dark:hover:bg-amber-900/40'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
+                                title={
+                                  isLowConfidence
+                                    ? `Low confidence token: ${(word.confidence * 100).toFixed(0)}% • Click to correct`
+                                    : `${(word.confidence * 100).toFixed(0)}% confidence`
+                                }
                               >
-                                <span>{word.text}</span>
+                                <span className="inline-flex items-center gap-1">
+                                  {isLowConfidence && !isWordSelected && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                                  )}
+                                  <span>{word.text}</span>
+                                </span>
                               </button>
                             )}
 
@@ -624,7 +951,23 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
 
         {/* Speed Review Mode */}
         {activeTab === 'speed_review' && (
-          <div data-testid="speed-review-panel" className="flex flex-col items-center justify-center p-6 space-y-6">
+          <div
+            data-testid="speed-review-panel"
+            className="flex flex-col items-center justify-center p-6 space-y-6 focus:outline-none"
+            onKeyDown={(e) => {
+              if (
+                e.target !== speedInputRef.current &&
+                e.key >= '1' &&
+                e.key <= '5'
+              ) {
+                const num = parseInt(e.key, 10);
+                if (speedSuggestions[num - 1]) {
+                  e.preventDefault();
+                  handleSpeedSubmit(speedSuggestions[num - 1].entry.term);
+                }
+              }
+            }}
+          >
             {speedQueue.length === 0 ? (
               <div className="text-center py-12 space-y-3">
                 <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto">
@@ -704,14 +1047,20 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                     data-testid="speed-review-input"
                     type="text"
                     value={speedInput}
-                    onChange={(e) => setSpeedInput(e.target.value)}
+                    onChange={(e) => {
+                      setSpeedInput(e.target.value);
+                      setSpeedInputTouched(true);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key >= '1' && e.key <= '5') {
-                        const num = parseInt(e.key, 10);
-                        if (speedSuggestions[num - 1]) {
-                          e.preventDefault();
-                          handleSpeedSubmit(speedSuggestions[num - 1].entry.term);
-                          return;
+                        const isUntouchedOrEmpty = !speedInputTouched || speedInput.trim() === '';
+                        if (e.altKey || isUntouchedOrEmpty) {
+                          const num = parseInt(e.key, 10);
+                          if (speedSuggestions[num - 1]) {
+                            e.preventDefault();
+                            handleSpeedSubmit(speedSuggestions[num - 1].entry.term);
+                            return;
+                          }
                         }
                       }
                       if (e.key === 'Enter') {

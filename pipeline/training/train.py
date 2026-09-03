@@ -646,7 +646,7 @@ class TrOCRTrainer:
                 if profile:
                     t_fwd = time.perf_counter() - t_fwd_start
                     t_bwd_start = time.perf_counter()
-                if (step + 1) % max(1, self.config.logging_steps) == 0 and not torch.isfinite(loss):
+                if not torch.isfinite(loss):
                     logger.warning(f"Non-finite loss detected at epoch {epoch} step {step}. Skipping gradient update.")
                     optimizer.zero_grad(set_to_none=True)
                     accum_loss_t = None

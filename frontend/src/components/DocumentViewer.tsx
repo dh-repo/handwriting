@@ -15,6 +15,7 @@ import {
   Search,
   Sliders,
   Sparkles,
+  Crosshair,
 } from 'lucide-react';
 import { PageResult, LineItem, WordToken, WordCandidate } from '../types/ocr';
 import { bboxToSvgRect } from '../lib/transformUtils';
@@ -141,6 +142,28 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setPan({ x: 0, y: 0 });
     setRotation(0);
   }, []);
+
+  const handleFocusCrop = useCallback(() => {
+    if (!selectedWordId || !containerRef.current || !docWidth || !docHeight) return;
+    for (const line of page.lines) {
+      const word = line.words?.find((w) => w.word_id === selectedWordId);
+      if (word && word.bbox) {
+        const [ymin, xmin, ymax, xmax] = word.bbox;
+        const wordCenterX = ((xmin + xmax) / 2) * docWidth;
+        const wordCenterY = ((ymin + ymax) / 2) * docHeight;
+
+        const targetScale = Math.max(scale, 1.8);
+        const docCenterX = docWidth / 2;
+        const docCenterY = docHeight / 2;
+        const targetPanX = (docCenterX - wordCenterX) * targetScale;
+        const targetPanY = (docCenterY - wordCenterY) * targetScale;
+
+        setScale(+targetScale.toFixed(2));
+        setPan({ x: Math.round(targetPanX), y: Math.round(targetPanY) });
+        break;
+      }
+    }
+  }, [selectedWordId, docWidth, docHeight, page.lines, scale]);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -382,6 +405,19 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
             <RefreshCw className="w-4 h-4" />
           </button>
 
+          {selectedWordId && (
+            <button
+              type="button"
+              data-testid="btn-focus-crop"
+              onClick={handleFocusCrop}
+              title="Focus and zoom into selected handwriting crop"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition-all shadow-sm shadow-cyan-500/20 flex items-center gap-1 animate-in fade-in"
+            >
+              <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Focus Crop</span>
+            </button>
+          )}
+
           <button
             type="button"
             data-testid="btn-rotate"
@@ -552,53 +588,107 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       line.words?.map((word: WordToken, wIdx: number) => {
                         const isWordSelected = selectedWordId === word.word_id;
                         const isWordHovered = hoveredWordId === word.word_id;
+                        const isLowConfidence = word.confidence < 0.85;
                         const wordRect = bboxToSvgRect(word.bbox, docWidth, docHeight);
 
                         return (
-                          <rect
-                            key={word.word_id}
-                            data-testid={`svg-word-rect-${word.word_id}`}
-                            x={wordRect.x}
-                            y={wordRect.y}
-                            width={wordRect.width}
-                            height={wordRect.height}
-                            rx={3}
-                            fill={
-                              isWordSelected
-                                ? "rgba(59, 130, 246, 0.35)"
-                                : "transparent"
-                            }
-                            stroke={
-                              isWordSelected
-                                ? "#2563eb"
-                                : isWordHovered
-                                ? "#3b82f6"
-                                : "transparent"
-                            }
-                            strokeWidth={1.5}
-                            className="cursor-pointer transition-all duration-150"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectWord?.(word.word_id, line.line_id);
-                            }}
-                            onMouseEnter={(e) => {
-                              e.stopPropagation();
-                              onHoverWord?.(word.word_id);
-                              setTooltip({
-                                visible: true,
-                                x: wordRect.x + wordRect.width / 2,
-                                y: Math.max(20, wordRect.y - 6),
-                                text: word.text,
-                                confidence: word.confidence,
-                                lineIndex: lineIdx + 1,
-                                wordIndex: wIdx + 1,
-                                alternatives: word.alternatives || word.candidate_tokens,
-                              });
-                            }}
-                            onMouseLeave={() => {
-                              onHoverWord?.(null);
-                            }}
-                          />
+                          <g key={word.word_id}>
+                            <rect
+                              data-testid={`svg-word-rect-${word.word_id}`}
+                              data-confidence-low={isLowConfidence ? 'true' : 'false'}
+                              x={wordRect.x}
+                              y={wordRect.y}
+                              width={wordRect.width}
+                              height={wordRect.height}
+                              rx={3}
+                              fill={
+                                isWordSelected
+                                  ? "rgba(6, 182, 212, 0.35)"
+                                  : isWordHovered
+                                  ? "rgba(245, 158, 11, 0.3)"
+                                  : isLowConfidence
+                                  ? "rgba(245, 158, 11, 0.14)"
+                                  : "transparent"
+                              }
+                              stroke={
+                                isWordSelected
+                                  ? "#06b6d4"
+                                  : isWordHovered
+                                  ? "#f59e0b"
+                                  : isLowConfidence
+                                  ? "#f59e0b"
+                                  : "transparent"
+                              }
+                              strokeWidth={isWordSelected || isWordHovered ? 2 : isLowConfidence ? 1.5 : 1}
+                              strokeDasharray={isLowConfidence && !isWordSelected && !isWordHovered ? "3 2" : undefined}
+                              className="cursor-pointer transition-all duration-150"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectWord?.(word.word_id, line.line_id);
+                              }}
+                              onMouseEnter={(e) => {
+                                e.stopPropagation();
+                                onHoverWord?.(word.word_id);
+                                setTooltip({
+                                  visible: true,
+                                  x: wordRect.x + wordRect.width / 2,
+                                  y: Math.max(20, wordRect.y - 6),
+                                  text: word.text,
+                                  confidence: word.confidence,
+                                  lineIndex: lineIdx + 1,
+                                  wordIndex: wIdx + 1,
+                                  alternatives: word.alternatives || word.candidate_tokens,
+                                });
+                              }}
+                              onMouseLeave={() => {
+                                onHoverWord?.(null);
+                              }}
+                            />
+                            {isWordSelected && (
+                              <>
+                                <rect
+                                  data-testid={`svg-crop-halo-${word.word_id}`}
+                                  x={wordRect.x - 3}
+                                  y={wordRect.y - 3}
+                                  width={wordRect.width + 6}
+                                  height={wordRect.height + 6}
+                                  rx={5}
+                                  fill="none"
+                                  stroke="#38bdf8"
+                                  strokeWidth={1.5}
+                                  className="pointer-events-none"
+                                />
+                                <path
+                                  d={`M ${wordRect.x - 5} ${wordRect.y + 3} L ${wordRect.x - 5} ${wordRect.y - 5} L ${wordRect.x + 3} ${wordRect.y - 5}`}
+                                  stroke="#06b6d4"
+                                  strokeWidth={2}
+                                  fill="none"
+                                  className="pointer-events-none"
+                                />
+                                <path
+                                  d={`M ${wordRect.x + wordRect.width + 5} ${wordRect.y + 3} L ${wordRect.x + wordRect.width + 5} ${wordRect.y - 5} L ${wordRect.x + wordRect.width - 3} ${wordRect.y - 5}`}
+                                  stroke="#06b6d4"
+                                  strokeWidth={2}
+                                  fill="none"
+                                  className="pointer-events-none"
+                                />
+                                <path
+                                  d={`M ${wordRect.x - 5} ${wordRect.y + wordRect.height - 3} L ${wordRect.x - 5} ${wordRect.y + wordRect.height + 5} L ${wordRect.x + 3} ${wordRect.y + wordRect.height + 5}`}
+                                  stroke="#06b6d4"
+                                  strokeWidth={2}
+                                  fill="none"
+                                  className="pointer-events-none"
+                                />
+                                <path
+                                  d={`M ${wordRect.x + wordRect.width + 5} ${wordRect.y + wordRect.height - 3} L ${wordRect.x + wordRect.width + 5} ${wordRect.y + wordRect.height + 5} L ${wordRect.x + wordRect.width - 3} ${wordRect.y + wordRect.height + 5}`}
+                                  stroke="#06b6d4"
+                                  strokeWidth={2}
+                                  fill="none"
+                                  className="pointer-events-none"
+                                />
+                              </>
+                            )}
+                          </g>
                         );
                       })}
                   </g>

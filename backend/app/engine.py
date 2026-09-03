@@ -7,11 +7,12 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import concurrent.futures
 import logging
 import os
 from pathlib import Path
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 import uuid
 
 import math
@@ -42,7 +43,7 @@ from pipeline.training.vlm_refine import (
     vlm_refine_available,
 )
 
-HTR_MAX_NEW_TOKENS = 128
+HTR_MAX_NEW_TOKENS = 64
 
 if hasattr(torch, "set_num_threads"):
     try:
@@ -210,9 +211,10 @@ class InferenceEngine:
         confusion_weight: Optional[float] = None,
         max_safe_mg: Optional[float] = None,
         line_batch_size: Optional[int] = None,
+        mode: Optional[str] = None,
     ) -> None:
         settings = get_settings()
-        self.mode = execution_mode or settings.resolve_device()
+        self.mode = execution_mode or mode or settings.resolve_device()
         self.model_name = assert_shippable_checkpoint(model_name_or_path or settings.resolve_model_path())
         self.use_fp16 = use_fp16 if use_fp16 is not None else settings.USE_FP16
         self.dpi = dpi or settings.DEFAULT_DPI
@@ -236,6 +238,10 @@ class InferenceEngine:
         self.max_safe_mg = max_safe_mg if max_safe_mg is not None else settings.MAX_SAFE_MG
         self.line_batch_size = line_batch_size or settings.LINE_BATCH_SIZE
         self.empty_cache_interval = settings.MPS_EMPTY_CACHE_INTERVAL
+        self.adaptive_beam_search = getattr(settings, "ADAPTIVE_BEAM_SEARCH", True)
+        self.adaptive_threshold = float(getattr(settings, "ADAPTIVE_CONFIDENCE_THRESHOLD", 0.88))
+        self.htr_max_new_tokens = int(getattr(settings, "HTR_MAX_NEW_TOKENS", 64))
+        self.vlm_concurrency = int(getattr(settings, "VLM_CONCURRENCY", 4))
 
         # Preprocessing pipeline
         if PIPELINE_AVAILABLE:
@@ -270,6 +276,11 @@ class InferenceEngine:
             cm = VisualConfusionMatrix(load_defaults=True)
             if self.confusion_matrix_path and Path(self.confusion_matrix_path).exists():
                 cm.load_json(self.confusion_matrix_path)
+
+            dynamic_state_path = Path("data/feedback/dynamic_confusion_matrix.json")
+            if dynamic_state_path.exists():
+                loaded_dynamic = cm.load_dynamic_state(dynamic_state_path)
+                logger.info(f"Loaded {loaded_dynamic} dynamic confusion pairs from {dynamic_state_path}")
 
             self.rescorer = BeamRescorer(
                 trie=trie,
@@ -398,6 +409,32 @@ class InferenceEngine:
         texts = [t.strip() for t in self.processor.batch_decode(sequences, skip_special_tokens=True)]
         return pick_crop_hypothesis(texts, pil.width, pil.height)
 
+    def recognize_stream(
+        self,
+        file_bytes: bytes,
+        filename: str = "document.png",
+        options: Optional[RecognitionOptions] = None,
+    ) -> Iterator[Dict[str, Any]]:
+        """
+        Stream recognition events: metadata -> line events -> complete event.
+        Yields JSON-compatible dictionaries suitable for SSE.
+        """
+        for item in self._recognize_gen(file_bytes, filename, options, is_stream=True):
+            event_type = item[0]
+            data = item[1]
+            extra = item[2:]
+            if event_type == "metadata":
+                yield {"event": "metadata", "data": data}
+            elif event_type == "line":
+                line_box = data
+                page_num = extra[0] if extra else 1
+                line_dict = line_box.model_dump() if hasattr(line_box, "model_dump") else dict(line_box)
+                line_dict["page_number"] = page_num
+                yield {"event": "line", "data": line_dict}
+            elif event_type == "complete":
+                resp_dict = data.model_dump() if hasattr(data, "model_dump") else dict(data)
+                yield {"event": "complete", "data": resp_dict}
+
     def recognize(
         self,
         file_bytes: bytes,
@@ -405,9 +442,21 @@ class InferenceEngine:
         options: Optional[RecognitionOptions] = None,
     ) -> RecognitionResponse:
         """
-        Recognize handwritten document from raw bytes.
+        Recognize handwritten document from raw bytes synchronously.
         Supports PNG, JPEG, TIFF, BMP, WebP, and multi-page PDFs.
         """
+        for item in self._recognize_gen(file_bytes, filename, options):
+            if item[0] == "complete":
+                return item[1]
+        raise RuntimeError("Recognition generator terminated without complete event")
+
+    def _recognize_gen(
+        self,
+        file_bytes: bytes,
+        filename: str = "document.png",
+        options: Optional[RecognitionOptions] = None,
+        is_stream: bool = False,
+    ) -> Iterator[Tuple[Any, ...]]:
         t0 = time.time()
 
         if not file_bytes or len(file_bytes) == 0:
@@ -418,7 +467,26 @@ class InferenceEngine:
 
         # If running in mock mode or model not loaded
         if self.mode == "mock" or self.model is None or self.processor is None:
-            return self._recognize_mock(file_bytes, filename, doc_id, t0, opts)
+            mock_res = self._recognize_mock(file_bytes, filename, doc_id, t0, opts)
+            yield ("metadata", {
+                "document_id": doc_id,
+                "filename": Path(filename).name,
+                "total_pages": mock_res.total_pages,
+                "pages": [
+                    {
+                        "page_number": p.page_number,
+                        "width": p.width,
+                        "height": p.height,
+                        "total_lines": len(p.lines),
+                    }
+                    for p in mock_res.pages
+                ],
+            })
+            for p in mock_res.pages:
+                for l in p.lines:
+                    yield ("line", l, p.page_number)
+            yield ("complete", mock_res)
+            return
 
         # Real TrOCR Pipeline Routing
         try:
@@ -431,6 +499,32 @@ class InferenceEngine:
             effective_rescore = bool(self.enable_rescorer and opt_rescore and (self.rescorer is not None))
             search_beams = max(1, int(opt_beam_width))
             effective_k = search_beams if search_beams > 1 else 1
+            use_adaptive = (
+                bool(getattr(opts, "adaptive", True))
+                and getattr(self, "adaptive_beam_search", True)
+                and search_beams > 1
+                and not effective_rescore
+            )
+            max_tokens = min(self.htr_max_new_tokens, 64)
+
+            # Emit metadata event immediately after preprocessing
+            yield ("metadata", {
+                "document_id": doc_id,
+                "filename": Path(filename).name,
+                "total_pages": len(pages),
+                "pages": [
+                    {
+                        "page_number": p_idx + 1,
+                        "width": p.original_image.shape[1],
+                        "height": p.original_image.shape[0],
+                        "total_lines": len([
+                            l for l in p.lines
+                            if l.image is not None and l.image.size > 0 and not is_sliver_bbox(l.bbox)
+                        ]),
+                    }
+                    for p_idx, p in enumerate(pages)
+                ],
+            })
 
             for page_idx, p_page in enumerate(pages):
                 h, w = p_page.original_image.shape[:2]
@@ -444,7 +538,7 @@ class InferenceEngine:
                     and line.image.size > 0
                     and not is_sliver_bbox(line.bbox)
                 ]
-                batch_size = max(1, self.line_batch_size)
+                batch_size = 1 if is_stream else (min(2, max(1, self.line_batch_size)) if self.device.type == "cpu" else max(1, self.line_batch_size))
 
                 for b_start in range(0, len(valid_lines), batch_size):
                     b_lines = valid_lines[b_start : b_start + batch_size]
@@ -459,103 +553,179 @@ class InferenceEngine:
                     if self.device.type in ("mps", "cuda") and self.use_fp16:
                         pixel_values = pixel_values.half()
 
-                    with torch.no_grad():
-                        if search_beams > 1:
-                            generate_kwargs: Dict[str, Any] = {
-                                "num_beams": search_beams,
-                                "max_new_tokens": HTR_MAX_NEW_TOKENS,
-                                "early_stopping": True,
-                                "return_dict_in_generate": True,
-                                "output_scores": True,
-                            }
-                            if effective_k > 1:
-                                generate_kwargs["num_return_sequences"] = effective_k
-                            outputs = self.model.generate(pixel_values, **generate_kwargs)
-                        else:
-                            outputs = self.model.generate(
+                    batch_decoded_texts: List[str] = []
+                    batch_scores: List[float] = []
+
+                    if use_adaptive:
+                        # Pass 1: Fast greedy decoding
+                        with torch.no_grad():
+                            outputs_greedy = self.model.generate(
                                 pixel_values,
-                                max_new_tokens=HTR_MAX_NEW_TOKENS,
+                                max_new_tokens=max_tokens,
                                 return_dict_in_generate=True,
                                 output_scores=True,
                             )
+                        greedy_texts = [
+                            t.strip()
+                            for t in self.processor.batch_decode(outputs_greedy.sequences, skip_special_tokens=True)
+                        ]
+                        if hasattr(outputs_greedy, "sequences_scores") and outputs_greedy.sequences_scores is not None:
+                            greedy_seq_scores = [float(s.item()) for s in outputs_greedy.sequences_scores]
+                        else:
+                            greedy_seq_scores = [0.0] * len(greedy_texts)
 
-                    decoded_texts = self.processor.batch_decode(outputs.sequences, skip_special_tokens=True)
+                        batch_decoded_texts = list(greedy_texts)
+                        batch_scores = list(greedy_seq_scores)
 
-                    if hasattr(outputs, "sequences_scores") and outputs.sequences_scores is not None:
-                        seq_scores = [float(s.item()) for s in outputs.sequences_scores]
+                        # Check which lines require beam escalation
+                        escalate_indices = []
+                        for s_idx, (g_txt, g_score) in enumerate(zip(greedy_texts, greedy_seq_scores)):
+                            conf = float(1.0 / (1.0 + math.exp(-max(-10.0, min(10.0, g_score))))) if g_score != 0.0 else 0.95
+                            if (conf < self.adaptive_threshold) or should_refine_with_vlm(g_txt):
+                                escalate_indices.append(s_idx)
+
+                        if escalate_indices:
+                            esc_pixels = pixel_values[escalate_indices]
+                            with torch.no_grad():
+                                outputs_beam = self.model.generate(
+                                    esc_pixels,
+                                    num_beams=search_beams,
+                                    num_return_sequences=effective_k,
+                                    max_new_tokens=max_tokens,
+                                    early_stopping=True,
+                                    return_dict_in_generate=True,
+                                    output_scores=True,
+                                )
+                            beam_texts = [
+                                t.strip()
+                                for t in self.processor.batch_decode(outputs_beam.sequences, skip_special_tokens=True)
+                            ]
+                            if hasattr(outputs_beam, "sequences_scores") and outputs_beam.sequences_scores is not None:
+                                beam_seq_scores = [float(s.item()) for s in outputs_beam.sequences_scores]
+                            else:
+                                beam_seq_scores = [0.0] * len(beam_texts)
+
+                            for esc_pos, orig_idx in enumerate(escalate_indices):
+                                sub_cands = beam_texts[esc_pos * effective_k : (esc_pos + 1) * effective_k]
+                                sub_scores = beam_seq_scores[esc_pos * effective_k : (esc_pos + 1) * effective_k]
+                                chosen = pick_crop_hypothesis(
+                                    sub_cands,
+                                    pil_crops[orig_idx].width,
+                                    pil_crops[orig_idx].height,
+                                    page_text_so_far,
+                                )
+                                batch_decoded_texts[orig_idx] = chosen
+                                if sub_scores:
+                                    batch_scores[orig_idx] = sub_scores[0]
                     else:
-                        seq_scores = [-0.45 - (i * 0.15) for i in range(len(decoded_texts))]
+                        with torch.no_grad():
+                            if search_beams > 1:
+                                generate_kwargs: Dict[str, Any] = {
+                                    "num_beams": search_beams,
+                                    "max_new_tokens": max_tokens,
+                                    "early_stopping": True,
+                                    "return_dict_in_generate": True,
+                                    "output_scores": True,
+                                }
+                                if effective_k > 1:
+                                    generate_kwargs["num_return_sequences"] = effective_k
+                                outputs = self.model.generate(pixel_values, **generate_kwargs)
+                            else:
+                                outputs = self.model.generate(
+                                    pixel_values,
+                                    max_new_tokens=max_tokens,
+                                    return_dict_in_generate=True,
+                                    output_scores=True,
+                                )
 
+                        decoded_texts = self.processor.batch_decode(outputs.sequences, skip_special_tokens=True)
+                        if hasattr(outputs, "sequences_scores") and outputs.sequences_scores is not None:
+                            seq_scores = [float(s.item()) for s in outputs.sequences_scores]
+                        else:
+                            seq_scores = [-0.45 - (i * 0.15) for i in range(len(decoded_texts))]
+
+                        for l_sub_idx in range(len(b_lines)):
+                            if effective_k > 1 and effective_rescore:
+                                line_beam_texts = decoded_texts[l_sub_idx * effective_k : (l_sub_idx + 1) * effective_k]
+                                line_beam_scores = seq_scores[l_sub_idx * effective_k : (l_sub_idx + 1) * effective_k]
+                                candidates = [
+                                    BeamCandidate(text=b_txt.strip(), log_prob=float(b_s))
+                                    for b_txt, b_s in zip(line_beam_texts, line_beam_scores)
+                                ]
+                                rescore_res = self.rescorer.rescore_detailed(candidates)
+                                text = rescore_res.rescored_text
+                                if looks_like_word_crop(pil_crops[l_sub_idx].width, pil_crops[l_sub_idx].height):
+                                    text = strip_word_decoder_punct(text)
+                                batch_decoded_texts.append(text)
+                                batch_scores.append(float(rescore_res.confidence))
+                            elif effective_k > 1:
+                                line_beam_texts = [
+                                    t.strip()
+                                    for t in decoded_texts[l_sub_idx * effective_k : (l_sub_idx + 1) * effective_k]
+                                ]
+                                text = pick_crop_hypothesis(
+                                    line_beam_texts,
+                                    pil_crops[l_sub_idx].width,
+                                    pil_crops[l_sub_idx].height,
+                                    page_text_so_far,
+                                )
+                                batch_decoded_texts.append(text)
+                                batch_scores.append(seq_scores[l_sub_idx * effective_k] if seq_scores else 0.0)
+                            else:
+                                text = pick_crop_hypothesis(
+                                    [decoded_texts[l_sub_idx]],
+                                    pil_crops[l_sub_idx].width,
+                                    pil_crops[l_sub_idx].height,
+                                )
+                                batch_decoded_texts.append(text)
+                                batch_scores.append(seq_scores[l_sub_idx] if seq_scores else 0.0)
+
+                    # Step 2: Parallel VLM Refinement
+                    vlm_candidates = []
+                    for l_sub_idx, t_text in enumerate(batch_decoded_texts):
+                        if (
+                            self.enable_vlm_refine
+                            and self.mode != "mock"
+                            and should_refine_with_vlm(t_text)
+                        ):
+                            vlm_candidates.append((l_sub_idx, pil_crops[l_sub_idx], t_text, page_text_so_far))
+
+                    if vlm_candidates:
+                        max_workers = min(self.vlm_concurrency, len(vlm_candidates))
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+                            fut_map = {
+                                pool.submit(refine_line, crop, hypothesis="", previous_text=p_text): (idx, orig_text)
+                                for (idx, crop, orig_text, p_text) in vlm_candidates
+                            }
+                            for fut in concurrent.futures.as_completed(fut_map):
+                                idx, orig_text = fut_map[fut]
+                                try:
+                                    vlm_text = fut.result()
+                                    fused = fuse_line(orig_text, vlm_text)
+                                    if vlm_text and fused != orig_text:
+                                        logger.info("vlm fuse trocr=%r vlm=%r out=%r", orig_text, vlm_text, fused)
+                                    batch_decoded_texts[idx] = fused
+                                except Exception:
+                                    logger.exception("vlm refine failed")
+
+                    # Step 3: Format line boxes and word boxes
                     for l_sub_idx, line in enumerate(b_lines):
                         global_l_idx = b_start + l_sub_idx
                         crop = pil_crops[l_sub_idx]
+                        text = batch_decoded_texts[l_sub_idx]
+                        top_s = batch_scores[l_sub_idx]
+                        line_conf = float(1.0 / (1.0 + math.exp(-max(-10.0, min(10.0, top_s))))) if top_s != 0.0 else 0.95
+                        line_conf = max(0.0, min(1.0, float(line_conf)))
+
+                        if not text:
+                            continue
+
                         ymin, xmin, ymax, xmax = [max(0.0, min(1.0, float(c))) for c in line.bbox]
                         if ymin >= ymax:
                             ymax = min(1.0, ymin + 0.05)
                         if xmin >= xmax:
                             xmax = min(1.0, xmin + 0.1)
 
-                        if effective_k > 1 and effective_rescore:
-                            line_beam_texts = decoded_texts[l_sub_idx * effective_k : (l_sub_idx + 1) * effective_k]
-                            line_beam_scores = seq_scores[l_sub_idx * effective_k : (l_sub_idx + 1) * effective_k]
-                            candidates = [
-                                BeamCandidate(text=b_txt.strip(), log_prob=float(b_s))
-                                for b_txt, b_s in zip(line_beam_texts, line_beam_scores)
-                            ]
-                            rescore_res = self.rescorer.rescore_detailed(candidates)
-                            text = rescore_res.rescored_text
-                            if looks_like_word_crop(crop.width, crop.height):
-                                text = strip_word_decoder_punct(text)
-                            line_conf = max(0.0, min(1.0, float(rescore_res.confidence)))
-                        elif effective_k > 1:
-                            line_beam_texts = [
-                                t.strip()
-                                for t in decoded_texts[l_sub_idx * effective_k : (l_sub_idx + 1) * effective_k]
-                            ]
-                            text = pick_crop_hypothesis(
-                                line_beam_texts,
-                                crop.width,
-                                crop.height,
-                                page_text_so_far,
-                            )
-                            if not text and not self.enable_vlm_refine:
-                                continue
-                            line_conf = 0.9
-                        else:
-                            text = pick_crop_hypothesis(
-                                [decoded_texts[l_sub_idx]],
-                                crop.width,
-                                crop.height,
-                            )
-                            if hasattr(outputs, "sequences_scores") and outputs.sequences_scores is not None and len(outputs.sequences_scores) > l_sub_idx:
-                                top_s = float(outputs.sequences_scores[l_sub_idx].item())
-                                line_conf = float(1.0 / (1.0 + math.exp(-max(-10.0, min(10.0, top_s)))))
-                            else:
-                                line_conf = 0.95
-                            line_conf = max(0.0, min(1.0, float(line_conf)))
-
-                        if (
-                            self.enable_vlm_refine
-                            and self.mode != "mock"
-                            and should_refine_with_vlm(text)
-                        ):
-                            try:
-                                vlm_text = refine_line(
-                                    pil_crops[l_sub_idx],
-                                    hypothesis="",
-                                    previous_text=page_text_so_far,
-                                )
-                                fused = fuse_line(text, vlm_text)
-                                if vlm_text and fused != text:
-                                    logger.info("vlm fuse trocr=%r vlm=%r out=%r", text, vlm_text, fused)
-                                text = fused
-                            except Exception:
-                                logger.exception("vlm refine failed")
-
-                        if not text:
-                            continue
-
-                        # Build word tokens
                         word_tokens = text.split()
                         words_data: List[WordBox] = []
                         if line.words and len(line.words) == len(word_tokens):
@@ -566,7 +736,6 @@ class InferenceEngine:
                                     w_ymax = min(1.0, w_ymin + 0.04)
                                 if w_xmin >= w_xmax:
                                     w_xmax = min(1.0, w_xmin + 0.05)
-
                                 words_data.append(
                                     WordBox(
                                         word_id=f"p{page_idx+1}_l{global_l_idx+1}_w{w_idx+1}",
@@ -583,7 +752,6 @@ class InferenceEngine:
                                 w_xmax = round(min(xmax, w_xmin + w_span * 0.95), 4)
                                 if w_xmin >= w_xmax:
                                     w_xmax = min(1.0, w_xmin + 0.02)
-
                                 words_data.append(
                                     WordBox(
                                         word_id=f"p{page_idx+1}_l{global_l_idx+1}_w{w_idx+1}",
@@ -597,19 +765,20 @@ class InferenceEngine:
                             continue
                         if is_page_echo(text, page_text_so_far):
                             continue
-                        if text:
-                            page_text_so_far = f"{page_text_so_far} {text}".strip()
-                        lines_data.append(
-                            LineBox(
-                                line_id=f"p{page_idx+1}_l{global_l_idx+1}",
-                                text=text,
-                                confidence=round(line_conf, 3),
-                                bbox=[ymin, xmin, ymax, xmax],
-                                words=words_data,
-                            )
-                        )
 
-                    # Periodic memory reclamation
+                        box = LineBox(
+                            line_id=f"p{page_idx+1}_l{global_l_idx+1}",
+                            text=text,
+                            confidence=round(line_conf, 3),
+                            bbox=[ymin, xmin, ymax, xmax],
+                            words=words_data,
+                        )
+                        lines_data.append(box)
+                        page_text_so_far = " ".join(item.text for item in lines_data)
+
+                        # Emit line event
+                        yield ("line", box, page_idx + 1)
+
                     if self.device.type == "mps" and hasattr(torch, "mps"):
                         torch.mps.empty_cache()
 
@@ -630,7 +799,7 @@ class InferenceEngine:
                 )
 
             elapsed_ms = (time.time() - t0) * 1000.0
-            return RecognitionResponse(
+            resp = RecognitionResponse(
                 document_id=doc_id,
                 filename=Path(filename).name,
                 total_pages=len(pages_result),
@@ -638,12 +807,13 @@ class InferenceEngine:
                 processing_time_ms=round(elapsed_ms, 2),
                 preprocessing_flags=opts.model_dump(),
             )
+            yield ("complete", resp)
         except (DocumentLoadingError, EmptyDocumentError, CorruptDocumentError, PasswordProtectedPDFError, UnsupportedFormatError):
             raise
         except Exception as exc:
             logger.error(f"Inference error on {filename}: {exc}", exc_info=True)
-            # Fallback to mock recognition if runtime generation fails
-            return self._recognize_mock(file_bytes, filename, doc_id, t0, opts)
+            mock_res = self._recognize_mock(file_bytes, filename, doc_id, t0, opts)
+            yield ("complete", mock_res)
 
     def _load_and_preprocess(self, file_bytes: bytes, opts: RecognitionOptions) -> List[PreprocessedPage]:
         """Load and preprocess document using M1 PreprocessingPipeline."""
@@ -797,6 +967,30 @@ class InferenceEngine:
             pages=pages_result,
             processing_time_ms=round(elapsed_ms, 2),
             preprocessing_flags=opts.model_dump(),
+        )
+
+    def adapt_confusion_matrix(
+        self,
+        original_prediction: str,
+        operator_correction: str,
+        learning_rate: float = 0.20,
+        min_cost: float = 0.15,
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """
+        Adapt live visual confusion matrix costs based on human operator correction.
+        Delegates directly to self.rescorer.confusion_matrix.adapt_from_correction() if rescorer is active.
+        """
+        if self.rescorer is None or not hasattr(self.rescorer, "confusion_matrix") or self.rescorer.confusion_matrix is None:
+            logger.warning("BeamRescorer or VisualConfusionMatrix is not active; dynamic adaptation skipped.")
+            return []
+
+        return self.rescorer.confusion_matrix.adapt_from_correction(
+            original_prediction=original_prediction,
+            operator_correction=operator_correction,
+            learning_rate=learning_rate,
+            min_cost=min_cost,
+            **kwargs,
         )
 
 
