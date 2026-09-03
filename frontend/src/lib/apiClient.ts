@@ -5,6 +5,7 @@
 
 import {
   DocumentOCRResult,
+  LineItem,
   RecognitionOptions,
   RecognizeJsonRequest,
   JobSubmissionResponse,
@@ -219,6 +220,100 @@ export class ApiClient {
       mimeType: file.type || 'image/png',
       fileSize: file.size || 1024,
     });
+  }
+
+  /**
+   * Stream recognition results via Server-Sent Events (SSE).
+   * Calls onMetadata, onLine, and onComplete as events stream in.
+   * Falls back to recognizeFile if streaming is unsupported or severed.
+   */
+  public async recognizeFileStream(
+    file: File | Blob,
+    options?: RecognitionOptions,
+    callbacks?: {
+      onMetadata?: (meta: any) => void;
+      onLine?: (line: LineItem, pageNumber: number) => void;
+      onComplete?: (doc: DocumentOCRResult) => void;
+      onError?: (err: string) => void;
+    },
+    filename?: string
+  ): Promise<DocumentOCRResult> {
+    const name = filename || ('name' in file ? (file as File).name : 'document.png');
+    const formData = new FormData();
+    formData.append('file', file, name);
+    if (options?.model_type) formData.append('model_type', options.model_type);
+    if (options?.deskew !== undefined) formData.append('deskew', String(options.deskew));
+    if (options?.enhance_contrast !== undefined) formData.append('enhance_contrast', String(options.enhance_contrast));
+    if (options?.binarization_method) formData.append('binarization_method', options.binarization_method);
+    if (options?.extract_words !== undefined) formData.append('extract_words', String(options.extract_words));
+    if (options?.beam_width !== undefined) formData.append('beam_width', String(options.beam_width));
+    if (options?.rescore !== undefined) formData.append('rescore', String(options.rescore));
+    if (options?.adaptive !== undefined) formData.append('adaptive', String(options.adaptive));
+
+    const qs = this.buildQueryString(options);
+    const streamUrl = this.baseUrl ? `${this.baseUrl}/v1/recognize/stream${qs}` : `/api/recognize-stream${qs}`;
+
+    try {
+      const res = await fetch(streamUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok || !res.body) {
+        return this.recognizeFile(file, options, filename);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalDoc: DocumentOCRResult | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() || '';
+
+        for (const block of blocks) {
+          if (!block.trim()) continue;
+          let eventType = 'message';
+          let eventData = '';
+          for (const line of block.split('\n')) {
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+              eventData = line.slice(6).trim();
+            }
+          }
+          if (!eventData) continue;
+          try {
+            const parsed = JSON.parse(eventData);
+            if (eventType === 'metadata') {
+              callbacks?.onMetadata?.(parsed);
+            } else if (eventType === 'line') {
+              const pNum = parsed.page_number || 1;
+              callbacks?.onLine?.(parsed as LineItem, pNum);
+            } else if (eventType === 'complete') {
+              finalDoc = parsed as DocumentOCRResult;
+              callbacks?.onComplete?.(finalDoc);
+            } else if (eventType === 'error') {
+              callbacks?.onError?.(parsed.error || 'Stream error');
+            }
+          } catch {
+            // non-JSON event data
+          }
+        }
+      }
+
+      if (finalDoc) {
+        return finalDoc;
+      }
+    } catch (err: unknown) {
+      console.warn('[ApiClient] Stream failed or aborted, falling back to sync recognize:', err);
+    }
+
+    return this.recognizeFile(file, options, filename);
   }
 
   /**

@@ -40,3 +40,52 @@ Integrity mode: development
 
 ### Decommissioning
 - [ ] Vercel deployment artifacts and temporary configurations are cleanly purged.
+
+## Follow-up — 2026-09-03T14:30:47Z
+
+Full multi-agent team (parallelize backend API, rescorer dynamic tuning, LoRA training, and frontend Darkroom integration).
+
+Build and prove out an end-to-end self-tuning and active learning flywheel for the handwriting recognition platform locally on Apple Silicon (Mac Studio), integrating closed-loop Darkroom operator feedback, dynamic confusion matrix adaptation, and automated background LoRA micro-epochs with replay preservation.
+
+Working directory: /Volumes/LaCie/GitHub/handwriting
+Branch: feature/self-tuning-htr-flywheel
+Integrity mode: development
+
+## Requirements
+
+### R1. Closed-Loop Operator Feedback Ingestion & Manifest Storage
+The platform must capture operator corrections from the Darkroom UI (line and word edits) and persist them via a backend feedback API endpoint (`POST /v1/feedback`). Each record must store the line crop, original model prediction, operator correction, line confidence, document identifier, and timestamp in an append-only feedback manifest.
+
+### R2. Online Self-Tuning Visual Confusion Matrix
+The system must automatically update substitution and ligature costs in the visual confusion matrix using character-level dynamic programming alignment between model predictions and verified corrections. Updated confusion costs must immediately influence candidate ranking in the multi-objective beam rescorer without requiring model retraining.
+
+### R3. Automated Background LoRA Adaptation with Experience Replay & Safety Gate
+The system must support automated background fine-tuning of LoRA adapters on Apple Silicon (using PyTorch MPS). To prevent catastrophic forgetting, training batches must combine accumulated feedback samples with an anchor replay set from existing golden data. Completed adapters must pass validation checks against character error rate (CER) regression and critical clinical safety rules (zero dangerous drug substitutions) before being activated.
+
+### R4. Frontend Darkroom Feedback Integration
+The Darkroom interface (`InlineEditor`, `SplitCurtain`, and speed review queue) must dispatch verified corrections to the feedback endpoint with appropriate debouncing, optimistic UI updates, and visual confirmation indicators.
+
+### R5. Local Proof on Apple Silicon (Mac Studio)
+All feedback ingestion, confusion matrix recalibration, rescoring, and LoRA training workflows must be fully functional and verifiable locally on Apple Silicon using the local virtual environment (`.venv`).
+
+## Verification Resources
+- Existing test suites: `backend/tests/`, `pipeline/tests/`, `frontend/src/__tests__/`.
+- Reference evaluation scripts and metrics in `pipeline/evaluation/metrics.py` and `backend/app/ship_gate.py`.
+- Execution command for Python test suite: `.venv/bin/pytest`.
+
+## Acceptance Criteria
+
+### Backend Feedback & Rescorer Recalibration
+- [ ] `POST /v1/feedback` validates incoming line/word correction payloads and appends them to `data/feedback/manifest.jsonl`.
+- [ ] DP character alignment extracts optical confusion pairs from corrections and dynamically updates confusion matrix costs.
+- [ ] Rescorer produces altered candidate rankings reflecting updated confusion penalties on subsequent inference calls.
+
+### Continuous Adaptation & Safety
+- [ ] LoRA micro-tuning script runs successfully on Apple Silicon MPS using the local `.venv`.
+- [ ] Experience replay data loader successfully interweaves feedback samples with golden anchor lines.
+- [ ] Automated ship gate rejects adapters that degrade benchmark CER or trigger LASA clinical confusions.
+
+### Frontend Integration & Test Coverage
+- [ ] Darkroom edits trigger feedback submissions without UI stutter or blocking user interactions.
+- [ ] Automated unit and integration tests pass via `.venv/bin/pytest` and `npm test` verifying feedback ingestion, alignment, rescorer updates, and adapter gating.
+

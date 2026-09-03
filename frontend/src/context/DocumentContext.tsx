@@ -65,6 +65,7 @@ export interface DocumentContextType {
   canRedo: boolean;
   loadPreset: (presetId: string) => void;
   setSignatureDecision: (lineId: string, decision: SignatureDecision) => void;
+  appendStreamedLine: (line: LineItem, pageNumber?: number) => void;
 }
 
 const DocumentContext = createContext<DocumentContextType | null>(null);
@@ -280,12 +281,34 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
     pushDocumentUpdate(newDoc);
   }, [document, activePage, pushDocumentUpdate]);
 
+  const appendStreamedLine = useCallback((line: LineItem, pageNumber: number = 1) => {
+    setDocumentInternal((prev) => {
+      if (!prev || !prev.pages || prev.pages.length === 0) return prev;
+      const pages = [...prev.pages];
+      const pIdx = Math.max(0, Math.min(pages.length - 1, pageNumber - 1));
+      const targetPage = { ...pages[pIdx] };
+      const lines = [...targetPage.lines];
+      const existingIdx = lines.findIndex((l) => l.line_id === line.line_id);
+      if (existingIdx >= 0) {
+        lines[existingIdx] = line;
+      } else {
+        lines.push(line);
+      }
+      targetPage.lines = lines;
+      targetPage.full_text = lines.map((l) => l.text).join('\n');
+      pages[pIdx] = targetPage;
+      const fullText = pages.map((p) => p.full_text).join('\n\n');
+      return { ...prev, pages, full_text: fullText };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       document,
       activePageIndex,
       activePage,
       setDocument,
+      appendStreamedLine,
       setActivePageIndex,
       selectedLineId,
       selectedWordId,
@@ -336,6 +359,7 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
       activePageIndex,
       activePage,
       setDocument,
+      appendStreamedLine,
       selectedLineId,
       selectedWordId,
       hoveredLineId,

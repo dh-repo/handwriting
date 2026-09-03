@@ -80,6 +80,26 @@ class Settings(BaseSettings):
     )
     BEAM_WIDTH: int = Field(default=4, ge=1, le=16, description="Beam search width (K candidates)")
     NUM_RETURN_SEQUENCES: int = Field(default=5, ge=1, le=16, description="Candidate beam count")
+    ADAPTIVE_BEAM_SEARCH: bool = Field(
+        default=True,
+        description="Use adaptive 2-pass decoding (greedy first, escalate to beams on ambiguity)",
+    )
+    ADAPTIVE_CONFIDENCE_THRESHOLD: float = Field(
+        default=0.88,
+        description="Confidence threshold below which lines escalate to beams",
+    )
+    HTR_MAX_NEW_TOKENS: int = Field(
+        default=64,
+        ge=16,
+        le=256,
+        description="Max generated tokens per line crop",
+    )
+    VLM_CONCURRENCY: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="Max concurrent requests for cloud VLM refinement",
+    )
     VOCAB_DIR: str = Field(
         default="data/reference_handwriting/vocabularies",
         description="Path to pharmaceutical and clinical vocabularies directory",

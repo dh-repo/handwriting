@@ -111,6 +111,7 @@ export interface RecognitionOptions {
   dpi?: number;
   beam_width?: number;
   rescore?: boolean;
+  adaptive?: boolean;
   model_type?: string;
 }
 

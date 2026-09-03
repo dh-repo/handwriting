@@ -35,6 +35,7 @@ export default function WorkspacePage() {
     activePageIndex,
     activePage,
     setDocument,
+    appendStreamedLine,
     setActivePageIndex,
     selectedLineId,
     selectedWordId,
@@ -69,9 +70,7 @@ export default function WorkspacePage() {
   const cleanupObjectURL = useCallback(() => {
     if (activeObjectUrlRef.current) {
       try {
-        if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
-          URL.revokeObjectURL(activeObjectUrlRef.current);
-        }
+        URL.revokeObjectURL(activeObjectUrlRef.current);
       } catch {
         // ignore
       }
@@ -87,59 +86,101 @@ export default function WorkspacePage() {
 
   const handleFileAccepted = async (file: File) => {
     setIsProcessing(true);
-    setUploadProgress(10);
-    setProcessingStage('Uploading document to neural recognition pipeline...');
+    setUploadProgress(15);
+    setProcessingStage('Uploading document & preparing preprocessor...');
     setError(null);
 
+    cleanupObjectURL();
+    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
+    if (previewUrl) {
+      activeObjectUrlRef.current = previewUrl;
+      // Show initial document preview immediately so viewer is not blank
+      setDocument({
+        document_id: 'doc_streaming',
+        filename: file.name,
+        total_pages: 1,
+        pages: [
+          {
+            page_number: 1,
+            width: 1000,
+            height: 1400,
+            full_text: '',
+            mean_confidence: 1.0,
+            lines: [],
+            image_url: previewUrl,
+          },
+        ],
+        processing_time_ms: 0,
+      });
+    }
+
     const startTime = Date.now();
+    let totalExpectedLines = 0;
+    let decodedCount = 0;
+
     const progressInterval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      if (elapsed < 3) {
-        setUploadProgress(20);
-        setProcessingStage('Uploading document & preparing preprocessor...');
-      } else if (elapsed < 8) {
-        setUploadProgress(35);
-        setProcessingStage('Preprocessing, deskewing & segmenting line crops...');
-      } else if (elapsed < 18) {
-        setUploadProgress(55);
-        setProcessingStage('ViT vision encoder extracting handwriting stroke tokens...');
-      } else if (elapsed < 35) {
-        setUploadProgress(70);
-        setProcessingStage(`Neural beam-search decoding lines (${elapsed}s elapsed)...`);
-      } else if (elapsed < 60) {
-        setUploadProgress(85);
-        setProcessingStage(`Neural beam-search & language model refinement (${elapsed}s elapsed)...`);
-      } else {
-        setUploadProgress(92);
-        setProcessingStage(`Finalizing line alignments and bounding boxes (${elapsed}s elapsed)...`);
+      if (decodedCount === 0) {
+        if (elapsed < 3) {
+          setUploadProgress(20);
+          setProcessingStage('Preprocessing, deskewing & segmenting line crops...');
+        } else if (elapsed < 6) {
+          setUploadProgress(28);
+          setProcessingStage('Vision transformer extracting handwriting stroke tokens...');
+        } else {
+          setUploadProgress(35);
+          setProcessingStage(`Neural decoding lines (${elapsed}s elapsed)...`);
+        }
       }
     }, 1000);
 
     try {
-      const result: DocumentOCRResult = await apiClient.recognizeFile(file, {
-        beam_width: 4,
-        rescore: false,
-      });
+      const result: DocumentOCRResult = await apiClient.recognizeFileStream(
+        file,
+        {
+          beam_width: 4,
+          rescore: false,
+          adaptive: true,
+        },
+        {
+          onMetadata: (meta) => {
+            if (meta.pages && meta.pages[0]) {
+              totalExpectedLines = meta.pages[0].total_lines || 0;
+              setProcessingStage(`Segmented into ${totalExpectedLines} lines. Decoding strokes...`);
+              setUploadProgress(30);
+            }
+          },
+          onLine: (line, pageNum) => {
+            decodedCount++;
+            appendStreamedLine(line, pageNum);
+            const total = Math.max(1, totalExpectedLines || 13);
+            const pct = Math.min(95, 30 + Math.floor((decodedCount / total) * 65));
+            setUploadProgress(pct);
+            const snippet = line.text.length > 28 ? `${line.text.slice(0, 28)}...` : line.text;
+            setProcessingStage(`Decoded line ${decodedCount}/${total}: "${snippet}"`);
+          },
+          onComplete: (doc) => {
+            if (previewUrl && doc.pages[0]) {
+              doc.pages[0].image_url = previewUrl;
+            }
+            setDocument(doc);
+            setUploadProgress(100);
+            setProcessingStage('Complete');
+          },
+          onError: (errMsg) => {
+            console.warn('[RecognizeStream Error]', errMsg);
+          },
+        }
+      );
 
       clearInterval(progressInterval);
 
-      setUploadProgress(98);
-      setProcessingStage('Formatting transcribed lines...');
-
-      if (file.type.startsWith('image/') && result.pages[0]) {
-        try {
-          cleanupObjectURL();
-          const previewUrl = URL.createObjectURL(file);
-          activeObjectUrlRef.current = previewUrl;
-          result.pages[0].image_url = previewUrl;
-        } catch {
-          // ignore
-        }
+      if (previewUrl && result.pages[0]) {
+        result.pages[0].image_url = previewUrl;
       }
-
+      setDocument(result);
       setUploadProgress(100);
       setProcessingStage('Complete');
-      setDocument(result);
     } catch (err: unknown) {
       clearInterval(progressInterval);
       const msg = err instanceof Error ? err.message : 'Failed to process document';

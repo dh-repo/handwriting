@@ -169,7 +169,7 @@ def test_recognition_options_defaults() -> None:
     assert ro.binarization_method == "sauvola"
     assert ro.extract_words is True
     assert ro.dpi == 300
-    assert ro.beam_width == 10
+    assert ro.beam_width == 4
     assert ro.rescore is False
 
 
