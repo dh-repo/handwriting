@@ -30,11 +30,11 @@ class Settings(BaseSettings):
     DEVICE: str = Field(default="auto", description="Execution device: auto, mps, cuda, cpu, mock")
     EXECUTION_MODE: Optional[str] = Field(default=None, description="Optional execution mode alias")
     MODEL_NAME_OR_PATH: str = Field(
-        default="microsoft/trocr-large-handwritten",
+        default="microsoft/trocr-base-handwritten",
         description="HuggingFace model identifier or local checkpoint path",
     )
     HTR_MODEL_ID: str = Field(
-        default="microsoft/trocr-large-handwritten",
+        default="microsoft/trocr-base-handwritten",
         description="Teklia-proven line-HTR checkpoint for POST /v1/recognize-line",
     )
     HTR_NUM_BEAMS: int = Field(default=4, ge=1, le=16, description="Beam width for line-HTR serve")
@@ -187,12 +187,20 @@ class Settings(BaseSettings):
         """
         Resolve model path in prioritized order:
         1. Explicitly configured path if exists on disk
-        2. Stage 2 doctor specialization checkpoint
-        3. Fallback root checkpoint (checkpoints/best_model.pt or checkpoints/best_model_hf)
-        4. Stage 1 general adaptation checkpoint
-        5. Configured MODEL_NAME_OR_PATH or HuggingFace ID
+        2. Local fine-tuned LoRA base checkpoint (checkpoints/lora_trocr_base_iam)
+        3. Configured MODEL_NAME_OR_PATH or HuggingFace ID
+        4. Stage 2 doctor specialization checkpoint
+        5. Fallback root checkpoint
+        6. Default ('microsoft/trocr-base-handwritten')
         """
         if self.MODEL_NAME_OR_PATH and Path(self.MODEL_NAME_OR_PATH).exists():
+            return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH)
+
+        lora_base = Path("checkpoints/lora_trocr_base_iam")
+        if lora_base.exists() and (lora_base / "config.json").exists():
+            return assert_shippable_checkpoint(str(lora_base))
+
+        if self.MODEL_NAME_OR_PATH:
             return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH)
 
         candidates = [
@@ -210,7 +218,7 @@ class Settings(BaseSettings):
                 if Path(f"{cand}.pt").exists():
                     return assert_shippable_checkpoint(f"{cand}.pt")
 
-        return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH or "microsoft/trocr-large-handwritten")
+        return assert_shippable_checkpoint("microsoft/trocr-base-handwritten")
 
 
 
