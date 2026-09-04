@@ -331,10 +331,10 @@ export const Dropzone: React.FC<DropzoneProps> = ({
             handleClick();
           }
         }}
-        className={`relative overflow-hidden flex flex-col items-center justify-center p-12 sm:p-16 rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer select-none outline-none group ${
+        className={`relative overflow-hidden flex flex-col items-center justify-center p-10 sm:p-14 rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer select-none outline-none group ${
           isDragOver
-            ? 'border-blue-400 bg-blue-500/15 scale-[1.01] shadow-2xl shadow-blue-500/30 ring-8 ring-blue-500/20'
-            : 'border-white/20 hover:border-blue-400/60 bg-slate-900/50 hover:bg-slate-900/70 shadow-2xl backdrop-blur-2xl'
+            ? 'border-indigo-400 bg-indigo-500/10 scale-[1.01] shadow-2xl shadow-indigo-500/20 ring-4 ring-indigo-500/20'
+            : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/60 shadow-2xl backdrop-blur-2xl'
         } ${disabled || isLoading ? 'pointer-events-none' : ''}`}
       >
         {/* Hidden inputs */}
@@ -370,33 +370,33 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         />
 
         {/* Ambient Gradient Glow */}
-        <div className="absolute w-80 h-80 rounded-full bg-gradient-to-tr from-blue-600/20 to-purple-600/20 blur-3xl opacity-50 pointer-events-none group-hover:opacity-75 transition-opacity" />
+        <div className="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-indigo-600/15 via-blue-600/10 to-transparent blur-3xl opacity-40 pointer-events-none group-hover:opacity-65 transition-opacity" />
 
         {isLoading ? (
           <div className="flex flex-col items-center text-center space-y-5 max-w-md py-4 relative z-10">
-            {/* Apple Intelligence style pulsing ambient glow */}
+            {/* Pulsing ambient glow */}
             <div className="relative flex items-center justify-center">
-              <div className="absolute w-24 h-24 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 blur-xl opacity-40 animate-pulse" />
-              <div className="w-16 h-16 rounded-2xl bg-white/[0.08] border border-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+              <div className="absolute w-20 h-20 rounded-full bg-blue-500/20 blur-xl animate-pulse" />
+              <div className="w-14 h-14 rounded-2xl bg-zinc-800/90 border border-zinc-700/60 backdrop-blur-md flex items-center justify-center shadow-inner">
+                <Loader2 className="w-7 h-7 text-blue-400 animate-spin" />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <p className="font-semibold text-white text-base sm:text-lg tracking-tight flex items-center justify-center gap-2">
+              <p className="font-semibold text-zinc-100 text-base sm:text-lg tracking-tight flex items-center justify-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-400 animate-pulse" />
                 <span>Transcribing Handwriting...</span>
               </p>
-              <p className="text-xs text-slate-400 font-normal tracking-wide">{processingStage}</p>
+              <p className="text-xs text-zinc-400 font-normal tracking-wide">{processingStage}</p>
               {elapsedSeconds > 0 && (
-                <p className="text-[11px] text-slate-500 font-mono pt-1">
+                <p className="text-[11px] text-zinc-500 font-mono pt-0.5">
                   Processing time: {elapsedSeconds.toFixed(1)}s
                 </p>
               )}
             </div>
 
             {/* Smooth progress indicator */}
-            <div className="w-64 sm:w-80 bg-white/10 rounded-full h-1.5 overflow-hidden p-0.5 border border-white/5 shadow-inner">
+            <div className="w-64 sm:w-80 bg-zinc-800 rounded-full h-1.5 overflow-hidden p-0.5 border border-zinc-700/50 shadow-inner">
               <div
                 className="bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 h-full rounded-full transition-all duration-500 ease-out shadow-sm"
                 style={{ width: `${Math.max(15, uploadProgress)}%` }}
@@ -404,68 +404,82 @@ export const Dropzone: React.FC<DropzoneProps> = ({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center space-y-5 relative z-10 max-w-xl">
-            {/* Apple HIG elevated icon button */}
-            <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 flex items-center justify-center text-blue-400 border border-white/20 shadow-xl shadow-black/40 group-hover:scale-105 group-hover:border-blue-400/50 group-hover:shadow-blue-500/25 transition-all duration-300">
-              <UploadCloud className="w-10 h-10 text-white/90 group-hover:text-blue-400 transition-colors" />
+          <div className="flex flex-col items-center text-center space-y-4 relative z-10 max-w-xl">
+            {/* Refined Icon Container */}
+            <div className="w-14 h-14 rounded-2xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-zinc-300 shadow-lg group-hover:scale-105 group-hover:border-blue-400/50 group-hover:text-blue-400 transition-all duration-300">
+              <UploadCloud className="w-7 h-7 transition-colors" />
             </div>
 
-            <div className="space-y-1.5">
-              <p className="text-lg sm:text-2xl font-bold text-white tracking-tight">
+            <div className="space-y-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-zinc-100 tracking-tight">
                 Drop your handwriting image or PDF here
-              </p>
-              <p className="text-xs sm:text-sm text-slate-300">
-                or <span className="text-blue-400 font-semibold hover:text-blue-300 underline underline-offset-4 decoration-blue-400/40">drop files, folders, or browse</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto">
+                High-accuracy neural transcription for historical cursive, receipts, and clinical notes
               </p>
             </div>
 
-            {/* Source Parity Badges: Clipboard, Camera/Scanner, Folders */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            {/* Primary Action Button */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClick();
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 shadow-md hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              >
+                <span>Browse Files</span>
+              </button>
+            </div>
+
+            {/* Secondary Link Row (De-compartmentalized, subtle, clean) */}
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1 text-xs text-zinc-400">
               <button
                 type="button"
                 data-testid="badge-clipboard-paste"
                 onClick={handlePasteButtonClick}
                 title="Paste image directly from clipboard"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 hover:text-white border border-white/10 hover:border-blue-400/40 transition-all shadow-sm group/btn"
+                className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
               >
-                <ClipboardPaste className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:scale-110 transition-transform" />
-                <span>Paste from Clipboard (Cmd/Ctrl + V)</span>
+                <ClipboardPaste className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Paste from Clipboard</span>
               </button>
-
+              <span className="text-zinc-600 select-none">•</span>
               <button
                 type="button"
                 data-testid="badge-camera-capture"
                 onClick={handleCameraCaptureClick}
                 title="Capture handwriting via device camera or document scanner"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 hover:text-white border border-white/10 hover:border-blue-400/40 transition-all shadow-sm group/btn"
+                className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
               >
-                <Camera className="w-3.5 h-3.5 text-blue-400 group-hover/btn:scale-110 transition-transform" />
-                <span>Camera / Scanner Capture</span>
+                <Camera className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Camera / Scanner</span>
               </button>
-
+              <span className="text-zinc-600 select-none">•</span>
               <button
                 type="button"
                 data-testid="badge-browse-folder"
                 onClick={handleBrowseFolderClick}
                 title="Select an entire folder of handwriting scans"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 hover:text-white border border-white/10 hover:border-blue-400/40 transition-all shadow-sm group/btn"
+                className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
               >
-                <FolderOpen className="w-3.5 h-3.5 text-cyan-400 group-hover/btn:scale-110 transition-transform" />
+                <FolderOpen className="w-3.5 h-3.5 text-zinc-400" />
                 <span>Browse Folder</span>
               </button>
             </div>
 
-            {/* Supported formats & size badge */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-white/[0.07] w-full max-w-md">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.04] text-slate-300 border border-white/10 shadow-sm">
-                <ImageIcon className="w-3.5 h-3.5 text-blue-400" /> PNG, JPEG, TIFF
+            {/* Formats & Limit footnote */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] text-zinc-400">
+              <span className="inline-flex items-center gap-1">
+                <ImageIcon className="w-3 h-3 text-zinc-400" /> PNG, JPEG, TIFF
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.04] text-slate-300 border border-white/10 shadow-sm">
-                <FileText className="w-3.5 h-3.5 text-indigo-400" /> Multi-page PDF
+              <span className="text-zinc-600 select-none">•</span>
+              <span className="inline-flex items-center gap-1">
+                <FileText className="w-3 h-3 text-zinc-400" /> Multi-page PDF
               </span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-mono text-slate-400 bg-white/[0.03] border border-white/5">
-                Up to 50 MB
-              </span>
+              <span className="text-zinc-600 select-none">•</span>
+              <span className="font-mono text-zinc-400">Up to 50 MB</span>
             </div>
           </div>
         )}

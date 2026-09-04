@@ -102,6 +102,22 @@ export default function WorkspacePage() {
   const [completedBatchDocuments, setCompletedBatchDocuments] = useState<DocumentOCRResult[]>([]);
   const [activeBatchDocIndex, setActiveBatchDocIndex] = useState<number>(0);
   const [engineMode, setEngineMode] = useState<'turbo' | 'trocr'>('turbo');
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    if (isExportMenuOpen) {
+      window.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isExportMenuOpen]);
 
   const cleanupObjectURLs = useCallback(() => {
     activeObjectUrlsRef.current.forEach((url) => {
@@ -556,31 +572,205 @@ export default function WorkspacePage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#07090E] text-slate-100 flex flex-col font-sans selection:bg-blue-500/30 selection:text-blue-200 antialiased">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200 antialiased">
       {/* Full-Viewport Drop Target Overlay */}
       <FullWindowDropOverlay onFilesDropped={handleFilesAccepted} disabled={isProcessing} />
 
-      {/* Apple HIG Top Navigation Bar */}
-      <header className="sticky top-0 z-40 h-16 border-b border-white/[0.08] bg-[#07090E]/80 backdrop-blur-2xl px-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25 border border-white/20">
-            <PenTool className="w-5 h-5 text-white" />
+      {/* Unified Compact Top Navigation Bar (h-14 / 56px) */}
+      <header className="sticky top-0 z-40 h-14 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-2xl px-4 sm:px-6 flex items-center justify-between">
+        {/* Left Section: Brand & Document Metadata */}
+        <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center shadow-md shadow-indigo-500/20 border border-white/20 shrink-0">
+            <PenTool className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-white tracking-tight text-base">Handwriting AI</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-semibold text-zinc-100 tracking-tight text-sm">Handwriting AI</span>
+            {!document && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide uppercase bg-blue-500/15 text-blue-400 border border-blue-500/30">
                 Neural Engine
               </span>
-            </div>
+            )}
           </div>
+
+          {document && (
+            <div className="hidden md:flex items-center gap-2.5 text-xs text-zinc-400 pl-2 border-l border-zinc-800 min-w-0">
+              {/* Multi-Document Batch Switcher Tabs (If batch processed) */}
+              {completedBatchDocuments.length > 1 && (
+                <div className="flex items-center gap-1 p-0.5 bg-zinc-900 rounded-lg border border-zinc-800 mr-1">
+                  {completedBatchDocuments.map((doc, idx) => (
+                    <button
+                      key={`${doc.document_id || 'doc'}_${idx}`}
+                      type="button"
+                      data-testid={`batch-tab-doc-${idx}`}
+                      onClick={() => {
+                        setActiveBatchDocIndex(idx);
+                        setDocument(doc);
+                      }}
+                      className={`px-2 py-0.5 rounded-md font-medium text-[11px] transition-all ${
+                        activeBatchDocIndex === idx
+                          ? 'bg-zinc-100 text-zinc-900 font-semibold shadow-sm'
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Doc {idx + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <span className="font-medium text-zinc-200 truncate max-w-[160px] lg:max-w-xs">
+                {document.filename || 'Document'}
+              </span>
+              <span className="text-zinc-600 select-none">•</span>
+              <span>
+                {totalLines} {totalLines === 1 ? 'Line' : 'Lines'}
+              </span>
+              <span className="text-zinc-600 select-none">•</span>
+              <span>{totalWords} Words</span>
+              <span className="text-zinc-600 select-none">•</span>
+              <span
+                className={
+                  meanConfidence >= 90
+                    ? 'text-emerald-400 font-semibold'
+                    : meanConfidence >= 75
+                    ? 'text-amber-400 font-semibold'
+                    : 'text-rose-400 font-semibold'
+                }
+              >
+                {meanConfidence}% Confidence
+              </span>
+
+              {lowConfidenceCount > 0 && (
+                <>
+                  <span className="text-zinc-600 select-none">•</span>
+                  <button
+                    type="button"
+                    onClick={handleJumpToNextAmbiguity}
+                    title="Click to jump through low-confidence tokens"
+                    data-testid="low-confidence-counter-badge"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer shadow-sm group"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse group-hover:scale-125 transition-transform" />
+                    <span>{lowConfidenceCount} ambiguous</span>
+                  </button>
+                </>
+              )}
+
+              <span className="text-zinc-600 select-none">•</span>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                  document?.engine_used === 'turbo-vlm' || (document?.preprocessing_flags as any)?.engine === 'turbo-vlm'
+                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                    : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                }`}
+              >
+                {document?.engine_used === 'turbo-vlm' || (document?.preprocessing_flags as any)?.engine === 'turbo-vlm' ? '⚡ Turbo' : '🧠 TrOCR'}
+                {document?.processing_time_ms ? ` (${(document.processing_time_ms / 1000).toFixed(1)}s)` : ''}
+              </span>
+            </div>
+          )}
         </div>
 
+        {/* Right Section: Actions & Split Export Dropdown */}
         {document && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyText}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-all duration-150 shadow-sm"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-zinc-400" />
+              )}
+              <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy Text'}</span>
+            </button>
+
+            {/* Split Export ▾ Dropdown */}
+            <div className="relative" ref={exportDropdownRef}>
+              <div className="inline-flex rounded-xl shadow-sm border border-zinc-700/80 bg-zinc-800/90 hover:bg-zinc-800 divide-x divide-zinc-700/80 overflow-hidden">
+                <button
+                  type="button"
+                  data-testid="btn-export-searchable-pdf"
+                  onClick={handleExportSearchablePdf}
+                  title="Export searchable PDF with OCR text layer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-100 hover:bg-zinc-700/50 transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Export PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                  title="More export formats"
+                  className="px-2 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-700/50 transition-colors"
+                  aria-expanded={isExportMenuOpen}
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Dropdown Menu */}
+              {isExportMenuOpen && (
+                <div className="absolute right-0 mt-1.5 w-48 rounded-xl bg-zinc-900 border border-zinc-700/80 shadow-2xl backdrop-blur-xl p-1 z-50 animate-in fade-in slide-in-from-top-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleExportMarkdown();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors text-left"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Export Markdown (.md)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleExportTxt();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors text-left"
+                  >
+                    <FileDown className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Export Plain Text (.txt)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleExportJson();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors text-left"
+                  >
+                    <Code className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Export JSON (.json)</span>
+                  </button>
+
+                  {completedBatchDocuments.length > 1 && batchConfig.outputMode === 'single' && (
+                    <div className="pt-1 mt-1 border-t border-zinc-800">
+                      <button
+                        type="button"
+                        data-testid="btn-export-combined-batch"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          handleExportBatchCombined();
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-indigo-300 hover:text-white hover:bg-indigo-600/30 transition-colors text-left font-medium"
+                      >
+                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Export All ({completedBatchDocuments.length})</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleReset}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 hover:text-white border border-white/10 hover:border-white/20 transition-all duration-200 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-all duration-200 shadow-sm"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>New Scan</span>
@@ -590,10 +780,10 @@ export default function WorkspacePage() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
+      <main className="flex-1 flex flex-col p-3 sm:p-5 lg:p-6 max-w-[1700px] w-full mx-auto">
         {!document && stagedFiles.length === 0 ? (
           /* Landing Screen: Expanded Drop Target & Zero-Friction Sample Cards */
-          <div className="flex-1 flex flex-col items-center justify-center py-8 sm:py-16 max-w-4xl mx-auto w-full text-center space-y-8 animate-in fade-in">
+          <div className="flex-1 flex flex-col items-center justify-center py-6 sm:py-12 max-w-4xl mx-auto w-full text-center space-y-6 animate-in fade-in">
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 backdrop-blur-md">
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
@@ -605,21 +795,21 @@ export default function WorkspacePage() {
                   Neural Precision
                 </span>
               </h1>
-              <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto font-normal leading-relaxed">
+              <p className="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto font-normal leading-relaxed">
                 Effortlessly read cursive correspondence, archival notes, signatures, receipts, and multi-page documents.
               </p>
 
               {/* Engine Selection Toggle: Turbo Mode vs Neural TrOCR */}
               <div className="pt-2 flex justify-center">
-                <div className="inline-flex items-center p-1 bg-white/[0.04] border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg">
+                <div className="inline-flex items-center p-1 bg-zinc-900/80 border border-zinc-800 rounded-2xl backdrop-blur-xl shadow-lg">
                   <button
                     type="button"
                     onClick={() => setEngineMode('turbo')}
                     data-testid="engine-toggle-turbo"
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                       engineMode === 'turbo'
-                        ? 'bg-gradient-to-r from-amber-500/25 to-orange-500/25 text-amber-300 border border-amber-500/40 shadow-md shadow-amber-500/10'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-md shadow-amber-500/10'
+                        : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
                     <span className="text-amber-400">⚡</span>
@@ -632,8 +822,8 @@ export default function WorkspacePage() {
                     data-testid="engine-toggle-trocr"
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                       engineMode === 'trocr'
-                        ? 'bg-gradient-to-r from-blue-500/25 to-indigo-500/25 text-blue-300 border border-blue-500/40 shadow-md shadow-blue-500/10'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-md shadow-blue-500/10'
+                        : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
                     <span>🧠</span>
@@ -685,166 +875,22 @@ export default function WorkspacePage() {
         ) : (
           /* Workspace Screen: Split-Pane Side-by-Side Verification */
           <div className="flex-1 flex flex-col gap-4 min-h-0 animate-in fade-in">
-            {/* Top Document Summary & Batch Switcher Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-xl">
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
-                {/* Multi-Document Batch Switcher Tabs (If batch processed) */}
-                {completedBatchDocuments.length > 1 && (
-                  <div className="flex items-center gap-1.5 p-1 bg-white/[0.06] rounded-xl border border-white/10 mr-2">
-                    {completedBatchDocuments.map((doc, idx) => (
-                      <button
-                        key={`${doc.document_id || 'doc'}_${idx}`}
-                        type="button"
-                        data-testid={`batch-tab-doc-${idx}`}
-                        onClick={() => {
-                          setActiveBatchDocIndex(idx);
-                          setDocument(doc);
-                        }}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-                          activeBatchDocIndex === idx
-                            ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        Doc {idx + 1}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <span className="font-semibold text-white truncate max-w-xs">
-                  {document?.filename || 'Document'}
-                </span>
-                <span className="text-slate-600">•</span>
-                <span>
-                  {totalLines} {totalLines === 1 ? 'Line' : 'Lines'}
-                </span>
-                <span className="text-slate-600">•</span>
-                <span>{totalWords} Words</span>
-                <span className="text-slate-600">•</span>
-                <span
-                  className={
-                    meanConfidence >= 90
-                      ? 'text-emerald-400 font-semibold'
-                      : meanConfidence >= 75
-                      ? 'text-amber-400 font-semibold'
-                      : 'text-rose-400 font-semibold'
-                  }
-                >
-                  {meanConfidence}% Confidence
-                </span>
-
-                {lowConfidenceCount > 0 && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <button
-                      type="button"
-                      onClick={handleJumpToNextAmbiguity}
-                      title="Click to jump through low-confidence tokens"
-                      data-testid="low-confidence-counter-badge"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer shadow-sm group"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse group-hover:scale-125 transition-transform" />
-                      <span>{lowConfidenceCount} low-confidence tokens</span>
-                      <span className="text-[9px] opacity-75 font-normal ml-0.5">(jump)</span>
-                    </button>
-                  </>
-                )}
-
-                <span className="text-slate-600">•</span>
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                    document?.engine_used === 'turbo-vlm' || (document?.preprocessing_flags as any)?.engine === 'turbo-vlm'
-                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                      : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                  }`}
-                >
-                  {document?.engine_used === 'turbo-vlm' || (document?.preprocessing_flags as any)?.engine === 'turbo-vlm' ? '⚡ Turbo VLM' : '🧠 TrOCR'}
-                  {document?.processing_time_ms ? ` (${(document.processing_time_ms / 1000).toFixed(1)}s)` : ''}
-                </span>
-              </div>
-
-              {/* Action Buttons & Exports */}
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyText}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10 transition-all duration-150"
-                >
-                  {copied ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-slate-300" />
-                  )}
-                  <span>{copied ? 'Copied' : 'Copy Text'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleExportMarkdown}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10 transition-all duration-150"
-                >
-                  <FileText className="w-3.5 h-3.5 text-slate-300" />
-                  <span>Export MD</span>
-                </button>
-
-                <button
-                  type="button"
-                  data-testid="btn-export-searchable-pdf"
-                  onClick={handleExportSearchablePdf}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10 transition-all duration-150"
-                >
-                  <FileText className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Export PDF</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleExportTxt}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10 transition-all duration-150"
-                >
-                  <FileDown className="w-3.5 h-3.5 text-slate-300" />
-                  <span>Export TXT</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleExportJson}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10 transition-all duration-150"
-                >
-                  <Code className="w-3.5 h-3.5 text-slate-300" />
-                  <span>Export JSON</span>
-                </button>
-
-                {completedBatchDocuments.length > 1 && batchConfig.outputMode === 'single' && (
-                  <button
-                    type="button"
-                    data-testid="btn-export-combined-batch"
-                    onClick={handleExportBatchCombined}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 border border-white/20 transition-all"
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    <span>Export All ({completedBatchDocuments.length})</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
             {/* Split-Pane Verification Workspace */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0 overflow-hidden">
-              {/* Left Column: High-Resolution Scan & Interactive Overlays (7 cols) */}
-              <div className="lg:col-span-7 h-full flex flex-col min-h-[500px] overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl p-3 gap-3">
-                {/* View Mode & Darkroom Controls */}
-                <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
-                  <div className="flex items-center gap-1 bg-white/[0.06] p-1 rounded-xl border border-white/10 text-xs">
+              {/* Left Column: Canvas Viewport with Floating Glass HUD Dock (7 cols) */}
+              <div className="lg:col-span-7 h-full flex flex-col min-h-[500px] overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/60 shadow-2xl relative">
+                {/* Floating Glass HUD Dock */}
+                <div className="absolute top-3.5 left-3.5 right-3.5 z-30 flex items-center justify-between pointer-events-none">
+                  {/* Left HUD: View Mode Toggle */}
+                  <div className="pointer-events-auto flex items-center gap-1 bg-zinc-900/85 hover:bg-zinc-900 backdrop-blur-xl p-1 rounded-xl border border-zinc-700/60 shadow-xl text-xs">
                     <button
                       type="button"
                       data-testid="toggle-view-canvas"
                       onClick={() => setViewMode('canvas')}
                       className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                         viewMode === 'canvas'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-zinc-100 text-zinc-900 font-semibold shadow-sm'
+                          : 'text-zinc-400 hover:text-zinc-200'
                       }`}
                     >
                       Canvas Inspector
@@ -855,25 +901,28 @@ export default function WorkspacePage() {
                       onClick={() => setViewMode('curtain')}
                       className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                         viewMode === 'curtain'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-zinc-100 text-zinc-900 font-semibold shadow-sm'
+                          : 'text-zinc-400 hover:text-zinc-200'
                       }`}
                     >
                       Split Curtain X-Ray
                     </button>
                   </div>
 
+                  {/* Right HUD: Darkroom Controls */}
                   {activePage && (
-                    <DarkroomToolbar
-                      settings={darkroomSettings}
-                      onChange={setDarkroomSettings}
-                      className="border-white/10"
-                    />
+                    <div className="pointer-events-auto bg-zinc-900/85 hover:bg-zinc-900 backdrop-blur-xl rounded-xl border border-zinc-700/60 shadow-xl p-1">
+                      <DarkroomToolbar
+                        settings={darkroomSettings}
+                        onChange={setDarkroomSettings}
+                        className="border-0 bg-transparent p-0"
+                      />
+                    </div>
                   )}
                 </div>
 
-                {/* Viewer or Curtain */}
-                <div className="flex-1 min-h-0 overflow-hidden rounded-2xl relative">
+                {/* Full-bleed Canvas Viewport */}
+                <div className="flex-1 w-full h-full min-h-0 overflow-hidden relative">
                   {activePage && viewMode === 'canvas' && (
                     <DocumentViewer
                       page={activePage}
@@ -904,8 +953,8 @@ export default function WorkspacePage() {
                 </div>
               </div>
 
-              {/* Right Column: Editable Transcription with Amber Confidence Tokens (5 cols) */}
-              <div className="lg:col-span-5 h-full flex flex-col min-h-[500px] overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl">
+              {/* Right Column: Editable Transcription (5 cols) */}
+              <div className="lg:col-span-5 h-full flex flex-col min-h-[500px] overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/60 shadow-2xl">
                 {activePage && (
                   <div className="flex h-full min-h-0 flex-col">
                     <div className="min-h-0 flex-1 overflow-hidden">

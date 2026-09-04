@@ -556,11 +556,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   return (
     <div
       data-testid="inline-editor-container"
-      className={`flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden ${className}`}
+      className={`flex flex-col h-full bg-[#09090b] border border-zinc-800 rounded-3xl shadow-sm overflow-hidden ${className}`}
     >
       {/* Editor Header Toolbar */}
-      <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/50">
-        <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
+      <div className="flex items-center justify-between p-2.5 border-b border-zinc-800/80 bg-zinc-950/60">
+        <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
           <button
             type="button"
             data-testid="tab-structured"
@@ -570,11 +570,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               activeTab === 'structured'
-                ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-indigo-500" />
+            <Layers className="w-3.5 h-3.5 text-indigo-400" />
             <span>Lines ({page.lines.length})</span>
           </button>
           <button
@@ -586,11 +586,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               activeTab === 'raw'
-                ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <FileText className="w-3.5 h-3.5 text-slate-500" />
+            <FileText className="w-3.5 h-3.5 text-zinc-400" />
             <span>Plain Text</span>
           </button>
           <button
@@ -602,10 +602,10 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               activeTab === 'speed_review'
-                ? 'bg-amber-500 text-white shadow-sm'
+                ? 'bg-amber-500 text-zinc-950 font-bold shadow-sm'
                 : lowConfCount > 0
-                ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-950/40'
-                : 'text-slate-400 opacity-60'
+                ? 'text-amber-400 hover:bg-amber-500/10'
+                : 'text-zinc-600 opacity-60'
             }`}
           >
             <FastForward className="w-3.5 h-3.5" />
@@ -622,7 +622,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
               onClick={onUndo}
               disabled={!canUndo}
               title="Undo (Ctrl+Z)"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 disabled:opacity-30 disabled:pointer-events-none transition-colors"
             >
               <Undo2 className="w-4 h-4" />
             </button>
@@ -634,7 +634,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
               onClick={onRedo}
               disabled={!canRedo}
               title="Redo (Ctrl+Y)"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 disabled:opacity-30 disabled:pointer-events-none transition-colors"
             >
               <Redo2 className="w-4 h-4" />
             </button>
@@ -646,7 +646,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
               onClick={handleRevertAll}
               disabled={editedCount === 0}
               title="Revert all edits"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 disabled:opacity-30 disabled:pointer-events-none"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-950/40 disabled:opacity-30 disabled:pointer-events-none transition-colors"
             >
               <span data-testid="revert-all-btn" className="inline-flex items-center justify-center pointer-events-none">
                 <RotateCcw className="w-4 h-4" />
@@ -659,42 +659,44 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       {/* Metrics Summary Strip */}
       <div
         data-testid="editor-metrics-strip"
-        className="flex items-center justify-between px-4 py-2 bg-slate-100/60 dark:bg-slate-950/40 border-b border-slate-200/70 dark:border-slate-800/70 text-xs text-slate-600 dark:text-slate-400"
+        className="flex items-center justify-between px-3.5 py-1.5 bg-zinc-950/40 border-b border-zinc-800/80 text-[11px] font-mono text-zinc-400"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span>
             Confidence:{' '}
             <strong
               className={
                 page.mean_confidence >= 0.90
-                  ? 'text-emerald-600 dark:text-emerald-400'
+                  ? 'text-emerald-400'
                   : page.mean_confidence >= 0.70
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-rose-600 dark:text-rose-400'
+                  ? 'text-amber-400'
+                  : 'text-rose-400'
               }
             >
               {(page.mean_confidence * 100).toFixed(1)}%
             </strong>
           </span>
+          <span className="text-zinc-600">•</span>
           <span>
-            Words: <strong>{totalWords}</strong>
+            Words: <strong className="text-zinc-200">{totalWords}</strong>
           </span>
+          <span className="text-zinc-600">•</span>
           <span>
-            Lines: <strong>{page.lines.length}</strong>
+            Lines: <strong className="text-zinc-200">{page.lines.length}</strong>
           </span>
         </div>
         {editedCount > 0 && (
-          <span data-testid="edited-count-badge" className="text-indigo-600 dark:text-indigo-400 font-medium">
+          <span data-testid="edited-count-badge" className="text-indigo-400 font-medium font-sans text-xs">
             {editedCount} line(s) modified
           </span>
         )}
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 relative">
         {/* Structured Line-by-Line Mode */}
         {activeTab === 'structured' && (
-          <div data-testid="structured-lines-list" className="space-y-3">
+          <div data-testid="structured-lines-list" className="space-y-2.5">
             {page.lines.map((line: LineItem, idx: number) => {
               const isSelected = selectedLineId === line.line_id;
               const isHovered = hoveredLineId === line.line_id;
@@ -707,28 +709,28 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                   onClick={() => onSelectLine?.(line.line_id)}
                   onMouseEnter={() => onHoverLine?.(line.line_id)}
                   onMouseLeave={() => onHoverLine?.(null)}
-                  className={`p-3.5 rounded-xl border transition-all duration-150 relative ${
+                  className={`p-3 rounded-xl border transition-all duration-150 relative ${
                     isSelected
-                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                      ? 'border-indigo-500/70 bg-indigo-950/20 ring-1 ring-indigo-500/30'
                       : isHovered
-                      ? 'border-blue-400/80 bg-blue-50/30 dark:bg-blue-950/30 ring-1 ring-blue-400/30'
-                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/60'
+                      ? 'border-zinc-700 bg-zinc-900/50'
+                      : 'border-zinc-800/80 hover:border-zinc-700/80 bg-zinc-900/30'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
+                      <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-semibold">
                         L{idx + 1}
                       </span>
                       <span
-                        className={`text-xs font-mono font-medium px-2 py-0.5 rounded border ${colorStyle.badgeBg} ${colorStyle.badgeBorder} ${colorStyle.tailwindText}`}
+                        className={`text-[11px] font-mono font-medium px-1.5 py-0.5 rounded border ${colorStyle.badgeBg} ${colorStyle.badgeBorder} ${colorStyle.tailwindText}`}
                       >
                         {(line.confidence * 100).toFixed(0)}%
                       </span>
                       {line.is_edited && (
                         <span
                           data-testid={`edited-badge-${line.line_id}`}
-                          className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800"
+                          className="text-[9px] uppercase font-bold text-indigo-400 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/60"
                         >
                           Edited
                         </span>
@@ -759,12 +761,12 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                         dispatchFeedbackForLine(line.line_id, e.currentTarget.value);
                       }
                     }}
-                    className="w-full text-sm font-medium px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full text-sm font-medium px-3 py-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                   />
 
-                  {/* Word-level breakdown chips */}
+                  {/* Word-level breakdown chips with diff-style underlines */}
                   {line.words && line.words.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-wrap items-center gap-1 mt-2 pt-1.5 border-t border-zinc-800/60">
                       {line.words.map((word: WordToken) => {
                         const isWordSelected = selectedWordId === word.word_id;
                         const isWordHovered = hoveredWordId === word.word_id;
@@ -843,7 +845,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                   }, 200);
                                 }}
                                 autoFocus
-                                className="px-2 py-0.5 text-xs font-mono font-bold rounded-md bg-indigo-600 text-white border-2 border-indigo-400 outline-none w-28"
+                                className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-indigo-600 text-white border-2 border-indigo-400 outline-none w-28"
                               />
                             ) : (
                               <button
@@ -860,16 +862,18 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                 }}
                                 onMouseEnter={() => onHoverWord?.(word.word_id)}
                                 onMouseLeave={() => onHoverWord?.(null)}
-                                className={`cursor-pointer px-2 py-0.5 rounded-md text-xs font-mono transition-all text-left ${
+                                className={`cursor-pointer px-1.5 py-0.5 rounded text-xs font-mono transition-all text-left ${
                                   isWordSelected
                                     ? 'bg-indigo-600 text-white font-bold ring-2 ring-indigo-400 shadow-md'
                                     : isWordHovered
-                                    ? 'bg-amber-500/30 text-amber-900 dark:text-amber-100 ring-2 ring-amber-400 border border-amber-400 shadow-sm shadow-amber-500/20'
+                                    ? 'bg-zinc-800 text-zinc-100 ring-1 ring-zinc-600'
                                     : isUncertainProperNoun
-                                    ? 'bg-amber-100/90 dark:bg-amber-950 text-amber-950 dark:text-amber-100 border-2 border-amber-500 shadow-sm shadow-amber-500/30 font-semibold'
+                                    ? 'text-amber-200 bg-amber-500/10 border-b-2 border-amber-400 border-dashed rounded-t font-semibold'
                                     : isLowConfidence
-                                    ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-600/60 hover:bg-amber-100 dark:hover:bg-amber-900/40'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    ? 'text-amber-200 bg-amber-500/10 border-b-2 border-amber-400 border-dashed rounded-t'
+                                    : isProperNoun
+                                    ? 'text-indigo-200 bg-indigo-500/10 border-b-2 border-indigo-400 border-dotted rounded-t'
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-800/60 border border-transparent'
                                 }`}
                                 title={
                                   isUncertainProperNoun
@@ -881,16 +885,16 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                               >
                                 <span className="inline-flex items-center gap-1">
                                   {isUncertainProperNoun && !isWordSelected && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping flex-shrink-0" title="Verify name/proper noun" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping flex-shrink-0" title="Verify name/proper noun" />
                                   )}
                                   {isLowConfidence && !isUncertainProperNoun && !isWordSelected && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
                                   )}
                                   <span>{word.text}</span>
                                   {isProperNoun && (
                                     <span
                                       data-testid={`proper-noun-tag-${word.word_id}`}
-                                      className="text-[9px] uppercase px-1 py-0.2 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-sans font-semibold tracking-wider"
+                                      className="text-[9px] uppercase px-1 py-0.2 rounded bg-indigo-950 text-indigo-400 border border-indigo-800/60 font-sans font-semibold tracking-wider ml-0.5"
                                     >
                                       name
                                     </span>
@@ -976,7 +980,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
               }
             }}
             rows={16}
-            className="w-full h-full p-4 font-mono text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
+            className="w-full h-full p-4 font-mono text-sm rounded-xl bg-zinc-950/60 border border-zinc-800 text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
           />
         )}
 
@@ -1001,36 +1005,36 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
           >
             {speedQueue.length === 0 ? (
               <div className="text-center py-12 space-y-3">
-                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto">
+                <div className="w-12 h-12 rounded-full bg-emerald-950/50 flex items-center justify-center text-emerald-400 mx-auto border border-emerald-800/50">
                   <Check className="w-6 h-6" />
                 </div>
-                <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100">All Words Verified!</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <h3 className="font-semibold text-lg text-zinc-100">All Words Verified!</h3>
+                <p className="text-xs text-zinc-400">
                   No uncertain words found below {(confidenceThreshold * 100).toFixed(0)}% confidence.
                 </p>
                 <button
                   type="button"
                   data-testid="btn-return-lines"
                   onClick={() => setActiveTab('structured')}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-colors shadow-sm"
                 >
                   Return to Line Editor
                 </button>
               </div>
             ) : (
-              <div className="w-full max-w-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md space-y-5">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <div className="w-full max-w-lg bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-5">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
                   <span>
                     Reviewing Uncertain Word <strong>{speedIndex + 1}</strong> of <strong>{speedQueue.length}</strong>
                   </span>
-                  <span className="px-2 py-0.5 rounded-full font-mono font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-[11px]">
+                  <span className="px-2 py-0.5 rounded-full font-mono font-bold bg-rose-950/60 text-rose-300 border border-rose-800/60 text-[11px]">
                     {(speedQueue[speedIndex].confidence * 100).toFixed(1)}% Conf
                   </span>
                 </div>
 
-                <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                  <span className="text-xs text-slate-400 block">Model OCR Prediction:</span>
-                  <span className="font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">
+                <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 text-center space-y-1">
+                  <span className="text-xs text-zinc-500 block font-mono">Model OCR Prediction:</span>
+                  <span className="font-mono text-2xl font-bold text-zinc-100">
                     &ldquo;{speedQueue[speedIndex].original_text}&rdquo;
                   </span>
                 </div>
@@ -1038,8 +1042,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                 {/* Direct Medical Quick-Select Suggestions (1-5) */}
                 {speedSuggestions.length > 0 && (
                   <div className="space-y-2">
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                      <Pill className="w-3.5 h-3.5 text-indigo-500" /> Quick-Pick Top Suggestions (Keys 1-5):
+                    <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1">
+                      <Pill className="w-3.5 h-3.5 text-indigo-400" /> Quick-Pick Top Suggestions (Keys 1-5):
                     </span>
                     <div className="grid grid-cols-1 gap-1.5">
                       {speedSuggestions.map((s, idx) => (
@@ -1048,18 +1052,18 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                           type="button"
                           data-testid={`speed-suggestion-${idx + 1}`}
                           onClick={() => handleSpeedSubmit(s.entry.term)}
-                          className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/40 text-left transition-all group"
+                          className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-indigo-500 hover:bg-zinc-800/60 text-left transition-all group"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs flex items-center justify-center border border-indigo-300 dark:border-indigo-800">
+                            <span className="w-5 h-5 rounded-md bg-zinc-800 text-indigo-300 font-mono font-bold text-xs flex items-center justify-center border border-zinc-700">
                               {idx + 1}
                             </span>
-                            <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                            <span className="font-bold text-sm text-zinc-100">
                               {s.entry.term}
                             </span>
                             {renderCategoryBadge(s.entry.category)}
                           </div>
-                          <span className="text-xs text-slate-400 group-hover:text-slate-200 max-w-[180px] truncate">
+                          <span className="text-xs text-zinc-400 group-hover:text-zinc-200 max-w-[180px] truncate">
                             {s.entry.description}
                           </span>
                         </button>
@@ -1069,7 +1073,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                 )}
 
                 <div>
-                  <label htmlFor="speed-review-input" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                  <label htmlFor="speed-review-input" className="block text-xs font-semibold text-zinc-300 mb-1.5">
                     Your Correction:
                   </label>
                   <input
@@ -1108,7 +1112,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                         setActiveTab('structured');
                       }
                     }}
-                    className="w-full text-base font-semibold px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
+                    className="w-full text-base font-semibold px-4 py-2.5 rounded-xl bg-zinc-950 border border-indigo-500 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
                   />
                 </div>
 
@@ -1119,7 +1123,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                       data-testid="btn-speed-prev"
                       onClick={handleSpeedPrev}
                       disabled={speedIndex === 0}
-                      className="px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      className="px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                     >
                       Prev
                     </button>
@@ -1127,7 +1131,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                       type="button"
                       data-testid="btn-speed-skip"
                       onClick={handleSpeedSkip}
-                      className="px-4 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                      className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
                     >
                       Skip (Tab)
                     </button>
@@ -1136,7 +1140,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                     type="button"
                     data-testid="btn-speed-accept"
                     onClick={() => handleSpeedSubmit()}
-                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md transition-colors"
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
                   >
                     Accept & Next (Enter)
                   </button>
