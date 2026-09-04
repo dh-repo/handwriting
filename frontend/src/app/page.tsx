@@ -14,6 +14,7 @@ import {
   ChevronDown,
   CheckCircle2,
   FolderOpen,
+  Loader2,
 } from 'lucide-react';
 import { useDocumentContext } from '../context/DocumentContext';
 import { Dropzone } from '../components/Dropzone';
@@ -799,36 +800,36 @@ export default function WorkspacePage() {
                 Effortlessly read cursive correspondence, archival notes, signatures, receipts, and multi-page documents.
               </p>
 
-              {/* Engine Selection Toggle: Turbo Mode vs Neural TrOCR */}
-              <div className="pt-2 flex justify-center">
-                <div className="inline-flex items-center p-1 bg-zinc-900/80 border border-zinc-800 rounded-2xl backdrop-blur-xl shadow-lg">
+              {/* ReadMe-Inspired Engine Selection Capsule */}
+              <div className="pt-1 flex justify-center">
+                <div className="inline-flex items-center p-1 bg-zinc-900/90 border border-zinc-800 rounded-full backdrop-blur-xl shadow-lg">
                   <button
                     type="button"
                     onClick={() => setEngineMode('turbo')}
                     data-testid="engine-toggle-turbo"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       engineMode === 'turbo'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-md shadow-amber-500/10'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm shadow-amber-500/10'
                         : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    <span className="text-amber-400">⚡</span>
+                    <span className="text-amber-400 font-bold">⚡</span>
                     <span>Turbo VLM</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-medium">~2s • 100% Cursive</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-300 font-medium">~2s • 100% Cursive</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setEngineMode('trocr')}
                     data-testid="engine-toggle-trocr"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       engineMode === 'trocr'
-                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-md shadow-blue-500/10'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-sm shadow-blue-500/10'
                         : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
                     <span>🧠</span>
                     <span>Neural TrOCR</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 font-medium">On-Device</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/15 text-blue-300 font-medium">On-Device</span>
                   </button>
                 </div>
               </div>
@@ -874,7 +875,49 @@ export default function WorkspacePage() {
           </div>
         ) : (
           /* Workspace Screen: Split-Pane Side-by-Side Verification */
-          <div className="flex-1 flex flex-col gap-4 min-h-0 animate-in fade-in">
+          <div className="flex-1 flex flex-col gap-3 min-h-0 animate-in fade-in">
+            {/* Active Workspace Recognition Status Cockpit */}
+            {isProcessing && (
+              <div
+                data-testid="workspace-processing-banner"
+                className="w-full bg-zinc-900/90 border border-blue-500/30 backdrop-blur-2xl rounded-2xl px-5 py-3 shadow-2xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-100">
+                        {engineMode === 'turbo' ? '⚡ Turbo VLM Active' : '🧠 Neural TrOCR Active'}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/25">
+                        Transcribing...
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 font-mono mt-0.5 max-w-xl truncate">
+                      {processingStage}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 ml-auto">
+                  {/* Progress bar */}
+                  <div className="w-36 sm:w-48 space-y-1">
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-zinc-500">Pipeline</span>
+                      <span className="text-blue-400 font-semibold">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden border border-zinc-700/50">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.max(10, Math.min(100, uploadProgress))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Split-Pane Verification Workspace */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0 overflow-hidden">
               {/* Left Column: Canvas Viewport with Floating Glass HUD Dock (7 cols) */}

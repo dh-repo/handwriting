@@ -11,6 +11,7 @@ import {
   ClipboardPaste,
   Camera,
   FolderOpen,
+  CheckCircle2,
 } from 'lucide-react';
 import { DocumentOCRResult } from '../types/ocr';
 import { ZeroFrictionSampleCards } from './ZeroFrictionSampleCards';
@@ -312,6 +313,49 @@ export const Dropzone: React.FC<DropzoneProps> = ({
     folderInputRef.current?.click();
   };
 
+  // Determine active stage index for multi-step progress
+  const getCurrentStepIndex = (progress: number, stageText: string): number => {
+    const lower = stageText.toLowerCase();
+    if (progress >= 95 || lower.includes('complete')) return 3;
+    if (
+      lower.includes('decod') ||
+      lower.includes('analyz') ||
+      lower.includes('extract') ||
+      lower.includes('stroke') ||
+      lower.includes('transformer') ||
+      progress >= 45
+    ) {
+      return 2;
+    }
+    if (lower.includes('segment') || progress >= 25) return 1;
+    return 0;
+  };
+
+  const currentStep = getCurrentStepIndex(uploadProgress, processingStage);
+
+  const PIPELINE_STEPS = [
+    {
+      id: 'ingestion',
+      title: 'Document Ingestion',
+      detail: 'Deskew & contrast normalization',
+    },
+    {
+      id: 'segmentation',
+      title: 'Stroke & Layout',
+      detail: 'Line crops & baseline detection',
+    },
+    {
+      id: 'decoding',
+      title: 'Neural VLM Decoding',
+      detail: 'Transformer attention over cursive',
+    },
+    {
+      id: 'verification',
+      title: 'Calibration & Verification',
+      detail: 'Confidence scoring & entities',
+    },
+  ];
+
   return (
     <div className={`w-full max-w-4xl mx-auto space-y-6 ${className}`}>
       {/* Expanded Main Dropzone Container */}
@@ -331,7 +375,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
             handleClick();
           }
         }}
-        className={`relative overflow-hidden flex flex-col items-center justify-center p-10 sm:p-14 rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer select-none outline-none group ${
+        className={`relative overflow-hidden flex flex-col items-center justify-center p-8 sm:p-12 rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer select-none outline-none group ${
           isDragOver
             ? 'border-indigo-400 bg-indigo-500/10 scale-[1.01] shadow-2xl shadow-indigo-500/20 ring-4 ring-indigo-500/20'
             : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/60 shadow-2xl backdrop-blur-2xl'
@@ -370,42 +414,127 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         />
 
         {/* Ambient Gradient Glow */}
-        <div className="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-indigo-600/15 via-blue-600/10 to-transparent blur-3xl opacity-40 pointer-events-none group-hover:opacity-65 transition-opacity" />
+        <div className="absolute w-80 h-80 rounded-full bg-gradient-to-tr from-indigo-600/15 via-blue-600/10 to-transparent blur-3xl opacity-40 pointer-events-none group-hover:opacity-65 transition-opacity" />
 
         {isLoading ? (
-          <div className="flex flex-col items-center text-center space-y-5 max-w-md py-4 relative z-10">
-            {/* Pulsing ambient glow */}
-            <div className="relative flex items-center justify-center">
-              <div className="absolute w-20 h-20 rounded-full bg-blue-500/20 blur-xl animate-pulse" />
-              <div className="w-14 h-14 rounded-2xl bg-zinc-800/90 border border-zinc-700/60 backdrop-blur-md flex items-center justify-center shadow-inner">
-                <Loader2 className="w-7 h-7 text-blue-400 animate-spin" />
+          /* Multi-Step Neural Processing Status Cockpit */
+          <div className="w-full max-w-2xl py-2 px-2 sm:px-4 space-y-6 relative z-10 text-left">
+            {/* Header: Status badge & Elapsed timer */}
+            <div className="flex items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono font-medium tracking-wide text-blue-400 bg-blue-500/10 border border-blue-500/25">
+                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                <span>NEURAL RECOGNITION ACTIVE</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 bg-zinc-800/80 border border-zinc-700/60 px-3 py-1 rounded-full">
+                <span>⏱</span>
+                <span>{elapsedSeconds.toFixed(1)}s elapsed</span>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <p className="font-semibold text-zinc-100 text-base sm:text-lg tracking-tight flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-400 animate-pulse" />
+            {/* Title & Stage message */}
+            <div className="space-y-1.5 text-center sm:text-left">
+              <h3 className="font-bold text-zinc-100 text-lg sm:text-xl tracking-tight flex items-center justify-center sm:justify-start gap-2.5">
+                <Sparkles className="w-5 h-5 text-blue-400 animate-pulse flex-shrink-0" />
                 <span>Transcribing Handwriting...</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-zinc-400 font-normal tracking-wide">
+                {processingStage}
               </p>
-              <p className="text-xs text-zinc-400 font-normal tracking-wide">{processingStage}</p>
-              {elapsedSeconds > 0 && (
-                <p className="text-[11px] text-zinc-500 font-mono pt-0.5">
-                  Processing time: {elapsedSeconds.toFixed(1)}s
-                </p>
-              )}
             </div>
 
-            {/* Smooth progress indicator */}
-            <div className="w-64 sm:w-80 bg-zinc-800 rounded-full h-1.5 overflow-hidden p-0.5 border border-zinc-700/50 shadow-inner">
-              <div
-                className="bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 h-full rounded-full transition-all duration-500 ease-out shadow-sm"
-                style={{ width: `${Math.max(15, uploadProgress)}%` }}
-              />
+            {/* Accessible Progress Meter */}
+            <div
+              role="progressbar"
+              aria-valuenow={uploadProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="space-y-1.5"
+            >
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-zinc-400">Recognition Pipeline</span>
+                <span className="text-blue-400 font-bold">{Math.max(10, Math.round(uploadProgress))}%</span>
+              </div>
+              <div className="w-full bg-zinc-800/90 rounded-full h-2 overflow-hidden p-0.5 border border-zinc-700/60 shadow-inner">
+                <div
+                  className="bg-gradient-to-r from-blue-500 via-indigo-400 to-emerald-400 h-full rounded-full transition-all duration-500 ease-out shadow-md shadow-blue-500/20 relative"
+                  style={{ width: `${Math.max(10, Math.min(100, uploadProgress))}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            {/* Stepped Pipeline Radar (4 Stages) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+              {PIPELINE_STEPS.map((step, idx) => {
+                const isCompleted = idx < currentStep;
+                const isActive = idx === currentStep;
+                const isPending = idx > currentStep;
+
+                return (
+                  <div
+                    key={step.id}
+                    className={`p-3 rounded-xl border transition-all duration-300 backdrop-blur-md flex flex-col justify-between ${
+                      isCompleted
+                        ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300 shadow-sm'
+                        : isActive
+                        ? 'bg-blue-500/10 border-blue-500/40 text-blue-200 ring-2 ring-blue-500/20 shadow-md shadow-blue-500/10'
+                        : 'bg-zinc-900/40 border-zinc-800/70 text-zinc-500'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                      <span className="text-[10px] font-mono font-medium tracking-wider uppercase">
+                        Step {idx + 1}
+                      </span>
+                      {isCompleted ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 font-semibold">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Done</span>
+                        </span>
+                      ) : isActive ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-400 font-semibold animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Active</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-zinc-600">Pending</span>
+                      )}
+                    </div>
+                    <div>
+                      <p
+                        className={`text-xs font-semibold tracking-tight ${
+                          isCompleted
+                            ? 'text-zinc-200'
+                            : isActive
+                            ? 'text-white'
+                            : 'text-zinc-500'
+                        }`}
+                      >
+                        {step.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug line-clamp-2">
+                        {step.detail}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Live Activity Log Pill */}
+            <div className="bg-zinc-950/90 rounded-xl border border-zinc-800/80 px-3.5 py-2.5 flex items-center justify-between font-mono text-xs text-zinc-300 shadow-inner">
+              <div className="flex items-center gap-2.5 truncate">
+                <span className="text-blue-400 select-none flex-shrink-0 font-bold">›</span>
+                <span className="text-zinc-500">neural-engine:</span>
+                <span className="text-zinc-300 truncate">active stream • stroke decoder online</span>
+              </div>
+              <span className="w-1.5 h-3.5 bg-blue-400 animate-pulse select-none flex-shrink-0" />
             </div>
           </div>
         ) : (
+          /* ReadMe-Inspired Idle Capsule Dropzone */
           <div className="flex flex-col items-center text-center space-y-4 relative z-10 max-w-xl">
-            {/* Refined Icon Container */}
+            {/* Elevated Icon Container */}
             <div className="w-14 h-14 rounded-2xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-zinc-300 shadow-lg group-hover:scale-105 group-hover:border-blue-400/50 group-hover:text-blue-400 transition-all duration-300">
               <UploadCloud className="w-7 h-7 transition-colors" />
             </div>
@@ -427,58 +556,57 @@ export const Dropzone: React.FC<DropzoneProps> = ({
                   e.stopPropagation();
                   handleClick();
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 shadow-md hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 shadow-md hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
               >
                 <span>Browse Files</span>
               </button>
             </div>
 
-            {/* Secondary Link Row (De-compartmentalized, subtle, clean) */}
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1 text-xs text-zinc-400">
+            {/* ReadMe-Style Inline Helper Pill Row */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs text-zinc-400">
+              <span className="text-zinc-500 font-medium">Try it out —</span>
               <button
                 type="button"
                 data-testid="badge-clipboard-paste"
                 onClick={handlePasteButtonClick}
-                title="Paste image directly from clipboard"
-                className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
+                title="Paste image directly from clipboard (Cmd+V)"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-700/50 transition-all cursor-pointer shadow-sm"
               >
-                <ClipboardPaste className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Paste from Clipboard</span>
+                <ClipboardPaste className="w-3 h-3 text-zinc-400" />
+                <span>Paste Clipboard</span>
               </button>
-              <span className="text-zinc-600 select-none">•</span>
               <button
                 type="button"
                 data-testid="badge-camera-capture"
                 onClick={handleCameraCaptureClick}
                 title="Capture handwriting via device camera or document scanner"
-                className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-700/50 transition-all cursor-pointer shadow-sm"
               >
-                <Camera className="w-3.5 h-3.5 text-zinc-400" />
+                <Camera className="w-3 h-3 text-zinc-400" />
                 <span>Camera / Scanner</span>
               </button>
-              <span className="text-zinc-600 select-none">•</span>
               <button
                 type="button"
                 data-testid="badge-browse-folder"
                 onClick={handleBrowseFolderClick}
                 title="Select an entire folder of handwriting scans"
-                className="inline-flex items-center gap-1.5 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-700/50 transition-all cursor-pointer shadow-sm"
               >
-                <FolderOpen className="w-3.5 h-3.5 text-zinc-400" />
+                <FolderOpen className="w-3 h-3 text-zinc-400" />
                 <span>Browse Folder</span>
               </button>
             </div>
 
             {/* Formats & Limit footnote */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] text-zinc-400">
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] text-zinc-500">
               <span className="inline-flex items-center gap-1">
                 <ImageIcon className="w-3 h-3 text-zinc-400" /> PNG, JPEG, TIFF
               </span>
-              <span className="text-zinc-600 select-none">•</span>
+              <span className="text-zinc-700 select-none">•</span>
               <span className="inline-flex items-center gap-1">
                 <FileText className="w-3 h-3 text-zinc-400" /> Multi-page PDF
               </span>
-              <span className="text-zinc-600 select-none">•</span>
+              <span className="text-zinc-700 select-none">•</span>
               <span className="font-mono text-zinc-400">Up to 50 MB</span>
             </div>
           </div>

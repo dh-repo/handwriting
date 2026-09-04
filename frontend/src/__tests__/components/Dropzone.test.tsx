@@ -58,5 +58,37 @@ describe('Dropzone Component', () => {
 
     expect(screen.getByText(/Transcribing Handwriting.../i)).toBeInTheDocument();
     expect(screen.getByText(/Segmenting handwriting lines.../i)).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '65');
+  });
+
+  it('renders multi-step pipeline stages with correct active and completed states', () => {
+    render(
+      <Dropzone
+        onFileAccepted={() => {}}
+        isLoading={true}
+        uploadProgress={55}
+        processingStage="Neural decoding lines..."
+      />
+    );
+
+    // Verify all 4 pipeline stages are rendered
+    expect(screen.getByText('Document Ingestion')).toBeInTheDocument();
+    expect(screen.getByText('Stroke & Layout')).toBeInTheDocument();
+    expect(screen.getByText('Neural VLM Decoding')).toBeInTheDocument();
+    expect(screen.getByText('Calibration & Verification')).toBeInTheDocument();
+
+    // Verify status states
+    expect(screen.getByText(/NEURAL RECOGNITION ACTIVE/i)).toBeInTheDocument();
+    expect(screen.getByText(/active stream • stroke decoder online/i)).toBeInTheDocument();
+  });
+
+  it('renders ReadMe-style inline helper pills for clipboard, camera, and folder', () => {
+    render(<Dropzone onFileAccepted={() => {}} />);
+
+    expect(screen.getByText(/Try it out —/i)).toBeInTheDocument();
+    expect(screen.getByTestId('badge-clipboard-paste')).toBeInTheDocument();
+    expect(screen.getByTestId('badge-camera-capture')).toBeInTheDocument();
+    expect(screen.getByTestId('badge-browse-folder')).toBeInTheDocument();
   });
 });
+
