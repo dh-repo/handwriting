@@ -15,6 +15,7 @@ export async function POST(req: Request | NextRequest) {
     let options: Record<string, unknown> | null = null;
     let beamWidth = '4';
     let rescore = 'false';
+    let turbo = 'true';
 
     const contentType = req.headers?.get('content-type') || '';
 
@@ -26,6 +27,8 @@ export async function POST(req: Request | NextRequest) {
         filename = json.filename || filename;
         modelType = json.model_type || modelType;
         options = json.options || null;
+        if (json.turbo !== undefined) turbo = String(json.turbo);
+        if (options && options.turbo !== undefined) turbo = String(options.turbo);
       } catch {
         // invalid JSON body
       }
@@ -52,6 +55,10 @@ export async function POST(req: Request | NextRequest) {
         const rescoreEntry = formData.get('rescore');
         if (typeof rescoreEntry === 'string' && rescoreEntry.length > 0) {
           rescore = rescoreEntry;
+        }
+        const turboEntry = formData.get('turbo');
+        if (typeof turboEntry === 'string' && turboEntry.length > 0) {
+          turbo = turboEntry;
         }
       } catch (formErr: unknown) {
         console.warn('[API /api/recognize] FormData parsing failed:', formErr);
@@ -89,10 +96,12 @@ export async function POST(req: Request | NextRequest) {
           const proxyFormData = new FormData();
           proxyFormData.append('file', file);
           proxyFormData.append('model_type', modelType);
+          proxyFormData.append('turbo', turbo);
 
           const qs = new URLSearchParams({
             beam_width: beamWidth,
             rescore,
+            turbo,
           }).toString();
           response = await fetch(`${backendUrl}/v1/recognize?${qs}`, {
             method: 'POST',
@@ -103,12 +112,13 @@ export async function POST(req: Request | NextRequest) {
           const payload = {
             file_base64: fileBase64,
             filename,
-            options,
+            options: { ...(options || {}), turbo: turbo === 'true' },
           };
           const optRecord = options ?? {};
           const qs = new URLSearchParams({
             beam_width: String(optRecord.beam_width ?? 4),
             rescore: String(optRecord.rescore ?? false),
+            turbo,
           }).toString();
           response = await fetch(`${backendUrl}/v1/recognize?${qs}`, {
             method: 'POST',

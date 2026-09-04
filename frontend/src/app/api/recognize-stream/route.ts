@@ -16,6 +16,7 @@ export async function POST(req: Request | NextRequest) {
     let beamWidth = '4';
     let rescore = 'false';
     let adaptive = 'true';
+    let turbo = 'true';
 
     const contentType = req.headers?.get('content-type') || '';
 
@@ -27,6 +28,8 @@ export async function POST(req: Request | NextRequest) {
         filename = json.filename || filename;
         modelType = json.model_type || modelType;
         options = json.options || null;
+        if (json.turbo !== undefined) turbo = String(json.turbo);
+        if (options && options.turbo !== undefined) turbo = String(options.turbo);
       } catch {
         // invalid JSON
       }
@@ -48,6 +51,8 @@ export async function POST(req: Request | NextRequest) {
         if (typeof rescoreEntry === 'string' && rescoreEntry.length > 0) rescore = rescoreEntry;
         const adaptiveEntry = formData.get('adaptive');
         if (typeof adaptiveEntry === 'string' && adaptiveEntry.length > 0) adaptive = adaptiveEntry;
+        const turboEntry = formData.get('turbo');
+        if (typeof turboEntry === 'string' && turboEntry.length > 0) turbo = turboEntry;
       } catch (formErr: unknown) {
         console.warn('[API /api/recognize-stream] FormData parsing failed:', formErr);
       }
@@ -115,12 +120,14 @@ export async function POST(req: Request | NextRequest) {
           beam_width: beamWidth,
           rescore,
           adaptive,
+          turbo,
         }).toString();
 
         if (file) {
           const proxyFormData = new FormData();
           proxyFormData.append('file', file);
           proxyFormData.append('model_type', modelType);
+          proxyFormData.append('turbo', turbo);
 
           backendRes = await fetch(`${backendUrl}/v1/recognize/stream?${qs}`, {
             method: 'POST',
@@ -131,7 +138,7 @@ export async function POST(req: Request | NextRequest) {
           const payload = {
             file_base64: fileBase64,
             filename,
-            options,
+            options: { ...(options || {}), turbo: turbo === 'true' },
           };
           backendRes = await fetch(`${backendUrl}/v1/recognize/stream?${qs}`, {
             method: 'POST',

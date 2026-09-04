@@ -94,6 +94,8 @@ export class ApiClient {
     if (options.dpi !== undefined) params.set('dpi', String(options.dpi));
     if (options.beam_width !== undefined) params.set('beam_width', String(options.beam_width));
     if (options.rescore !== undefined) params.set('rescore', String(options.rescore));
+    if (options.adaptive !== undefined) params.set('adaptive', String(options.adaptive));
+    if (options.turbo !== undefined) params.set('turbo', String(options.turbo));
     if (options.model_type) params.set('model_type', options.model_type);
     const qs = params.toString();
     return qs ? `?${qs}` : '';
@@ -138,6 +140,8 @@ export class ApiClient {
     if (options?.extract_words !== undefined) formData.append('extract_words', String(options.extract_words));
     if (options?.beam_width !== undefined) formData.append('beam_width', String(options.beam_width));
     if (options?.rescore !== undefined) formData.append('rescore', String(options.rescore));
+    if (options?.adaptive !== undefined) formData.append('adaptive', String(options.adaptive));
+    if (options?.turbo !== undefined) formData.append('turbo', String(options.turbo));
 
     const qs = this.buildQueryString(options);
 
@@ -251,6 +255,7 @@ export class ApiClient {
     if (options?.beam_width !== undefined) formData.append('beam_width', String(options.beam_width));
     if (options?.rescore !== undefined) formData.append('rescore', String(options.rescore));
     if (options?.adaptive !== undefined) formData.append('adaptive', String(options.adaptive));
+    if (options?.turbo !== undefined) formData.append('turbo', String(options.turbo));
 
     const qs = this.buildQueryString(options);
     const streamUrl = this.baseUrl ? `${this.baseUrl}/v1/recognize/stream${qs}` : `/api/recognize-stream${qs}`;

@@ -95,6 +95,7 @@ class RecognitionResponse(BaseModel):
     pages: List[PageResult] = Field(..., description="Transcribed page records")
     processing_time_ms: float = Field(..., ge=0.0, description="Total processing latency in milliseconds")
     preprocessing_flags: Optional[Dict[str, Any]] = Field(default=None, description="Preprocessing flags applied")
+    engine_used: Optional[str] = Field(default="trocr", description="Engine used ('turbo-vlm' | 'trocr')")
 
     model_config = ConfigDict(extra="ignore")
 
@@ -170,6 +171,7 @@ class RecognitionOptions(BaseModel):
     beam_width: int = Field(default=1, ge=1, le=16, description="Beam search candidate width")
     rescore: bool = Field(default=False, description="Enable RxNorm beam rescoring")
     adaptive: bool = Field(default=True, description="Enable adaptive fast 2-pass decoding")
+    turbo: bool = Field(default=True, description="Enable Turbo VLM mode for sub-3s high-accuracy recognition")
 
     model_config = ConfigDict(extra="ignore")
 

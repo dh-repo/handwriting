@@ -170,3 +170,23 @@ def test_recognize_line_rejects_tiny_crop(client: TestClient) -> None:
         files={"file": ("tiny.png", buf.getvalue(), "image/png")},
     )
     assert resp.status_code == 400
+
+
+def test_recognize_turbo_query_option(client: TestClient, sample_image_bytes: bytes) -> None:
+    """Verify POST /v1/recognize accepts turbo=True/False query option."""
+    resp = client.post(
+        "/v1/recognize?turbo=true",
+        files={"file": ("note.png", sample_image_bytes, "image/png")},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "document_id" in data
+    assert "pages" in data
+
+    resp_false = client.post(
+        "/v1/recognize?turbo=false",
+        files={"file": ("note.png", sample_image_bytes, "image/png")},
+    )
+    assert resp_false.status_code == 200
+    assert "document_id" in resp_false.json()
+

@@ -78,6 +78,14 @@ class Settings(BaseSettings):
         default="gpt-4o",
         description="Azure OpenAI deployment name",
     )
+    ENABLE_TURBO_MODE: bool = Field(
+        default=True,
+        description="Enable sub-3s Turbo VLM mode using Azure OpenAI",
+    )
+    TURBO_MODEL_DEPLOYMENT: str = Field(
+        default="gpt-4o-mini",
+        description="Azure OpenAI deployment name for Turbo mode",
+    )
     BEAM_WIDTH: int = Field(default=4, ge=1, le=16, description="Beam search width (K candidates)")
     NUM_RETURN_SEQUENCES: int = Field(default=5, ge=1, le=16, description="Candidate beam count")
     ADAPTIVE_BEAM_SEARCH: bool = Field(

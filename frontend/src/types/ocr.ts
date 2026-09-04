@@ -73,6 +73,7 @@ export interface DocumentOCRResult {
   preprocessing_flags?: Record<string, unknown>;
   is_mock?: boolean;
   signature_reviews?: SignatureReviewRecord[];
+  engine_used?: string;
 }
 
 export type SignatureDecision = 'pending' | 'accepted' | 'rejected';
@@ -118,6 +119,7 @@ export interface RecognitionOptions {
   rescore?: boolean;
   adaptive?: boolean;
   model_type?: string;
+  turbo?: boolean;
 }
 
 export interface RecognizeJsonRequest {

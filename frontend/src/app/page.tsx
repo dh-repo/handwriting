@@ -101,6 +101,7 @@ export default function WorkspacePage() {
   const [batchStageText, setBatchStageText] = useState<string>('');
   const [completedBatchDocuments, setCompletedBatchDocuments] = useState<DocumentOCRResult[]>([]);
   const [activeBatchDocIndex, setActiveBatchDocIndex] = useState<number>(0);
+  const [engineMode, setEngineMode] = useState<'turbo' | 'trocr'>('turbo');
 
   const cleanupObjectURLs = useCallback(() => {
     activeObjectUrlsRef.current.forEach((url) => {
@@ -167,15 +168,25 @@ export default function WorkspacePage() {
       const progressInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         if (decodedCount === 0) {
-          if (elapsed < 3) {
-            setUploadProgress(20);
-            setProcessingStage('Preprocessing, deskewing & segmenting line crops...');
-          } else if (elapsed < 6) {
-            setUploadProgress(28);
-            setProcessingStage('Vision transformer extracting handwriting stroke tokens...');
+          if (engineMode === 'turbo') {
+            if (elapsed < 2) {
+              setUploadProgress(30);
+              setProcessingStage('⚡ Segmenting document & querying Turbo VLM...');
+            } else {
+              setUploadProgress(65);
+              setProcessingStage('⚡ Turbo VLM analyzing cursive handwriting...');
+            }
           } else {
-            setUploadProgress(35);
-            setProcessingStage(`Neural decoding lines (${elapsed}s elapsed)...`);
+            if (elapsed < 3) {
+              setUploadProgress(20);
+              setProcessingStage('Preprocessing, deskewing & segmenting line crops...');
+            } else if (elapsed < 6) {
+              setUploadProgress(28);
+              setProcessingStage('Vision transformer extracting handwriting stroke tokens...');
+            } else {
+              setUploadProgress(35);
+              setProcessingStage(`Neural decoding lines (${elapsed}s elapsed)...`);
+            }
           }
         }
       }, 1000);
@@ -187,6 +198,7 @@ export default function WorkspacePage() {
             beam_width: 4,
             rescore: false,
             adaptive: true,
+            turbo: engineMode === 'turbo',
             model_type: batchConfig.modelBias,
           },
           {
@@ -241,6 +253,7 @@ export default function WorkspacePage() {
       }
     },
     [
+      engineMode,
       batchConfig.modelBias,
       cleanupObjectURLs,
       appendStreamedLine,
@@ -348,6 +361,7 @@ export default function WorkspacePage() {
             beam_width: 4,
             rescore: false,
             adaptive: true,
+            turbo: engineMode === 'turbo',
           },
           {
             onMetadata: (meta) => {
@@ -594,6 +608,40 @@ export default function WorkspacePage() {
               <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto font-normal leading-relaxed">
                 Effortlessly read cursive correspondence, archival notes, signatures, receipts, and multi-page documents.
               </p>
+
+              {/* Engine Selection Toggle: Turbo Mode vs Neural TrOCR */}
+              <div className="pt-2 flex justify-center">
+                <div className="inline-flex items-center p-1 bg-white/[0.04] border border-white/10 rounded-2xl backdrop-blur-xl shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => setEngineMode('turbo')}
+                    data-testid="engine-toggle-turbo"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      engineMode === 'turbo'
+                        ? 'bg-gradient-to-r from-amber-500/25 to-orange-500/25 text-amber-300 border border-amber-500/40 shadow-md shadow-amber-500/10'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-amber-400">⚡</span>
+                    <span>Turbo VLM</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-medium">~2s • 100% Cursive</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEngineMode('trocr')}
+                    data-testid="engine-toggle-trocr"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      engineMode === 'trocr'
+                        ? 'bg-gradient-to-r from-blue-500/25 to-indigo-500/25 text-blue-300 border border-blue-500/40 shadow-md shadow-blue-500/10'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>🧠</span>
+                    <span>Neural TrOCR</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 font-medium">On-Device</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Expanded Dropzone Component with Source Parity */}
@@ -702,6 +750,18 @@ export default function WorkspacePage() {
                     </button>
                   </>
                 )}
+
+                <span className="text-slate-600">•</span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                    document?.engine_used === 'turbo-vlm' || (document?.preprocessing_flags as any)?.engine === 'turbo-vlm'
+                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                      : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                  }`}
+                >
+                  {document?.engine_used === 'turbo-vlm' || (document?.preprocessing_flags as any)?.engine === 'turbo-vlm' ? '⚡ Turbo VLM' : '🧠 TrOCR'}
+                  {document?.processing_time_ms ? ` (${(document.processing_time_ms / 1000).toFixed(1)}s)` : ''}
+                </span>
               </div>
 
               {/* Action Buttons & Exports */}

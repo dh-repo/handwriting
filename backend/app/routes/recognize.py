@@ -93,6 +93,7 @@ async def _extract_recognition_inputs(
     beam_width: int,
     rescore: bool,
     adaptive: bool,
+    turbo: bool,
     settings: Settings,
 ) -> Tuple[bytes, str, RecognitionOptions]:
     content_type = request.headers.get("content-type", "")
@@ -107,6 +108,7 @@ async def _extract_recognition_inputs(
         beam_width=beam_width,
         rescore=rescore,
         adaptive=adaptive,
+        turbo=turbo,
     )
 
     if "application/json" in content_type:
@@ -180,6 +182,7 @@ async def recognize_document(
     beam_width: int = Query(default=1, ge=1, le=16),
     rescore: bool = Query(default=False),
     adaptive: bool = Query(default=True),
+    turbo: bool = Query(default=True),
     settings: Settings = Depends(get_settings),
 ) -> RecognitionResponse:
     """
@@ -189,7 +192,7 @@ async def recognize_document(
     engine = get_engine()
     file_bytes, filename, options = await _extract_recognition_inputs(
         request, file, deskew, enhance_contrast, binarization_method,
-        extract_words, dpi, beam_width, rescore, adaptive, settings
+        extract_words, dpi, beam_width, rescore, adaptive, turbo, settings
     )
 
     try:
@@ -224,6 +227,7 @@ async def recognize_document_stream(
     beam_width: int = Query(default=1, ge=1, le=16),
     rescore: bool = Query(default=False),
     adaptive: bool = Query(default=True),
+    turbo: bool = Query(default=True),
     settings: Settings = Depends(get_settings),
 ) -> StreamingResponse:
     """
@@ -233,7 +237,7 @@ async def recognize_document_stream(
     engine = get_engine()
     file_bytes, filename, options = await _extract_recognition_inputs(
         request, file, deskew, enhance_contrast, binarization_method,
-        extract_words, dpi, beam_width, rescore, adaptive, settings
+        extract_words, dpi, beam_width, rescore, adaptive, turbo, settings
     )
 
     async def _event_generator() -> AsyncIterator[str]:
