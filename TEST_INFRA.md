@@ -1,3 +1,5 @@
+> Historical design/test notes. Current supported behavior and verification are documented in README.md and TEST_READY.md. Earlier readiness, accuracy, cloud-default, and automatic-learning claims below are superseded.
+
 # Test Infrastructure: Self-Tuning HTR Flywheel (Features F1–F17)
 
 ## 1. Executive Summary & Testing Philosophy

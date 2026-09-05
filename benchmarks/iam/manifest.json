@@ -1,0 +1,509 @@
+{
+  "purpose": "evaluation_only",
+  "source": "Teklia/IAM-line",
+  "revision": "fbdad97500ce54635c0d1ba306bf535cb40656cf",
+  "split": "test",
+  "scope": "line",
+  "rows": [
+    {
+      "image": "00000.png",
+      "text": "assuredness \" Bella Bella Marie \" ( Parlophone ) , a lively song that changes tempo mid-way .",
+      "sha256": "162f521ad5284d8f88c5bd3041bc173e9a2a8aca428144f071c6a8fc3c704768"
+    },
+    {
+      "image": "00001.png",
+      "text": "I don't think he will storm the charts with this one , but it 's a good start .",
+      "sha256": "df81523ea7522a451b33cdf011f360c37a8c2acc835d829a59e3b66dd8f29e03"
+    },
+    {
+      "image": "00002.png",
+      "text": "CHRIS CHARLES , 39 , who lives in Stockton-on-Tees , is an accountant .",
+      "sha256": "e3f079f2a61a82263a6ec0137ab362d0f2082519cf14e9207905813bf27dc76c"
+    },
+    {
+      "image": "00003.png",
+      "text": "Become a success with a disc and hey presto ! You 're a star ... . Rolly sings with",
+      "sha256": "7915ebf4ed853ca6c513b369821bedf0d993fb827d41b2b72c84a9d30a2bfecd"
+    },
+    {
+      "image": "00004.png",
+      "text": "Tolch , as he is known in Tin Pan Alley , likes songs with a month in the title . He wrote",
+      "sha256": "aebcc0f6fa9c719c967e781594cdd9b3b7cc8835ab70f0997fcdf5defa353e8d"
+    },
+    {
+      "image": "00005.png",
+      "text": "\" My September Love , \" the big David Whitfield hit of 1956 .",
+      "sha256": "173a33667051ccce66fe420a5efb069359ac026083ab99922a9a2622c83dc678"
+    },
+    {
+      "image": "00006.png",
+      "text": "He is also a director of a couple of garages . And he finds time as well to be a lyric",
+      "sha256": "984c402bef3939da8647116f98aff14c5e0b79d23afbf436233aa5f6f53f922d"
+    },
+    {
+      "image": "00007.png",
+      "text": "writer . He writes with Tolchard Evans , composer of \" Lady of Spain \" and other big hits .",
+      "sha256": "c4d4bd9cedd9cebf19df4d0ac91d7b910392017d239e5ccb2796816da99267d6"
+    },
+    {
+      "image": "00008.png",
+      "text": "The numbers include \" Scotland the Brave , \" \" Men of Harlech , \"",
+      "sha256": "13089bc157b32cfad29bdbb3b51c0ad5aec05ff61fd0ed335b47abc30f18e1d1"
+    },
+    {
+      "image": "00009.png",
+      "text": "Fay Compton stars in \" No Hiding Place \" (I T V , 9.35 p.m. ) .",
+      "sha256": "30cdea1c6ab4abc9943eb501cf6305c1a75a32531d61314b91ce54c15843853e"
+    },
+    {
+      "image": "00010.png",
+      "text": "She plays the possessive mother of a man whose hobby revolves",
+      "sha256": "46e8d23df14b99d2469cbbae2314a3e102dd5726ecaa39f9f359a5f755370d93"
+    },
+    {
+      "image": "00011.png",
+      "text": "round a doll's house .",
+      "sha256": "f3f16ec86b37091aa52ea4cf48daee031b4d41c5aea9376e4341d5a69b60fdd6"
+    },
+    {
+      "image": "00012.png",
+      "text": "THREE people will be hypnotised in tonight's \" Lifeline \"",
+      "sha256": "ca9aa9b446ad70a12dd4dcd2723f1d937038afbc286f2a68398931aaf7bf81b5"
+    },
+    {
+      "image": "00013.png",
+      "text": "( B B C , 10.15 ) .",
+      "sha256": "c4e714785ad986d9f0bc602c0bdd0ae9568f2291f096b959a49bae7503bf1368"
+    },
+    {
+      "image": "00014.png",
+      "text": "\" McNamara's Band , \" \" Greensleeves \" and \" English Rose . \"",
+      "sha256": "a6a2985e7d53e46d5bb89cf386547a002ffe3aeafc6b6840175c7fcda99fedf6"
+    },
+    {
+      "image": "00015.png",
+      "text": "of Rhodesia and Nyasaland ( 10.30 p.m. ) .",
+      "sha256": "a25836204b2b9c3f3e1039dbe70e4d8bb3e55cf07ee57aab1ede3e146e661824"
+    },
+    {
+      "image": "00016.png",
+      "text": "They will be asked to comment on the design of everyday articles",
+      "sha256": "e655fb676924c4a31c965cd7c57125d90e6274d8cd0a9894cbc626396d87fb42"
+    },
+    {
+      "image": "00017.png",
+      "text": "playwright Arnold Wesker . \" Instead , Muggeridge's appointment",
+      "sha256": "9978df14e62a74e70028f69252bf09299f29d2735df2e6d05024d2db898137c0"
+    },
+    {
+      "image": "00018.png",
+      "text": "such as a chair and a motor-car . The idea is to see what happens when",
+      "sha256": "e0dbb4751136f4834ce11b833eca541aa74b20fa5c73ec49e1e05efb85217928"
+    },
+    {
+      "image": "00019.png",
+      "text": "will be with Sir Roy Welensky the Premier of the Federation",
+      "sha256": "b2bcc8675157c2bfae585b55074a26f6e9a95d1a29c948831add8110c51f0d4a"
+    },
+    {
+      "image": "00020.png",
+      "text": "parts of the mind not normally available without hypnosis are used .",
+      "sha256": "65760e9c39689b9f9f2635d8b554311777d555ac7948e6d6a9360299dfa1dad2"
+    },
+    {
+      "image": "00021.png",
+      "text": "I T V have postponed Malcolm Muggeridge's \" Appointment with",
+      "sha256": "a396489e7a39aaa1ad8ae0567edb4a29c0bcbad1d1d84733851ae42855012a4b"
+    },
+    {
+      "image": "00022.png",
+      "text": "success last night in I T V's \" Private Potter , \" his",
+      "sha256": "54ca2c635b8bc8cf40789e49f42a638b5dca83fe5aff15930e4c2f68f10bc347"
+    },
+    {
+      "image": "00023.png",
+      "text": "man could only be regarded as a machine .",
+      "sha256": "ccb8221b6e3e4619df126bf56baa2fba2767793180b18352eb70decd8f236c1d"
+    },
+    {
+      "image": "00024.png",
+      "text": "date . \" ACTOR Tom Courtenay was an outstanding",
+      "sha256": "da8db840f65c39e73bfc7ab4c921e782e06a641c37795a6e870aec7367fe69c8"
+    },
+    {
+      "image": "00025.png",
+      "text": "the switch because of the topicality of African",
+      "sha256": "852eb7b3668ed15aaea57c3c2f6c9197f85916a360ff4f65aa9356993c4dedf9"
+    },
+    {
+      "image": "00026.png",
+      "text": "essay on soldiering which stated that a fighting",
+      "sha256": "3518f2c651e17d88fc385f1003c28976f9d770e76458091ce8c3e4bc26b6b84b"
+    },
+    {
+      "image": "00027.png",
+      "text": "Say Granada T V , the producers : \" We decided to make",
+      "sha256": "9fe02cf9495dad88de6ec4fb73cc34f25a7260bd508f10e14a96be262a6dd21e"
+    },
+    {
+      "image": "00028.png",
+      "text": "first big T V part . The play was a brilliantly-written",
+      "sha256": "2eb9d6a932415f53288a58e9064b823968437e73f24a55146bd2b80edf856ffa"
+    },
+    {
+      "image": "00029.png",
+      "text": "affairs . The Wesker interview will be seen at a later",
+      "sha256": "7c12d407c2b69a5db44bd4af4d73aa3e17279f24ce72e4a6d0e317eb9b274c1a"
+    },
+    {
+      "image": "00030.png",
+      "text": "craggy face , and obstinate , baffled eyes . They stripped",
+      "sha256": "211bb241c7d92757f0002ed9e432347c048fc0bc31eb430f3b818cadd11bed85"
+    },
+    {
+      "image": "00031.png",
+      "text": "claimed he had seen a vision of God - only the padre and his",
+      "sha256": "1a62732acaaa4e335fad2ca709db7c13756a3c27bcf7a093c957f1488733bdfb"
+    },
+    {
+      "image": "00032.png",
+      "text": "Potter screamed during an action , and was arrested . He",
+      "sha256": "c0e91cfc602b72268a613dad23a4b356399757e59042bf8a6f3dd18c46562a7e"
+    },
+    {
+      "image": "00033.png",
+      "text": "him of his ugly battle-dress , to leave him for",
+      "sha256": "472f1334442233fd40abeeee1e837cc5204a66377b73552ead50ff75673a3e66"
+    },
+    {
+      "image": "00034.png",
+      "text": "vision .",
+      "sha256": "4f32dd00f44e30784862c7e32382d758a1fa75ff169de403368daccafff786d3"
+    },
+    {
+      "image": "00035.png",
+      "text": "what he was - Potter , a frightened boy who had a",
+      "sha256": "ac2db37ccf62b65a5cfb54812d79a0a57a1575544f1e56f8c0e2c7e5fffbdb73"
+    },
+    {
+      "image": "00036.png",
+      "text": "C O believed him . Courtenay played the part with a gawky ,",
+      "sha256": "b2a65325874536e28de5c67b253f38ddfe1c6ffc75cff3cd26175808767b1ce4"
+    },
+    {
+      "image": "00037.png",
+      "text": "Northern defiance . The cameras played continuously on his",
+      "sha256": "9b451bbedcfc2d4da0bbfd205dbaf768935247d9b7bf2e4e0a46be02eee3b9b8"
+    },
+    {
+      "image": "00038.png",
+      "text": "to the European Common Market .",
+      "sha256": "ecaab299804b7abd5f18204dbd993dc9ca2a734b76c2b5d63d42d682ce773dae"
+    },
+    {
+      "image": "00039.png",
+      "text": "scene , ranging from pubs , the Eton wall game ,",
+      "sha256": "8dc0ffee5c9169b1b1036afb3233f0b67b4518443b229a671fa26cc193d0557f"
+    },
+    {
+      "image": "00040.png",
+      "text": "Dennis Brogan , Shelagh Delaney , and Alan Sillitoe .",
+      "sha256": "98399960092ed645bb0a30a5b8f84ac1fc53fd65897863a7a296f6fa8d51e694"
+    },
+    {
+      "image": "00041.png",
+      "text": "The film replaced \" What 's My Line ? \" and \" Be My",
+      "sha256": "8f483502885fc733aee37ed6cfb5b2fe7c63515a1cdfc654314e0589ae505b44"
+    },
+    {
+      "image": "00042.png",
+      "text": "British personalities . Among them - Professor",
+      "sha256": "263eab9e5ba5aaa421276bb0b1bda32102b56ae75c312dbe6a36a8b7848547e3"
+    },
+    {
+      "image": "00043.png",
+      "text": "The film covered a wide aspect of the British",
+      "sha256": "0db7316613d7ba2b2345aadc07eb0d1777b522106e3d139d866953dc69de9762"
+    },
+    {
+      "image": "00044.png",
+      "text": "Guest \" programmes because of an electricians'",
+      "sha256": "163df26de80b46df9f48c596226d6c202c72c572c78a8c7e952d711cca624703"
+    },
+    {
+      "image": "00045.png",
+      "text": "of an American T V reporter , Eric Sevareid , and",
+      "sha256": "baa6d902a98dffe1f01ddaacdd73b81f5c76cda5c2c7ab2d8e214183ef59f3e1"
+    },
+    {
+      "image": "00046.png",
+      "text": "strike . It showed Britain today through the eyes",
+      "sha256": "2347d0be560348605d7813b46f18c3229c4078c83f6b6f1aacb0e144dcd6ef09"
+    },
+    {
+      "image": "00047.png",
+      "text": "Britain was slipping behind ... .",
+      "sha256": "0b15cbf025fa9b6d919374f01f0448147b183b626a206b124f771c15f666c3a8"
+    },
+    {
+      "image": "00048.png",
+      "text": "to make the strongest criticisms . He said",
+      "sha256": "0fdfe9a6873a3d5e6dce6d1d04b8ff0f7f3e7fb73d8c1a557a3da60314734397"
+    },
+    {
+      "image": "00049.png",
+      "text": "Shelagh Delaney and Alan Sillitoe attacked",
+      "sha256": "2a4c82c7dc6bb0fb85fb716caa5b7421c22f55af58e36728fac9b588b482510d"
+    },
+    {
+      "image": "00050.png",
+      "text": "that in the race of the modern nations ,",
+      "sha256": "d2485c2b9d087affb49ab8965b0bc0493f903f559af5d129799b7083cd69d40a"
+    },
+    {
+      "image": "00051.png",
+      "text": "education . It was left to reporter Sevareid",
+      "sha256": "3758a551d615df8df591044ad88e662103e002361a603bfc7e1c4a337436f6e3"
+    },
+    {
+      "image": "00052.png",
+      "text": "other chums sniffing the wind and",
+      "sha256": "fb07e0e588cf48783e10e64d3c67f57b5c9fa45a2ec2bcf742bbc6c1456bfe7f"
+    },
+    {
+      "image": "00053.png",
+      "text": "offering to drop by for a chat .",
+      "sha256": "5f19220e3be6a95f5f45c37a02a927155146a088f214921017fad2d79dee2c2a"
+    },
+    {
+      "image": "00054.png",
+      "text": "arrived two hours earlier by appointment",
+      "sha256": "21c746943d89fcffb773a980c274a85a33950b877d9a8be0061b4cd647f17ae9"
+    },
+    {
+      "image": "00055.png",
+      "text": "to talk to the author of Borstal Boy and",
+      "sha256": "d28a386266885bdd69ae73a4fce982a219d374cf3b10582445080ffac74e5586"
+    },
+    {
+      "image": "00056.png",
+      "text": "The Hostage about his new work , if any ,",
+      "sha256": "60a193e074a3a1993bc2fbcb17a0b0937336f9841de411625abc5c3ea67dd508"
+    },
+    {
+      "image": "00057.png",
+      "text": "and who is now being pluckily convivial",
+      "sha256": "263f9f357edbe7ded346e2124a1d6d1719409c6802f0bfb2072fa8d62ac3c93b"
+    },
+    {
+      "image": "00058.png",
+      "text": "has rung a couple of times , calls from",
+      "sha256": "ed4025edc5184c4af3625acff9906711af01563e2275df83ca2ac190438c65d4"
+    },
+    {
+      "image": "00059.png",
+      "text": "to fight off the frustration . The telephone",
+      "sha256": "cb56c325697b3a6f1b6322357f9969e633add88b4ad34455822e334a081d47b7"
+    },
+    {
+      "image": "00060.png",
+      "text": "ALSO present is a London journalist who",
+      "sha256": "7687e49761fbde38d9305671d325002846f68b2d9d1d815c99ce9327c21ec207"
+    },
+    {
+      "image": "00061.png",
+      "text": "the Synoptics can be reasonably solved by paying due regard to the time and",
+      "sha256": "8a39e0c8d32024b3e904fd7def256841994d1da68db017219c085e2486d33089"
+    },
+    {
+      "image": "00062.png",
+      "text": "plan and to the different public for which , or against which , the author wrote .",
+      "sha256": "2eb82417053a5c9a6da0ad32426303a26a08263462e1d4c1ae46e60cde3117dd"
+    },
+    {
+      "image": "00063.png",
+      "text": "The third article excluded any allegorical interpretation of the Gospel .",
+      "sha256": "f8587861d5930679ffe399e6c4d2a39a6892796fdfaeee2dd36df945d4ff7a9e"
+    },
+    {
+      "image": "00064.png",
+      "text": "The second said that the problems which arise from the comparisons with",
+      "sha256": "6e592cc6c6027bbe5243ceab1ae5e26af581ba865e374a545c90d0f798d4071e"
+    },
+    {
+      "image": "00065.png",
+      "text": "Fourth Gospel by explanations based on assumed textual dislocations . The",
+      "sha256": "4ceaf41d60f60c9fe8c077656b7cefd99e9342a2ec0d656b49ad00982fdc032f"
+    },
+    {
+      "image": "00066.png",
+      "text": "There is a whole group of theories which attempt to explain the problems of the",
+      "sha256": "3301063f7b8b8fcdbf8fccfbd99dad82cec559769cc64a2bc9e21a45a6e32bee"
+    },
+    {
+      "image": "00067.png",
+      "text": "could of the chaos by placing the fragments , or sheets , or pages , in order .",
+      "sha256": "e03160e9b8e6399c85de46d69b6165efdc304fe839331806f833fdfe916a4eb5"
+    },
+    {
+      "image": "00068.png",
+      "text": "present state of the Gospel is the result of an accident-prone history . The",
+      "sha256": "b261a0125219847b245ba5f12d4fe0c9003ff035e1e07c80367be1e08bd4e8d9"
+    },
+    {
+      "image": "00069.png",
+      "text": "accidentally damaged . An editor , who was not the author , made what he",
+      "sha256": "8ace6633f6faccf43a73062c4b3994c1094e8ae7f923228c04cfd2968b047d56"
+    },
+    {
+      "image": "00070.png",
+      "text": "original was written on a roll , or codex , which fell into disorder or was",
+      "sha256": "f52e40fe44248b176b3b9cac58bb2754504e04e5432dbb76ae14cd968d52dee3"
+    },
+    {
+      "image": "00071.png",
+      "text": "showing that such changes are part of a",
+      "sha256": "17d28817796ef64aa41adbc8117254a44e17fcddda7f71e6f7d1a4750d91be91"
+    },
+    {
+      "image": "00072.png",
+      "text": "how this enlargement was effected nor has he",
+      "sha256": "e07415be20f1d963d35c9ace979cabff77bd44362059f3feb7f211dddcf115f2"
+    },
+    {
+      "image": "00073.png",
+      "text": "The one real weakness of the Commentator's",
+      "sha256": "b5d90d2f08c1e100fde2861cd7c88042935c657d38c6652365a9045fc7ea39d2"
+    },
+    {
+      "image": "00074.png",
+      "text": "this is possible it is necessary to examine the",
+      "sha256": "20bedc2818dc01a402cd50e3d28cc6f2a29fd95a55fbc3b74182aa62c9473df5"
+    },
+    {
+      "image": "00075.png",
+      "text": "he has not , until now , been able to exhibit exactly",
+      "sha256": "107eb365e7a35960083e9b3b0dc22c0ed3ef52420bc7ae2154c9ec5c87ceb6c8"
+    },
+    {
+      "image": "00076.png",
+      "text": "been able to explain the textual movements by",
+      "sha256": "ff10a1c00b5e19b20e3e86c575d92c4ee7269225b29e9504e76359c1349758bb"
+    },
+    {
+      "image": "00077.png",
+      "text": "case is that , in common with all his colleagues ,",
+      "sha256": "ae70088c5d13e3d5ba739e00a6685c91d26a74815dacb2ec957f372c0b9c53c9"
+    },
+    {
+      "image": "00078.png",
+      "text": "text of the Gospel .",
+      "sha256": "fdf9eb9f1142da1cb6ead76e644ff074326683f8e73c3be1334e0150b66af516"
+    },
+    {
+      "image": "00079.png",
+      "text": "simple and coherent plan . To understand how",
+      "sha256": "238155385e7b6422ff6dd40baf5aff0aa054835609c051094dbd8239ee9e223c"
+    },
+    {
+      "image": "00080.png",
+      "text": "wording . It is not possible to establish any one",
+      "sha256": "72e97bf9b8ccf622fd04dd311a5485b59ed81687374459ae57490e7c2da0646e"
+    },
+    {
+      "image": "00081.png",
+      "text": "THE Fourth Gospel was almost certainly",
+      "sha256": "37284ba8f7207f398295490dcefc7944e812444d9f09bb54fe839f3d3d0ad318"
+    },
+    {
+      "image": "00082.png",
+      "text": "Gospel represents the work of generations of",
+      "sha256": "0e87effad1947c057c8599147c12feafb085943bf0c434f236963876876f13ab"
+    },
+    {
+      "image": "00083.png",
+      "text": "scholars who have compared the many manu-",
+      "sha256": "db27d16e514871437d4b4c5851911b3b21a23bec644857f7ed7a512168457567"
+    },
+    {
+      "image": "00084.png",
+      "text": "written in Greek . A modern text of the",
+      "sha256": "a0e78d2cda8c8deb5ad4fe065f375cd32e95ac7ff41ccc2901d374a3a206aaff"
+    },
+    {
+      "image": "00085.png",
+      "text": "which is most likely to have been the original",
+      "sha256": "116cd7b3e254424aa470672823f841042629c969d1505b1610262d7aa5125b62"
+    },
+    {
+      "image": "00086.png",
+      "text": "text with absolute precision .",
+      "sha256": "a30d30b31bdd464c459b5fda08caab13721ecee48f49dfe894628ca53f34ef25"
+    },
+    {
+      "image": "00087.png",
+      "text": "scripts of John and worked out the version",
+      "sha256": "da96e02df8b4705f518ac9f1be74b88d422b8708fe4dc828bce018e58c93e83f"
+    },
+    {
+      "image": "00088.png",
+      "text": "paragraphos markings were omitted . C. H. Roberts is of",
+      "sha256": "dc9cdf7b2574722cb710041fa2ca898111167e7d03aff220a379b6f3fa358ce1"
+    },
+    {
+      "image": "00089.png",
+      "text": "The bar was the commonest marking , but others",
+      "sha256": "054dcbdedbdb7d6adfecec26ace3ed63f3f92c7359906f28eb86d921b3e8f0e0"
+    },
+    {
+      "image": "00090.png",
+      "text": "some markings would be used , although which , it is",
+      "sha256": "8c3e13c0bbdaa4a242c976e748c2766279355cf2bd531ee125de2475df411d64"
+    },
+    {
+      "image": "00091.png",
+      "text": "impossible to say .",
+      "sha256": "5846a8b7221ee699b9ce3fab7305fae9504af52c05d6b0155131a9b2beecce88"
+    },
+    {
+      "image": "00092.png",
+      "text": "were also used . Dots sometimes served in place of the",
+      "sha256": "aaf61ab55fe6155be2de1b754ad9dd7b1ed6d5a49eff5af96c8c4388a90d4246"
+    },
+    {
+      "image": "00093.png",
+      "text": "bar , and there are cases where spacing is used as",
+      "sha256": "f55f012a1575ef54357d2fb266ea9d6aef2ec3af0ecee06a6b0b289fb5184e0f"
+    },
+    {
+      "image": "00094.png",
+      "text": "the opinion that in the original of the Fourth Gospel",
+      "sha256": "a32809278a2bac69a54986d20173642e8945b912a60d5da50918479a64a7a898"
+    },
+    {
+      "image": "00095.png",
+      "text": "it is now used to mark a paragraph ending . Frequently",
+      "sha256": "151d34e77c6278a29243105310e11d42a865b62648760fe86ced33c28c04b6e4"
+    },
+    {
+      "image": "00096.png",
+      "text": "the original of the Gospel would be unmarked . The",
+      "sha256": "7eac0cf13095fd8c7d3820b6ad24590386b614043493d3d88f8d026254ac75b2"
+    },
+    {
+      "image": "00097.png",
+      "text": "Professor E. G. Turner is inclined to take the view that",
+      "sha256": "b95b8044152ecb8cb4d90ce72f2d1b45b1a7ba3b9d702bbb18c076008170e435"
+    },
+    {
+      "image": "00098.png",
+      "text": "about one third of a page of Souter's print .",
+      "sha256": "b47321adb29d2bf03354dc00ae5e4c877c5ab9b8bbb17152a09923cae3c54dfc"
+    },
+    {
+      "image": "00099.png",
+      "text": "manuscripts . A common size of column would hold",
+      "sha256": "a7f24d58864c1813c7d4da96df2e6a03759607332be1afa28e04ea2ce92a8dff"
+    }
+  ]
+}

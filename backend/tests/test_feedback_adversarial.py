@@ -603,7 +603,7 @@ def test_bbox_structural_type_errors(
         ("line_id", "\t"),
         ("original_prediction", None),
         ("operator_correction", None),
-        ("confidence", None),
+
         ("page_number", None),
     ],
 )

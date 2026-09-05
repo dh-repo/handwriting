@@ -15,7 +15,8 @@ export async function POST(req: Request | NextRequest) {
     let options: Record<string, unknown> | null = null;
     let beamWidth = '4';
     let rescore = 'false';
-    let turbo = 'true';
+    let turbo: string | undefined;
+    let processingMode = 'local';
 
     const contentType = req.headers?.get('content-type') || '';
 
@@ -27,6 +28,7 @@ export async function POST(req: Request | NextRequest) {
         filename = json.filename || filename;
         modelType = json.model_type || modelType;
         options = json.options || null;
+        processingMode = options?.processing_mode as string || json.processing_mode || "local";
         if (json.turbo !== undefined) turbo = String(json.turbo);
         if (options && options.turbo !== undefined) turbo = String(options.turbo);
       } catch {
@@ -56,6 +58,7 @@ export async function POST(req: Request | NextRequest) {
         if (typeof rescoreEntry === 'string' && rescoreEntry.length > 0) {
           rescore = rescoreEntry;
         }
+        processingMode = String(formData.get('processing_mode') || 'local');
         const turboEntry = formData.get('turbo');
         if (typeof turboEntry === 'string' && turboEntry.length > 0) {
           turbo = turboEntry;
@@ -67,7 +70,7 @@ export async function POST(req: Request | NextRequest) {
 
     // 1. If explicit sample ID requested
     if (sampleId && SAMPLE_PRESETS[sampleId]) {
-      const presetData = structuredClone(SAMPLE_PRESETS[sampleId]);
+      const presetData = { ...structuredClone(SAMPLE_PRESETS[sampleId]), is_demo: true, engine_used: "demo" };
       return NextResponse.json(presetData, {
         status: 200,
         headers: {
@@ -96,12 +99,13 @@ export async function POST(req: Request | NextRequest) {
           const proxyFormData = new FormData();
           proxyFormData.append('file', file);
           proxyFormData.append('model_type', modelType);
-          proxyFormData.append('turbo', turbo);
+
 
           const qs = new URLSearchParams({
             beam_width: beamWidth,
             rescore,
-            turbo,
+            processing_mode: processingMode,
+            ...(turbo !== undefined ? { turbo } : {}),
           }).toString();
           response = await fetch(`${backendUrl}/v1/recognize?${qs}`, {
             method: 'POST',
@@ -112,13 +116,14 @@ export async function POST(req: Request | NextRequest) {
           const payload = {
             file_base64: fileBase64,
             filename,
-            options: { ...(options || {}), turbo: turbo === 'true' },
+            options: { ...(options || {}), processing_mode: processingMode, ...(turbo !== undefined ? { turbo: turbo === 'true' } : {}) },
           };
           const optRecord = options ?? {};
           const qs = new URLSearchParams({
             beam_width: String(optRecord.beam_width ?? 4),
             rescore: String(optRecord.rescore ?? false),
-            turbo,
+            processing_mode: processingMode,
+            ...(turbo !== undefined ? { turbo } : {}),
           }).toString();
           response = await fetch(`${backendUrl}/v1/recognize?${qs}`, {
             method: 'POST',
@@ -197,20 +202,7 @@ export async function POST(req: Request | NextRequest) {
       }
     }
 
-    // 4. Standalone in-app mock engine execution (only when no backend is configured)
-    const mockResult = await runMockOcr({
-      filename: file ? file.name : filename,
-      mimeType: file ? file.type : 'image/png',
-      fileSize: file ? file.size : fileBase64 ? Math.round(fileBase64.length * 0.75) : 1024,
-    });
-
-    return NextResponse.json(mockResult, {
-      status: 200,
-      headers: {
-        'X-Recognition-Provider': 'mock',
-        'Content-Type': 'application/json',
-      },
-    });
+    return NextResponse.json({ error: 'Recognition service is not configured' }, { status: 503 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown server error';
     return NextResponse.json(

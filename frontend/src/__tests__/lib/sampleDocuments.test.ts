@@ -28,7 +28,7 @@ describe('sampleDocuments', () => {
 
   it('validates messy cursive preset contains low-confidence tokens for speed review', () => {
     const hasLowConfWord = SAMPLE_MESSY_CURSIVE.pages[0].lines.some((line) =>
-      line.words.some((word) => word.confidence < 0.70)
+      line.words.some((word) => (word.confidence ?? 0) < 0.70)
     );
     expect(hasLowConfWord).toBe(true);
   });

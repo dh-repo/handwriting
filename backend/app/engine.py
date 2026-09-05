@@ -197,6 +197,25 @@ def _finalize_page_lines(lines_data: List[LineBox]) -> None:
     lines_data[:] = kept
 
 
+def _sequence_scores(model, outputs, count):
+    if getattr(outputs, "sequences_scores", None) is not None:
+        return [float(x.item()) for x in outputs.sequences_scores]
+    if getattr(outputs, "scores", None) and hasattr(model, "compute_transition_scores"):
+        try:
+            values = model.compute_transition_scores(outputs.sequences, outputs.scores, normalize_logits=True)
+            return [float(row.mean().item()) for row in values]
+        except (AttributeError, ValueError, RuntimeError):
+            pass
+    return [None] * count
+
+
+def _page_image_url(array):
+    import base64, io
+    buffer = io.BytesIO()
+    Image.fromarray(array).convert("RGB").save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
+
+
 class InferenceEngine:
     """
     Unified Handwriting Recognition Engine with Apple Silicon MPS acceleration,
@@ -270,8 +289,8 @@ class InferenceEngine:
 
         if self.mode != "mock" and TRANSFORMERS_AVAILABLE:
             self._load_model()
-        else:
-            self.mode = "mock"
+        elif self.mode != "mock":
+            raise RuntimeError("Recognition model dependencies are unavailable")
 
     def _init_rescorer(self) -> None:
         """Initialize PrefixTrie, VisualConfusionMatrix, and BeamRescorer."""
@@ -391,15 +410,15 @@ class InferenceEngine:
             self.model.eval()
             logger.info(f"Successfully loaded '{self.model_name}' on {self.device}.")
         except Exception as e:
-            logger.warning(f"Could not load TrOCR model ({e}). Operating in deterministic mock mode.")
+            logger.warning(f"Could not load TrOCR model ({e}). Recognition unavailable.")
             self.model = None
             self.processor = None
-            self.mode = "mock"
+            raise RuntimeError("Recognition model could not be loaded") from e
 
     def recognize_single_crop(self, image: Image.Image, num_beams: int | None = None) -> str:
         """Same generate path as page recognition, one line crop, no VLM."""
         if self.model is None or self.processor is None:
-            return ""
+            raise RuntimeError("Recognition model is unavailable")
         search_beams = max(1, int(num_beams or self.beam_width or 10))
         pil = image.convert("RGB")
         inputs = self.processor(images=pil, return_tensors="pt")
@@ -498,6 +517,7 @@ class InferenceEngine:
             "pages": [
                 {
                     "page_number": p_idx + 1,
+                    "image_url": _page_image_url(p.original_image),
                     "width": p.original_image.shape[1],
                     "height": p.original_image.shape[0],
                     "total_lines": len([
@@ -604,7 +624,7 @@ class InferenceEngine:
                         WordBox(
                             word_id=f"{line_id}_w{w_i + 1}",
                             text=w_text,
-                            confidence=0.98,
+                            confidence=None,
                             bbox=[ymin, w_xmin, ymax, w_xmax],
                             is_proper_noun=is_name_or_title(w_text),
                         )
@@ -613,7 +633,7 @@ class InferenceEngine:
                 line_box = LineBox(
                     line_id=line_id,
                     text=line_text,
-                    confidence=0.98,
+                    confidence=None,
                     bbox=bbox,
                     words=words_data,
                 )
@@ -626,7 +646,8 @@ class InferenceEngine:
                 width=w,
                 height=h,
                 full_text=page_full_text,
-                mean_confidence=0.98,
+                image_url=_page_image_url(p_page.original_image),
+                mean_confidence=None,
                 lines=lines_data,
             )
             pages_result.append(page_res)
@@ -646,6 +667,7 @@ class InferenceEngine:
                 "deployment": deployment,
             },
             engine_used="turbo-vlm",
+            model_id=deployment, processing_location="cloud",
         )
         yield ("complete", total_response)
 
@@ -664,26 +686,21 @@ class InferenceEngine:
         doc_id = f"doc_{uuid.uuid4().hex[:8]}"
         opts = options or RecognitionOptions()
 
-        # Check if Turbo VLM mode is requested and Azure OpenAI credentials are configured
-        is_turbo = getattr(opts, "turbo", True) and getattr(self.settings, "ENABLE_TURBO_MODE", True)
-        has_azure_credentials = bool(
-            getattr(self.settings, "AZURE_OPENAI_ENDPOINT", None)
-            and getattr(self.settings, "AZURE_OPENAI_API_KEY", None)
-        )
-
-        if is_turbo and has_azure_credentials:
-            try:
-                yield from self._recognize_turbo_gen(file_bytes, filename, doc_id, t0, opts, is_stream=is_stream)
-                return
-            except Exception as turbo_err:
-                logger.warning(
-                    "Turbo VLM recognition failed: %s; falling back to TrOCR / mock engine.",
-                    turbo_err,
-                )
+        if opts.processing_mode == "cloud":
+            if not self.settings.ENABLE_TURBO_MODE or not (
+                self.settings.AZURE_OPENAI_ENDPOINT and self.settings.AZURE_OPENAI_API_KEY
+            ):
+                raise ValueError("Cloud recognition is not enabled on this server")
+            yield from self._recognize_turbo_gen(file_bytes, filename, doc_id, t0, opts, is_stream=is_stream)
+            return
+        if self.mode != "mock" and (self.model is None or self.processor is None):
+            raise RuntimeError("Recognition model is unavailable")
 
         # If running in mock mode or model not loaded
         if self.mode == "mock" or self.model is None or self.processor is None:
             mock_res = self._recognize_mock(file_bytes, filename, doc_id, t0, opts)
+            mock_res.is_demo = True
+            mock_res.engine_used = "demo"
             yield ("metadata", {
                 "document_id": doc_id,
                 "filename": Path(filename).name,
@@ -731,7 +748,8 @@ class InferenceEngine:
                 "pages": [
                     {
                         "page_number": p_idx + 1,
-                        "width": p.original_image.shape[1],
+                        "image_url": _page_image_url(p.original_image),
+                    "width": p.original_image.shape[1],
                         "height": p.original_image.shape[0],
                         "total_lines": len([
                             l for l in p.lines
@@ -785,10 +803,7 @@ class InferenceEngine:
                             t.strip()
                             for t in self.processor.batch_decode(outputs_greedy.sequences, skip_special_tokens=True)
                         ]
-                        if hasattr(outputs_greedy, "sequences_scores") and outputs_greedy.sequences_scores is not None:
-                            greedy_seq_scores = [float(s.item()) for s in outputs_greedy.sequences_scores]
-                        else:
-                            greedy_seq_scores = [0.0] * len(greedy_texts)
+                        greedy_seq_scores = _sequence_scores(self.model, outputs_greedy, len(greedy_texts))
 
                         batch_decoded_texts = list(greedy_texts)
                         batch_scores = list(greedy_seq_scores)
@@ -796,7 +811,7 @@ class InferenceEngine:
                         # Check which lines require beam escalation
                         escalate_indices = []
                         for s_idx, (g_txt, g_score) in enumerate(zip(greedy_texts, greedy_seq_scores)):
-                            conf = float(1.0 / (1.0 + math.exp(-max(-10.0, min(10.0, g_score))))) if g_score != 0.0 else 0.95
+                            conf = math.exp(min(0.0, g_score)) if g_score is not None else 0.0
                             if (conf < self.adaptive_threshold) or should_refine_with_vlm(g_txt):
                                 escalate_indices.append(s_idx)
 
@@ -816,10 +831,7 @@ class InferenceEngine:
                                 t.strip()
                                 for t in self.processor.batch_decode(outputs_beam.sequences, skip_special_tokens=True)
                             ]
-                            if hasattr(outputs_beam, "sequences_scores") and outputs_beam.sequences_scores is not None:
-                                beam_seq_scores = [float(s.item()) for s in outputs_beam.sequences_scores]
-                            else:
-                                beam_seq_scores = [0.0] * len(beam_texts)
+                            beam_seq_scores = _sequence_scores(self.model, outputs_beam, len(beam_texts))
 
                             for esc_pos, orig_idx in enumerate(escalate_indices):
                                 sub_cands = beam_texts[esc_pos * effective_k : (esc_pos + 1) * effective_k]
@@ -855,10 +867,7 @@ class InferenceEngine:
                                 )
 
                         decoded_texts = self.processor.batch_decode(outputs.sequences, skip_special_tokens=True)
-                        if hasattr(outputs, "sequences_scores") and outputs.sequences_scores is not None:
-                            seq_scores = [float(s.item()) for s in outputs.sequences_scores]
-                        else:
-                            seq_scores = [-0.45 - (i * 0.15) for i in range(len(decoded_texts))]
+                        seq_scores = _sequence_scores(self.model, outputs, len(decoded_texts))
 
                         for l_sub_idx in range(len(b_lines)):
                             if effective_k > 1 and effective_rescore:
@@ -900,7 +909,7 @@ class InferenceEngine:
                     vlm_candidates = []
                     for l_sub_idx, t_text in enumerate(batch_decoded_texts):
                         if (
-                            self.enable_vlm_refine
+                            False  # General local recognition never invokes a remote referee.
                             and self.mode != "mock"
                             and should_refine_with_vlm(t_text)
                         ):
@@ -930,8 +939,7 @@ class InferenceEngine:
                         crop = pil_crops[l_sub_idx]
                         text = batch_decoded_texts[l_sub_idx]
                         top_s = batch_scores[l_sub_idx]
-                        line_conf = float(1.0 / (1.0 + math.exp(-max(-10.0, min(10.0, top_s))))) if top_s != 0.0 else 0.95
-                        line_conf = max(0.0, min(1.0, float(line_conf)))
+                        line_conf = math.exp(min(0.0, top_s)) if top_s is not None else None
 
                         if not text:
                             continue
@@ -956,7 +964,7 @@ class InferenceEngine:
                                     WordBox(
                                         word_id=f"p{page_idx+1}_l{global_l_idx+1}_w{w_idx+1}",
                                         text=w_text,
-                                        confidence=round(line_conf, 3),
+                                        confidence=round(line_conf, 3) if line_conf is not None else None,
                                         bbox=[w_ymin, w_xmin, w_ymax, w_xmax],
                                         is_proper_noun=is_name_or_title(w_text),
                                     )
@@ -973,7 +981,7 @@ class InferenceEngine:
                                     WordBox(
                                         word_id=f"p{page_idx+1}_l{global_l_idx+1}_w{w_idx+1}",
                                         text=wt,
-                                        confidence=round(line_conf, 3),
+                                        confidence=round(line_conf, 3) if line_conf is not None else None,
                                         bbox=[ymin, w_xmin, ymax, w_xmax],
                                         is_proper_noun=is_name_or_title(wt),
                                     )
@@ -987,7 +995,7 @@ class InferenceEngine:
                         box = LineBox(
                             line_id=f"p{page_idx+1}_l{global_l_idx+1}",
                             text=text,
-                            confidence=round(line_conf, 3),
+                            confidence=round(line_conf, 3) if line_conf is not None else None,
                             bbox=[ymin, xmin, ymax, xmax],
                             words=words_data,
                         )
@@ -1002,8 +1010,8 @@ class InferenceEngine:
 
                 _finalize_page_lines(lines_data)
                 full_text = "\n".join(l.text for l in lines_data)
-                mean_conf = float(np.mean([l.confidence for l in lines_data])) if lines_data else 1.0
-                mean_conf = max(0.0, min(1.0, mean_conf))
+                mean_conf = float(np.mean([l.confidence for l in lines_data])) if lines_data and all(l.confidence is not None for l in lines_data) else None
+                mean_conf = max(0.0, min(1.0, mean_conf)) if mean_conf is not None else None
 
                 pages_result.append(
                     PageResult(
@@ -1011,7 +1019,8 @@ class InferenceEngine:
                         width=w,
                         height=h,
                         full_text=full_text,
-                        mean_confidence=round(mean_conf, 3),
+                        mean_confidence=round(mean_conf, 3) if mean_conf is not None else None,
+                        image_url=_page_image_url(p_page.original_image),
                         lines=lines_data,
                     )
                 )
@@ -1023,6 +1032,7 @@ class InferenceEngine:
                 total_pages=len(pages_result),
                 pages=pages_result,
                 processing_time_ms=round(elapsed_ms, 2),
+                model_id=self.model_name, processing_location="local",
                 preprocessing_flags=opts.model_dump(),
             )
             yield ("complete", resp)
@@ -1030,8 +1040,7 @@ class InferenceEngine:
             raise
         except Exception as exc:
             logger.error(f"Inference error on {filename}: {exc}", exc_info=True)
-            mock_res = self._recognize_mock(file_bytes, filename, doc_id, t0, opts)
-            yield ("complete", mock_res)
+            raise RuntimeError("Recognition failed; no transcript was produced") from exc
 
     def _load_and_preprocess(self, file_bytes: bytes, opts: RecognitionOptions) -> List[PreprocessedPage]:
         """Load and preprocess document using M1 PreprocessingPipeline."""

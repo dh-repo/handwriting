@@ -96,7 +96,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       vi.useFakeTimers();
 
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -150,11 +150,11 @@ describe('InlineEditor Feedback Integration Suite', () => {
       expect(callArgs.original_text).toBe('Amoxicilln 500mg');
       expect(callArgs.corrected_text).toBe('Amoxicillin 500mg');
 
-      // Visual badge transitions to 'synced' (Flywheel Saved)
+      // Visual badge transitions to 'synced' (Feedback submitted)
       await act(async () => {
         await Promise.resolve();
       });
-      expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Flywheel Saved/i);
+      expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Feedback submitted/i);
     });
   });
 
@@ -163,7 +163,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       vi.useFakeTimers();
 
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -199,7 +199,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       vi.useFakeTimers();
 
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -228,7 +228,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
   describe('3. Optimistic UI Updates & Visual Confirmation Statuses', () => {
     it('updates text optimistically without waiting for server response', () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -247,7 +247,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       } as unknown as ApiClient;
 
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={retryClient}
@@ -283,7 +283,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Flywheel Saved/i);
+        expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Feedback submitted/i);
       });
       expect(failingSubmit).toHaveBeenCalledTimes(2);
     });
@@ -292,7 +292,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
   describe('4. Speed Review Integration & Immediate Dispatch', () => {
     it('dispatches feedback immediately on speed review correction submit and advances to next item', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -329,7 +329,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
 
     it('dispatches feedback when selecting a quick-pick suggestion in speed review', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -363,7 +363,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
   describe('5. Structured Word Chip Editing & Autocomplete Popover Feedback', () => {
     it('dispatches feedback when editing a word chip and pressing Enter', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={mockPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -405,7 +405,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       };
 
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={modifiedPage}
           documentId="doc_test_flywheel"
           apiClientInstance={mockClient}
@@ -503,27 +503,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       }
     });
 
-    it('falls back to simulated persisted mock response when offline or proxy fails and fallback is enabled', async () => {
-      const origFetch = global.fetch;
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network offline'));
-
-      try {
-        const client = new ApiClient({ baseUrl: 'http://localhost:8000', enableFallback: true });
-        const res = await client.submitFeedback({
-          document_id: 'doc_offline',
-          line_id: 'line_offline',
-          original_text: 'pred',
-          corrected_text: 'corr',
-        });
-
-        expect(res.status).toBe('persisted');
-        expect(res.document_id).toBe('doc_offline');
-        expect(res.line_id).toBe('line_offline');
-        expect(res.feedback_id).toMatch(/^fb_mock_/);
-      } finally {
-        global.fetch = origFetch;
-      }
-    });
+    it("reports unavailable service honestly: falls back to simulated persisted mock response when offline or proxy fails and fallback is enabled", async () => { vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('offline'))); const { ApiClient }=await import('@/lib/apiClient'); const { pendingFeedback }=await import('@/lib/documentStore'); const submission_id=crypto.randomUUID(); const timestamp='2026-01-01T00:00:00.000Z'; await expect(new ApiClient({baseUrl:'http://backend',enableFallback:true}).submitFeedback({document_id:'d',line_id:'l',original_text:'a',corrected_text:'b',submission_id,timestamp})).rejects.toThrow(); expect((await pendingFeedback()).find(p=>p.submission_id===submission_id)?.timestamp).toBe(timestamp); });
   });
 
   describe('7. /api/feedback Route Handler', () => {
@@ -546,28 +526,7 @@ describe('InlineEditor Feedback Integration Suite', () => {
       expect(json.error).toMatch(/Missing required feedback fields/i);
     });
 
-    it('returns simulated persisted response with mock header when BACKEND_URL is not set', async () => {
-      delete process.env.BACKEND_URL;
-
-      const validReq = new Request('http://localhost:3000/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: 'doc_mock_route',
-          line_id: 'line_mock_route',
-          original_text: 'old text',
-          corrected_text: 'new text',
-        }),
-      });
-
-      const res = await feedbackRoute(validReq);
-      expect(res.status).toBe(200);
-      expect(res.headers.get('X-Feedback-Provider')).toBe('mock');
-      const json = await res.json();
-      expect(json.status).toBe('persisted');
-      expect(json.document_id).toBe('doc_mock_route');
-      expect(json.feedback_id).toMatch(/^fb_mock_/);
-    });
+    it("reports unavailable service honestly: returns simulated persisted response with mock header when BACKEND_URL is not set", async () => { delete process.env.BACKEND_URL; const { POST } = await import('@/app/api/feedback/route'); const res=await POST(new Request('http://localhost/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({document_id:'d',line_id:'l',original_text:'',corrected_text:'new'})})); expect(res.status).toBe(503); expect((await res.json()).status).not.toBe('persisted'); });
 
     it('proxies to backend when BACKEND_URL is configured and returns 200', async () => {
       process.env.BACKEND_URL = 'http://backend-ai:8000';

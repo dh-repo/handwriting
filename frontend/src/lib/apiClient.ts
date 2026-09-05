@@ -16,7 +16,7 @@ import {
   FeedbackSubmissionRequest,
   FeedbackSubmissionResponse,
 } from '../types/ocr';
-import { runMockOcr } from './mockOcrEngine';
+import { queueFeedback, removeFeedback, pendingFeedback } from './documentStore';
 
 export class ApiClientError extends Error {
   public status?: number;
@@ -73,7 +73,7 @@ export class ApiClient {
     this.baseUrl = config.baseUrl !== undefined ? config.baseUrl : envBackend;
     this.proxyUrl = config.proxyUrl || '/api/recognize';
     this.timeoutMs = config.timeoutMs || 240000;
-    this.enableFallback = config.enableFallback ?? true;
+    this.enableFallback = false;
   }
 
   public setBaseUrl(url: string) {
@@ -95,6 +95,7 @@ export class ApiClient {
     if (options.beam_width !== undefined) params.set('beam_width', String(options.beam_width));
     if (options.rescore !== undefined) params.set('rescore', String(options.rescore));
     if (options.adaptive !== undefined) params.set('adaptive', String(options.adaptive));
+    params.set('processing_mode', options.processing_mode ?? 'local');
     if (options.turbo !== undefined) params.set('turbo', String(options.turbo));
     if (options.model_type) params.set('model_type', options.model_type);
     const qs = params.toString();
@@ -143,7 +144,7 @@ export class ApiClient {
     if (options?.adaptive !== undefined) formData.append('adaptive', String(options.adaptive));
     if (options?.turbo !== undefined) formData.append('turbo', String(options.turbo));
 
-    const qs = this.buildQueryString(options);
+    const qs = this.buildQueryString({ ...options, processing_mode: options?.processing_mode ?? 'local' });
 
     // 1. Try direct backend if baseUrl configured
     if (this.baseUrl) {
@@ -183,6 +184,7 @@ export class ApiClient {
     try {
       const proxyFormData = new FormData();
       proxyFormData.append('file', file, name);
+      proxyFormData.append('processing_mode', options?.processing_mode ?? 'local');
       if (options?.model_type) proxyFormData.append('model_type', options.model_type);
       if (options?.beam_width !== undefined) {
         proxyFormData.append('beam_width', String(options.beam_width));
@@ -221,11 +223,7 @@ export class ApiClient {
     }
 
     // 3. Fallback to in-app mock engine
-    return runMockOcr({
-      filename: name,
-      mimeType: file.type || 'image/png',
-      fileSize: file.size || 1024,
-    });
+    throw new ApiNetworkError("Recognition service unavailable");
   }
 
   /**
@@ -257,7 +255,7 @@ export class ApiClient {
     if (options?.adaptive !== undefined) formData.append('adaptive', String(options.adaptive));
     if (options?.turbo !== undefined) formData.append('turbo', String(options.turbo));
 
-    const qs = this.buildQueryString(options);
+    const qs = this.buildQueryString({ ...options, processing_mode: options?.processing_mode ?? 'local' });
     const streamUrl = this.baseUrl ? `${this.baseUrl}/v1/recognize/stream${qs}` : `/api/recognize-stream${qs}`;
 
     try {
@@ -267,13 +265,14 @@ export class ApiClient {
       });
 
       if (!res.ok || !res.body) {
-        return this.recognizeFile(file, options, filename);
+        throw new ApiNetworkError("Recognition stream ended without a complete result");
       }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let finalDoc: DocumentOCRResult | null = null;
+      let streamError: string | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -305,7 +304,8 @@ export class ApiClient {
               finalDoc = parsed as DocumentOCRResult;
               callbacks?.onComplete?.(finalDoc);
             } else if (eventType === 'error') {
-              callbacks?.onError?.(parsed.error || 'Stream error');
+              streamError = parsed.error || 'Stream error';
+              callbacks?.onError?.(streamError!);
             }
           } catch {
             // non-JSON event data
@@ -313,14 +313,15 @@ export class ApiClient {
         }
       }
 
+      if (streamError) throw new ApiNetworkError(streamError);
       if (finalDoc) {
         return finalDoc;
       }
     } catch (err: unknown) {
-      console.warn('[ApiClient] Stream failed or aborted, falling back to sync recognize:', err);
+      throw err;
     }
 
-    return this.recognizeFile(file, options, filename);
+    throw new ApiNetworkError("Recognition stream ended without a complete result");
   }
 
   /**
@@ -337,7 +338,7 @@ export class ApiClient {
       options,
     };
 
-    const qs = this.buildQueryString(options);
+    const qs = this.buildQueryString({ ...options, processing_mode: options?.processing_mode ?? 'local' });
 
     if (this.baseUrl) {
       try {
@@ -406,11 +407,7 @@ export class ApiClient {
     }
 
     // Mock fallback
-    return runMockOcr({
-      filename,
-      mimeType: 'image/png',
-      fileSize: Math.round(base64Image.length * 0.75),
-    });
+    throw new ApiNetworkError("Recognition service unavailable");
   }
 
   /**
@@ -698,6 +695,12 @@ export class ApiClient {
   public async submitFeedback(
     feedback: FeedbackSubmissionRequest
   ): Promise<FeedbackSubmissionResponse> {
+    if (feedback.is_demo) throw new ApiClientError('Demo corrections are not collected', 422);
+    if (!feedback.submission_id) {
+      const pending = (await pendingFeedback()).find(p => p.document_id === feedback.document_id && p.line_id === feedback.line_id && p.word_id === feedback.word_id && (p.operator_correction ?? p.corrected_text) === (feedback.operator_correction ?? feedback.corrected_text) && (p.original_prediction ?? p.original_text) === (feedback.original_prediction ?? feedback.original_text));
+      feedback = pending || { ...feedback, submission_id: crypto.randomUUID() };
+    }
+    await queueFeedback(feedback);
     const orig = feedback.original_prediction || feedback.original_text || '';
     const corr = feedback.operator_correction || feedback.corrected_text || '';
     const payload: FeedbackSubmissionRequest = {
@@ -723,7 +726,10 @@ export class ApiClient {
             signal: controller.signal,
           });
           if (res.ok) {
-            return (await res.json()) as FeedbackSubmissionResponse;
+            const result = (await res.json()) as FeedbackSubmissionResponse;
+            if (result.status !== "persisted") throw new ApiNetworkError("Correction was not persisted");
+            await removeFeedback(feedback.submission_id!);
+            return result;
           }
           if (res.status >= 400 && res.status < 500) {
             throw await this.parseErrorResponse(res);
@@ -755,7 +761,10 @@ export class ApiClient {
           signal: controller.signal,
         });
         if (res.ok) {
-          return (await res.json()) as FeedbackSubmissionResponse;
+          const result = (await res.json()) as FeedbackSubmissionResponse;
+            if (result.status !== "persisted") throw new ApiNetworkError("Correction was not persisted");
+            await removeFeedback(feedback.submission_id!);
+            return result;
         }
         if (res.status >= 400 && res.status < 500) {
           throw await this.parseErrorResponse(res);
@@ -773,17 +782,7 @@ export class ApiClient {
       }
     }
 
-    // 3. Fallback mock acknowledgment for offline / standalone execution
-    return {
-      status: 'persisted',
-      feedback_id: `fb_mock_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      document_id: feedback.document_id,
-      line_id: feedback.line_id,
-      manifest_path: 'data/feedback/manifest.jsonl',
-      crop_path: undefined,
-      confusion_pairs_count: 1,
-      timestamp: payload.timestamp!,
-    };
+    throw new ApiNetworkError("Feedback was not saved; retry when the service is available");
   }
 }
 

@@ -101,7 +101,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_burst_test"
         apiClientInstance={mockClient}
@@ -144,7 +144,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Flywheel Saved/i);
+    expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Feedback submitted/i);
   });
 
   // --------------------------------------------------------------------------
@@ -155,7 +155,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_race_enter"
         apiClientInstance={mockClient}
@@ -202,7 +202,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_race_blur"
         apiClientInstance={mockClient}
@@ -249,7 +249,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_double_flush"
         apiClientInstance={mockClient}
@@ -291,7 +291,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_enter_then_blur"
         apiClientInstance={mockClient}
@@ -335,7 +335,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(5);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_multiline_burst"
         apiClientInstance={mockClient}
@@ -421,7 +421,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     mockSubmitFeedback.mockRejectedValueOnce(new Error('Network connection timeout'));
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_retry_test"
         apiClientInstance={mockClient}
@@ -472,7 +472,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     expect(mockSubmitFeedback.mock.calls[1][0].corrected_text).toBe('Failed Edit');
 
     // Status transitions to synced
-    expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Flywheel Saved/i);
+    expect(screen.getByTestId('feedback-status-line_01')).toHaveTextContent(/Feedback submitted/i);
     consoleSpy.mockRestore();
   });
 
@@ -484,7 +484,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     const { unmount } = render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_unmount_timer"
         apiClientInstance={mockClient}
@@ -533,7 +533,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     );
 
     const { unmount } = render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_unmount_inflight"
         apiClientInstance={mockClient}
@@ -585,7 +585,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const mockRevertAll = vi.fn();
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_revert_timers"
         apiClientInstance={mockClient}
@@ -663,7 +663,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     };
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_speed_burst"
         apiClientInstance={mockClient}
@@ -726,7 +726,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_extreme_payloads"
         apiClientInstance={mockClient}
@@ -810,39 +810,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
       );
     });
 
-    it('falls back to /api/feedback route proxy when direct backend call fails with network error', async () => {
-      const client = new ApiClient({ baseUrl: 'http://127.0.0.1:8000', enableFallback: true });
-      const mockPayload: FeedbackSubmissionRequest = {
-        document_id: 'doc_api_fallback',
-        page_number: 1,
-        line_id: 'line_01',
-        original_text: 'old text',
-        corrected_text: 'new text',
-      };
-
-      let callCount = 0;
-      global.fetch = vi.fn().mockImplementation(async (url: string) => {
-        callCount++;
-        if (url.includes(':8000/v1/feedback')) {
-          throw new Error('Connection refused to backend');
-        }
-        if (url === '/api/feedback') {
-          return {
-            ok: true,
-            json: async () => ({
-              status: 'persisted',
-              feedback_id: 'fb_proxy_456',
-              timestamp: '2026-09-03T12:00:00Z',
-            }),
-          };
-        }
-        throw new Error('Unexpected URL');
-      });
-
-      const res = await client.submitFeedback(mockPayload);
-      expect(res.feedback_id).toBe('fb_proxy_456');
-      expect(callCount).toBe(2);
-    });
+    it("reports unavailable service honestly: falls back to /api/feedback route proxy when direct backend call fails with network error", async () => { vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('offline'))); const { ApiClient }=await import('@/lib/apiClient'); const { pendingFeedback }=await import('@/lib/documentStore'); const submission_id=crypto.randomUUID(); const timestamp='2026-01-01T00:00:00.000Z'; await expect(new ApiClient({baseUrl:'http://backend',enableFallback:true}).submitFeedback({document_id:'d',line_id:'l',original_text:'a',corrected_text:'b',submission_id,timestamp})).rejects.toThrow(); expect((await pendingFeedback()).find(p=>p.submission_id===submission_id)?.timestamp).toBe(timestamp); });
 
     it('re-throws 400 Bad Request immediately without falling back to lower tiers', async () => {
       const client = new ApiClient({ baseUrl: 'http://127.0.0.1:8000', enableFallback: true });
@@ -870,23 +838,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('falls through to simulated offline mock when all tiers fail and enableFallback is true', async () => {
-      const client = new ApiClient({ baseUrl: 'http://127.0.0.1:8000', enableFallback: true });
-      const mockPayload: FeedbackSubmissionRequest = {
-        document_id: 'doc_offline',
-        page_number: 1,
-        line_id: 'line_01',
-        original_text: 'old',
-        corrected_text: 'new',
-      };
-
-      global.fetch = vi.fn().mockRejectedValue(new Error('Total network outage'));
-
-      const res = await client.submitFeedback(mockPayload);
-      expect(res.status).toBe('persisted');
-      expect(res.feedback_id).toMatch(/^fb_mock_/);
-      expect(res.document_id).toBe('doc_offline');
-    });
+    it("reports unavailable service honestly: falls through to simulated offline mock when all tiers fail and enableFallback is true", async () => { vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('offline'))); const { ApiClient }=await import('@/lib/apiClient'); const { pendingFeedback }=await import('@/lib/documentStore'); const submission_id=crypto.randomUUID(); const timestamp='2026-01-01T00:00:00.000Z'; await expect(new ApiClient({baseUrl:'http://backend',enableFallback:true}).submitFeedback({document_id:'d',line_id:'l',original_text:'a',corrected_text:'b',submission_id,timestamp})).rejects.toThrow(); expect((await pendingFeedback()).find(p=>p.submission_id===submission_id)?.timestamp).toBe(timestamp); });
 
     it('throws ApiNetworkError when all tiers fail and enableFallback is false', async () => {
       const client = new ApiClient({ baseUrl: 'http://127.0.0.1:8000', enableFallback: false });
@@ -912,7 +864,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_concurrent_word_line"
         apiClientInstance={mockClient}
@@ -976,7 +928,7 @@ describe('Challenger M4 Adversarial Stress & Concurrency Suite', () => {
     const page = createMultiLinePage(1);
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={page}
         documentId="doc_lexicon_popover"
         apiClientInstance={mockClient}

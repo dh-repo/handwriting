@@ -54,7 +54,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
   describe('Medical Autocomplete Popover in Structured Mode', () => {
     it('opens autocomplete popover when editing a word chip', async () => {
       const onWordChange = vi.fn();
-      render(<InlineEditor page={sampleMedicalPage} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={sampleMedicalPage} onWordChange={onWordChange} />);
 
       const amoxWordChip = screen.getByTestId('word-chip-p1_l1_w1');
       fireEvent.click(amoxWordChip);
@@ -74,7 +74,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
 
     it('navigates autocomplete popover with ArrowDown and selects with Enter', async () => {
       const onWordChange = vi.fn();
-      render(<InlineEditor page={sampleMedicalPage} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={sampleMedicalPage} onWordChange={onWordChange} />);
 
       const amoxWordChip = screen.getByTestId('word-chip-p1_l1_w1');
       fireEvent.click(amoxWordChip);
@@ -95,7 +95,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
     });
 
     it('closes popover on Escape', async () => {
-      render(<InlineEditor page={sampleMedicalPage} />);
+      render(<InlineEditor enableMedicalSuggestions page={sampleMedicalPage} />);
 
       const amoxWordChip = screen.getByTestId('word-chip-p1_l1_w1');
       fireEvent.click(amoxWordChip);
@@ -113,7 +113,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
 
     it('applies suggestion when clicking directly on popover item', async () => {
       const onWordChange = vi.fn();
-      render(<InlineEditor page={sampleMedicalPage} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={sampleMedicalPage} onWordChange={onWordChange} />);
 
       const amoxWordChip = screen.getByTestId('word-chip-p1_l1_w1');
       fireEvent.click(amoxWordChip);
@@ -131,7 +131,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
 
   describe('Speed Review Queue & Quick-Pick Shortcuts', () => {
     it('populates speed queue with low-confidence tokens (<70%) and renders quick-picks', () => {
-      render(<InlineEditor page={sampleMedicalPage} />);
+      render(<InlineEditor enableMedicalSuggestions page={sampleMedicalPage} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       fireEvent.click(speedTab);
@@ -146,7 +146,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
 
     it('quick-selects suggestion using number key 1 and advances to next item', () => {
       const onWordChange = vi.fn();
-      render(<InlineEditor page={sampleMedicalPage} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={sampleMedicalPage} onWordChange={onWordChange} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       fireEvent.click(speedTab);
@@ -161,7 +161,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
     });
 
     it('navigates with Prev and Skip buttons', () => {
-      render(<InlineEditor page={sampleMedicalPage} />);
+      render(<InlineEditor enableMedicalSuggestions page={sampleMedicalPage} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       fireEvent.click(speedTab);
@@ -198,7 +198,7 @@ describe('InlineEditor Medical Autocomplete & Speed Review Tests', () => {
         ],
       };
 
-      render(<InlineEditor page={allHighConfPage} />);
+      render(<InlineEditor enableMedicalSuggestions page={allHighConfPage} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       fireEvent.click(speedTab);

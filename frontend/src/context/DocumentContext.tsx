@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { DocumentOCRResult, PageResult, LineItem, WordToken, SignatureDecision } from '../types/ocr';
 import { SAMPLE_PRESETS } from '../lib/sampleDocuments';
 import { findSignatureCandidates, upsertSignatureReview } from '../lib/signatureCandidates';
@@ -76,6 +76,22 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
 }) => {
   // Document state
   const [document, setDocumentInternal] = useState<DocumentOCRResult | null>(initialDocument);
+  const lastInteraction = useRef<number | null>(null);
+  useEffect(() => {
+    lastInteraction.current = null;
+    const activity = () => {
+      const now = Date.now();
+      const previous = lastInteraction.current;
+      lastInteraction.current = now;
+      if (previous !== null && now - previous <= 60000) {
+        setDocumentInternal(doc => doc && !doc.is_demo ? { ...doc, active_review_ms: (doc.active_review_ms || 0) + now - previous } : doc);
+      }
+    };
+    window.addEventListener('keydown', activity);
+    window.addEventListener('pointerdown', activity);
+    return () => { window.removeEventListener('keydown', activity); window.removeEventListener('pointerdown', activity); };
+  }, [document?.document_id]);
+
   const [activePageIndex, setActivePageIndex] = useState<number>(0);
 
   // Selection / Hover
@@ -172,6 +188,9 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
       const line = page.lines.find((l: LineItem) => l.line_id === lineId);
       if (line) {
         line.text = newText;
+        line.reviewed = true;
+        const tokens = newText.split(/\s+/).filter(Boolean);
+        line.words = tokens.map((text, i) => ({ ...line.words[i], word_id: `${lineId}_w${i}`, text, bbox: line.words[i]?.bbox || line.bbox, confidence: null, reviewed: true }));
         line.is_edited = newText !== (line.original_text || '');
         // Sync full text
         page.full_text = page.lines.map((l: LineItem) => l.text).join('\n');
@@ -192,6 +211,7 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
         const word = line.words.find((w: WordToken) => w.word_id === wordId);
         if (word) {
           word.text = newText;
+          word.reviewed = true;
           word.is_edited = newText !== (word.original_text || '');
           line.text = line.words.map((w: WordToken) => w.text).join(' ');
           line.is_edited = true;
@@ -262,7 +282,7 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode; initialDocu
 
   const loadPreset = useCallback((presetId: string) => {
     if (SAMPLE_PRESETS[presetId]) {
-      setDocument(structuredClone(SAMPLE_PRESETS[presetId]));
+      setDocument({ ...structuredClone(SAMPLE_PRESETS[presetId]), is_demo: true, engine_used: "demo" });
     }
   }, [setDocument]);
 

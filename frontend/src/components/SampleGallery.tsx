@@ -21,26 +21,8 @@ export const SAMPLE_CARD_CONFIGS = [
     badgeColor: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
     glowColor: 'group-hover:border-emerald-500/50 group-hover:shadow-emerald-500/10',
   },
-  {
-    id: 'sample_legal_contract',
-    title: 'Legal Contract & Signature',
-    description: 'Agreement clauses with dates and a general-purpose sign-off line for human review.',
-    category: 'Legal / Signatures',
-    difficulty: 'Signatures',
-    icon: <Scale className="w-5 h-5 text-indigo-400" />,
-    badgeColor: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
-    glowColor: 'group-hover:border-indigo-500/50 group-hover:shadow-indigo-500/10',
-  },
-  {
-    id: 'sample_prescription',
-    title: 'Doctor Prescription Slip',
-    description: 'Clinic header with medication lines (Amoxicillin, Ibuprofen) and dosage sigs.',
-    category: 'Medical / Clinical',
-    difficulty: 'Prescription',
-    icon: <Stethoscope className="w-5 h-5 text-purple-400" />,
-    badgeColor: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
-    glowColor: 'group-hover:border-purple-500/50 group-hover:shadow-purple-500/10',
-  },
+
+
   {
     id: 'sample_messy_cursive',
     title: 'Messy Journal & Field Note',
@@ -51,16 +33,7 @@ export const SAMPLE_CARD_CONFIGS = [
     badgeColor: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
     glowColor: 'group-hover:border-amber-500/50 group-hover:shadow-amber-500/10',
   },
-  {
-    id: 'sample_multipage',
-    title: '3-Page Multi-Document Record',
-    description: 'Comprehensive record: intake assessment, orders, and archival sign-off.',
-    category: 'Multi-Page',
-    difficulty: 'Multi-Page PDF',
-    icon: <Layers className="w-5 h-5 text-cyan-400" />,
-    badgeColor: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
-    glowColor: 'group-hover:border-cyan-500/50 group-hover:shadow-cyan-500/10',
-  },
+
 ];
 
 export const SampleGallery: React.FC<SampleGalleryProps> = ({ onSelectSample, className = '' }) => {
@@ -69,12 +42,12 @@ export const SampleGallery: React.FC<SampleGalleryProps> = ({ onSelectSample, cl
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-cyan-400" />
-          <span>Universal Handwriting Sample Gallery</span>
+          <span>Prepared handwriting demos</span>
         </h3>
-        <span className="text-xs text-slate-400 font-mono">1-Click Live Previews</span>
+        <span className="text-xs text-slate-400 font-mono">Not recognition benchmarks</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
         {SAMPLE_CARD_CONFIGS.map((config) => {
           const presetData = SAMPLE_PRESETS[config.id] || (config.id === 'sample_legal_contract' ? SAMPLE_LEGAL_CONTRACT : null);
           if (!presetData) return null;

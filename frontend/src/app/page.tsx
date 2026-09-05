@@ -1,5 +1,7 @@
 'use client';
 
+import { LocalDocuments } from '../components/LocalDocuments';
+import { rememberOriginal, saveDocument } from '../lib/documentStore';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   PenTool,
@@ -102,7 +104,7 @@ export default function WorkspacePage() {
   const [batchStageText, setBatchStageText] = useState<string>('');
   const [completedBatchDocuments, setCompletedBatchDocuments] = useState<DocumentOCRResult[]>([]);
   const [activeBatchDocIndex, setActiveBatchDocIndex] = useState<number>(0);
-  const [engineMode, setEngineMode] = useState<'turbo' | 'trocr'>('turbo');
+  const [engineMode, setEngineMode] = useState<'turbo' | 'trocr'>('trocr');
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -147,12 +149,13 @@ export default function WorkspacePage() {
   // Single file direct recognition (fast-path)
   const handleSingleFileAccepted = useCallback(
     async (file: File) => {
+      const originalKey = await rememberOriginal(file).catch(() => { setError("Original could not be saved locally; export your result"); return undefined; });
       setIsProcessing(true);
       setUploadProgress(15);
       setProcessingStage('Uploading document & preparing preprocessor...');
       setError(null);
 
-      cleanupObjectURLs();
+
       let previewUrl: string | undefined;
       if (file.type.startsWith('image/')) {
         previewUrl = URL.createObjectURL(file);
@@ -160,7 +163,8 @@ export default function WorkspacePage() {
 
         // Show initial document preview immediately so viewer is not blank
         setDocument({
-          document_id: 'doc_streaming',
+          document_id: `pending_${originalKey || Date.now()}`,
+          original_key: originalKey, incomplete: true,
           filename: file.name,
           total_pages: 1,
           pages: [
@@ -169,7 +173,7 @@ export default function WorkspacePage() {
               width: 1000,
               height: 1400,
               full_text: '',
-              mean_confidence: 1.0,
+              mean_confidence: null,
               lines: [],
               image_url: previewUrl,
             },
@@ -215,11 +219,15 @@ export default function WorkspacePage() {
             beam_width: 4,
             rescore: false,
             adaptive: true,
-            turbo: engineMode === 'turbo',
+            processing_mode: engineMode === 'turbo' ? 'cloud' : 'local',
             model_type: batchConfig.modelBias,
           },
           {
             onMetadata: (meta) => {
+              setDocument({ document_id: meta.document_id, filename: meta.filename, total_pages: meta.total_pages,
+                original_key: originalKey, incomplete: true, processing_time_ms: 0,
+                processing_location: engineMode === 'turbo' ? 'cloud' : 'local',
+                pages: meta.pages.map((p: any) => ({ ...p, full_text: '', mean_confidence: null, lines: [] })) });
               if (meta.pages && meta.pages[0]) {
                 totalExpectedLines = meta.pages[0].total_lines || 0;
                 setProcessingStage(`Segmented into ${totalExpectedLines} lines. Decoding strokes...`);
@@ -236,6 +244,7 @@ export default function WorkspacePage() {
               setProcessingStage(`Decoded line ${decodedCount}/${total}: "${snippet}"`);
             },
             onComplete: (doc) => {
+              doc.original_key = originalKey;
               if (previewUrl && doc.pages[0]) {
                 doc.pages[0].image_url = previewUrl;
               }
@@ -266,6 +275,7 @@ export default function WorkspacePage() {
       } finally {
         clearInterval(progressInterval);
         setIsProcessing(false);
+        setEngineMode("trocr");
         setUploadProgress(0);
       }
     },
@@ -336,6 +346,7 @@ export default function WorkspacePage() {
     for (let i = 0; i < stagedFiles.length; i++) {
       setCurrentBatchIndex(i);
       const currentItem = stagedFiles[i];
+      const originalKey = await rememberOriginal(currentItem.file).catch(() => { setError("Original could not be saved locally"); return undefined; });
 
       updateStagedItem(currentItem.id, {
         status: 'processing',
@@ -349,7 +360,9 @@ export default function WorkspacePage() {
       // If first document, show preview in workspace right away
       if (i === 0 && currentItem.previewUrl) {
         setDocument({
-          document_id: 'doc_streaming_batch',
+          document_id: `pending_${originalKey || Date.now()}`,
+          original_key: originalKey,
+          incomplete: true,
           filename: currentItem.name,
           total_pages: 1,
           pages: [
@@ -358,7 +371,7 @@ export default function WorkspacePage() {
               width: 1000,
               height: 1400,
               full_text: '',
-              mean_confidence: 1.0,
+              mean_confidence: null,
               lines: [],
               image_url: currentItem.previewUrl,
             },
@@ -378,10 +391,14 @@ export default function WorkspacePage() {
             beam_width: 4,
             rescore: false,
             adaptive: true,
-            turbo: engineMode === 'turbo',
+            processing_mode: engineMode === 'turbo' ? 'cloud' : 'local',
           },
           {
             onMetadata: (meta) => {
+              setDocument({ document_id: meta.document_id, filename: meta.filename, total_pages: meta.total_pages,
+                original_key: originalKey, incomplete: true, processing_time_ms: 0,
+                processing_location: engineMode === 'turbo' ? 'cloud' : 'local',
+                pages: meta.pages.map((p: any) => ({ ...p, full_text: '', mean_confidence: null, lines: [] })) });
               if (meta.pages && meta.pages[0]) {
                 totalLines = meta.pages[0].total_lines || 12;
                 updateStagedItem(currentItem.id, {
@@ -409,6 +426,7 @@ export default function WorkspacePage() {
               );
             },
             onComplete: (doc) => {
+              doc.original_key = originalKey;
               if (currentItem.previewUrl && doc.pages[0]) {
                 doc.pages[0].image_url = currentItem.previewUrl;
               }
@@ -423,6 +441,8 @@ export default function WorkspacePage() {
           result.pages[0].image_url = currentItem.previewUrl;
         }
 
+        result.original_key = originalKey;
+        await saveDocument(result).catch(() => setError("Local save failed — export this document"));
         completedDocs.push(result);
         updateStagedItem(currentItem.id, {
           status: 'completed',
@@ -450,6 +470,7 @@ export default function WorkspacePage() {
     setBatchOverallProgress(100);
     setBatchStageText(`Batch complete • ${completedDocs.length} documents transcribed.`);
     setIsProcessing(false);
+        setEngineMode("trocr");
   };
 
   const handleReset = () => {
@@ -460,6 +481,7 @@ export default function WorkspacePage() {
     setActiveBatchDocIndex(0);
     setError(null);
     setIsProcessing(false);
+        setEngineMode("trocr");
   };
 
   const handleCopyText = async () => {
@@ -506,7 +528,7 @@ export default function WorkspacePage() {
     const ambiguousTokens: { wordId: string; lineId: string }[] = [];
     for (const line of activePage.lines) {
       for (const word of line.words || []) {
-        if (word.confidence < 0.85) {
+        if ((word.confidence == null || (word.confidence ?? 0) < 0.85)) {
           ambiguousTokens.push({ wordId: word.word_id, lineId: line.line_id });
         }
       }
@@ -524,13 +546,13 @@ export default function WorkspacePage() {
     if (completedBatchDocuments.length === 0) return;
 
     if (batchConfig.format === 'markdown') {
-      const content = exportBatchDocumentsAsMarkdown(completedBatchDocuments);
+      const content = exportBatchDocumentsAsMarkdown(completedBatchDocuments.map(d => d.document_id === document?.document_id ? document : d));
       downloadFile(content, 'batch_transcriptions.md', 'text/markdown;charset=utf-8');
     } else if (batchConfig.format === 'json') {
-      const content = exportBatchDocumentsAsJson(completedBatchDocuments);
+      const content = exportBatchDocumentsAsJson(completedBatchDocuments.map(d => d.document_id === document?.document_id ? document : d));
       downloadFile(content, 'batch_ocr_results.json', 'application/json');
     } else {
-      const content = exportBatchDocumentsAsTxt(completedBatchDocuments);
+      const content = exportBatchDocumentsAsTxt(completedBatchDocuments.map(d => d.document_id === document?.document_id ? document : d));
       downloadFile(content, 'batch_transcriptions.txt', 'text/plain;charset=utf-8');
     }
   };
@@ -552,9 +574,9 @@ export default function WorkspacePage() {
     ? document.pages.reduce((acc, p) => acc + p.lines.length, 0)
     : 0;
 
-  const meanConfidence = document
+  const meanConfidence = document?.pages.some(p => p.mean_confidence == null) ? null : document
     ? Math.round(
-        (document.pages.reduce((acc, p) => acc + (p.mean_confidence || 0.9), 0) /
+        (document.pages.reduce((acc, p) => acc + (p.mean_confidence ?? 0), 0) /
           Math.max(1, document.pages.length)) *
           100
       )
@@ -565,7 +587,7 @@ export default function WorkspacePage() {
         (acc, p) =>
           acc +
           p.lines.reduce(
-            (lAcc, l) => lAcc + l.words.filter((w) => w.confidence < 0.85).length,
+            (lAcc, l) => lAcc + l.words.filter((w) => (w.confidence == null || (w.confidence ?? 0) < 0.85)).length,
             0
           ),
         0
@@ -577,6 +599,7 @@ export default function WorkspacePage() {
       {/* Full-Viewport Drop Target Overlay */}
       <FullWindowDropOverlay onFilesDropped={handleFilesAccepted} disabled={isProcessing} />
 
+      <LocalDocuments />
       {/* Unified Compact Top Navigation Bar (h-14 / 56px) */}
       <header className="sticky top-0 z-40 h-14 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-2xl px-4 sm:px-6 flex items-center justify-between">
         {/* Left Section: Brand & Document Metadata */}
@@ -631,14 +654,14 @@ export default function WorkspacePage() {
               <span className="text-zinc-600 select-none">•</span>
               <span
                 className={
-                  meanConfidence >= 90
+                  (meanConfidence ?? -1) >= 90
                     ? 'text-emerald-400 font-semibold'
-                    : meanConfidence >= 75
+                    : (meanConfidence ?? -1) >= 75
                     ? 'text-amber-400 font-semibold'
                     : 'text-rose-400 font-semibold'
                 }
               >
-                {meanConfidence}% Confidence
+                {meanConfidence == null ? "Unknown" : `${meanConfidence}%`} Confidence
               </span>
 
               {lowConfidenceCount > 0 && (
@@ -788,16 +811,16 @@ export default function WorkspacePage() {
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 backdrop-blur-md">
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span>Deep Vision-Language Intelligence</span>
+                <span>Private handwriting review</span>
               </div>
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.15]">
                 Transcribe Handwriting with{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
-                  Neural Precision
+                  Human Review
                 </span>
               </h1>
               <p className="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto font-normal leading-relaxed">
-                Effortlessly read cursive correspondence, archival notes, signatures, receipts, and multi-page documents.
+                Transcribe notes and letters, compare the original, and correct the result before exporting.
               </p>
 
               {/* ReadMe-Inspired Engine Selection Capsule */}
@@ -805,7 +828,7 @@ export default function WorkspacePage() {
                 <div className="inline-flex items-center p-1 bg-zinc-900/90 border border-zinc-800 rounded-full backdrop-blur-xl shadow-lg">
                   <button
                     type="button"
-                    onClick={() => setEngineMode('turbo')}
+                    onClick={() => { if (window.confirm('Send selected documents to Azure for cloud recognition? Corrections stay local.')) setEngineMode('turbo'); }}
                     data-testid="engine-toggle-turbo"
                     className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       engineMode === 'turbo'
@@ -814,8 +837,8 @@ export default function WorkspacePage() {
                     }`}
                   >
                     <span className="text-amber-400 font-bold">⚡</span>
-                    <span>Turbo VLM</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-300 font-medium">~2s • 100% Cursive</span>
+                    <span>Cloud</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-300 font-medium">Azure • opt-in</span>
                   </button>
                   <button
                     type="button"
@@ -840,7 +863,7 @@ export default function WorkspacePage() {
               onFileAccepted={handleSingleFileAccepted}
               onFilesAccepted={handleFilesAccepted}
               onSelectSample={(sample) => {
-                setDocument(sample);
+                setDocument({ ...sample, is_demo: true, engine_used: "demo" });
                 setCompletedBatchDocuments([sample]);
               }}
               isLoading={isProcessing}
@@ -889,7 +912,7 @@ export default function WorkspacePage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-zinc-100">
-                        {engineMode === 'turbo' ? '⚡ Turbo VLM Active' : '🧠 Neural TrOCR Active'}
+                        {engineMode === 'turbo' ? 'Cloud recognition selected' : 'Local recognition selected'}
                       </span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/25">
                         Transcribing...
@@ -987,7 +1010,7 @@ export default function WorkspacePage() {
                         setDarkroomSettings((prev) => ({ ...prev, inverted: !prev.inverted }))
                       }
                       contrastBoost={darkroomSettings.contrast}
-                      signatureLineIds={findSignatureCandidates(activePage).map((row) => row.lineId)}
+                      signatureLineIds={[]}
                     />
                   )}
                   {activePage && viewMode === 'curtain' && (
@@ -1003,7 +1026,7 @@ export default function WorkspacePage() {
                     <div className="min-h-0 flex-1 overflow-hidden">
                       <InlineEditor
                         page={activePage}
-                        documentId={document?.document_id}
+                        documentId={document?.is_demo ? "demo" : document?.document_id}
                         selectedLineId={selectedLineId}
                         selectedWordId={selectedWordId}
                         hoveredLineId={hoveredLineId}
@@ -1021,14 +1044,7 @@ export default function WorkspacePage() {
                         canRedo={canRedo}
                       />
                     </div>
-                    <SignatureInspector
-                      page={activePage}
-                      reviews={document?.signature_reviews}
-                      selectedLineId={selectedLineId}
-                      onSelectLine={(lineId) => setSelectedLineId(lineId)}
-                      onDecide={setSignatureDecision}
-                      className="m-3 mt-0 shrink-0"
-                    />
+
                   </div>
                 )}
               </div>

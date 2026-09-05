@@ -61,9 +61,9 @@ class Settings(BaseSettings):
     MAX_PDF_PAGES: int = Field(default=50, description="Max allowed PDF pages")
 
     # Beam Search & Rescorer settings
-    ENABLE_RESCORER: bool = Field(default=True, description="Enable RxNorm beam rescoring")
+    ENABLE_RESCORER: bool = Field(default=False, description="Enable RxNorm beam rescoring")
     ENABLE_VLM_REFINE: bool = Field(
-        default=True,
+        default=False,
         description="Second-pass VLM (MLX on Apple Silicon or Azure OpenAI in Cloud) on line crops",
     )
     AZURE_OPENAI_ENDPOINT: Optional[str] = Field(
@@ -79,7 +79,7 @@ class Settings(BaseSettings):
         description="Azure OpenAI deployment name",
     )
     ENABLE_TURBO_MODE: bool = Field(
-        default=True,
+        default=False,
         description="Enable sub-3s Turbo VLM mode using Azure OpenAI",
     )
     TURBO_MODEL_DEPLOYMENT: str = Field(
@@ -155,7 +155,7 @@ class Settings(BaseSettings):
         description="Azure Blob container for append-only JSONL manifests",
     )
     FEEDBACK_STORAGE_BACKEND: str = Field(
-        default="auto",
+        default="local",
         description="Feedback storage backend: 'auto' (Azure if configured, else local), 'azure_blob', or 'local'",
     )
 
@@ -240,6 +240,15 @@ class Settings(BaseSettings):
         6. Local fine-tuned LoRA base checkpoint (checkpoints/lora_trocr_base_iam)
         7. Default ('microsoft/trocr-base-handwritten')
         """
+        registry = Path("checkpoints/active.json")
+        if registry.exists():
+            import json
+            from pipeline.training.release_registry import checkpoint_digest
+            state = json.loads(registry.read_text())
+            if checkpoint_digest(state["active"]) != state["sha256"]:
+                raise RuntimeError("Active checkpoint content changed; restore or roll back")
+            return assert_shippable_checkpoint(state["active"])
+
         if self.MODEL_NAME_OR_PATH and Path(self.MODEL_NAME_OR_PATH).exists():
             return assert_shippable_checkpoint(self.MODEL_NAME_OR_PATH)
 

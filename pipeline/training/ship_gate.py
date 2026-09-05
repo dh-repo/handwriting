@@ -293,6 +293,33 @@ def decide_ship(
     2. Candidate CER satisfies baseline threshold (or regression tolerance).
     3. Clinical LASA safety audit passes with zero dangerous drug substitutions.
     """
+    # Evidence is mandatory; historical constants and empty audits are not measurements.
+    import math
+    evidence_error = None
+    baseline = report.get("baseline", {})
+    if not report.get("measured") or report.get("sample_count", 0) <= 0 or not report.get("manifest_hash"):
+        evidence_error = "missing nonempty measured candidate evaluation"
+    elif not baseline.get("measured") or baseline.get("manifest_hash") != report["manifest_hash"] or baseline.get("sample_count") != report["sample_count"]:
+        evidence_error = "baseline must be measured on the same frozen split"
+    elif any(not isinstance(x, (int, float)) or not math.isfinite(x) or x < 0 for x in (report.get("cer"), baseline.get("cer"))):
+        evidence_error = "invalid evaluation metrics"
+    elif report.get("failures", 0) or baseline.get("failures", 0):
+        evidence_error = "evaluation contains failed samples"
+    elif not report.get("checkpoint_hash"):
+        evidence_error = "missing checkpoint content hash"
+    elif report.get("domain") == "clinical":
+        clinical = report.get("clinical_evaluation", {})
+        audit_count = lasa_audit.total_evaluated if isinstance(lasa_audit, LasaAuditResult) else (lasa_audit or {}).get("total_evaluated", 0)
+        if not clinical.get("measured") or clinical.get("sample_count", 0) <= 0 or not clinical.get("manifest_hash") or clinical.get("failures", 0) or clinical.get("checkpoint_hash") != report["checkpoint_hash"] or clinical.get("required_directions", 0) <= 0 or clinical.get("covered_directions") != clinical.get("required_directions") or lasa_audit is None or audit_count <= 0:
+            evidence_error = "missing candidate clinical inference or complete directional coverage"
+    if evidence_error:
+        decision = {"promote": False, "reason": evidence_error}
+        if output_dir is not None:
+            path = Path(output_dir) / "ship_decision.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(decision, indent=2))
+        return decision
+    baseline_cer = baseline["cer"]
     checkpoint = assert_shippable_checkpoint(str(report.get("checkpoint", "")))
     cer = float(report["cer"])
     beams = int(report.get("num_beams", 1))
@@ -354,6 +381,7 @@ def decide_ship(
 
     decision = {
         "promote": promote,
+        "checkpoint_hash": report.get("checkpoint_hash"),
         "reason": reason,
         "candidate_cer": cer,
         "candidate_beams": beams,

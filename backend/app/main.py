@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import logging
 from typing import Any, AsyncIterator
+from pydantic import ValidationError
+import httpx
 import torch
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -121,6 +123,23 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
+
+    @app.exception_handler(RuntimeError)
+    async def recognition_unavailable(request: Request, exc: RuntimeError) -> JSONResponse:
+        logger.error("Recognition unavailable: %s", exc)
+        return JSONResponse(status_code=503, content={"code": "recognition_unavailable", "error": "Recognition unavailable", "detail": "The recognition engine could not complete this request. Retry after checking model availability."})
+
+    @app.exception_handler(ValidationError)
+    async def option_validation_error(request: Request, exc: ValidationError) -> JSONResponse:
+        return JSONResponse(status_code=422, content={"code": "invalid_options", "error": str(exc)})
+
+    @app.exception_handler(httpx.TimeoutException)
+    async def provider_timeout(request: Request, exc: httpx.TimeoutException) -> JSONResponse:
+        return JSONResponse(status_code=504, content={"code": "provider_timeout", "error": "Cloud recognition timed out; no completed transcript was produced"})
+
+    @app.exception_handler(httpx.HTTPError)
+    async def provider_failure(request: Request, exc: httpx.HTTPError) -> JSONResponse:
+        return JSONResponse(status_code=502, content={"code": "provider_unavailable", "error": "Cloud recognition failed; retry explicitly"})
 
     # Include Routers
     app.include_router(health.router, prefix="/v1", tags=["Health"])

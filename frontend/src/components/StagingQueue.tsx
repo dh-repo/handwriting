@@ -29,6 +29,7 @@ import {
 import { DocumentOCRResult } from '../types/ocr';
 
 export interface StagingQueueProps {
+  generalOnly?: boolean;
   items: BatchFileItem[];
   config: BatchConfiguration;
   onConfigChange: (newConfig: BatchConfiguration) => void;
@@ -46,6 +47,7 @@ export interface StagingQueueProps {
 
 export const StagingQueue: React.FC<StagingQueueProps> = ({
   items,
+  generalOnly = true,
   config,
   onConfigChange,
   onRemoveItem,
@@ -363,7 +365,7 @@ export const StagingQueue: React.FC<StagingQueueProps> = ({
                   { id: 'archival', label: 'Legal / Archival', desc: 'Signatures & historical' },
                   { id: 'tabular', label: 'Tabular / Forms', desc: 'Structured alignment' },
                 ] as const
-              ).map((bias) => (
+              ).filter(bias => !generalOnly || bias.id === "general").map((bias) => (
                 <label
                   key={bias.id}
                   data-testid={`config-bias-${bias.id}`}

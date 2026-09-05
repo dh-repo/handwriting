@@ -1,0 +1,199 @@
+{
+  "cer": 0.047909906470700515,
+  "wer": 0.1323251417769376,
+  "exact_match": 0.37,
+  "uncased_cer": 0.04523764077113953,
+  "checkpoint": "microsoft/trocr-base-handwritten",
+  "model_revision": "eaacaf452b06415df8f10bb6fad3a4c11e609406",
+  "manifest_hash": "5f2d95fa62cc78e7b7b3f7e448765726ef816b55a4033781e5a30acb3fe685e0",
+  "scope": "line",
+  "sample_count": 100,
+  "measured": true,
+  "device": "mps",
+  "num_beams": 4,
+  "max_new_tokens": 128,
+  "failures": 0,
+  "elapsed_seconds": 145.18058262497652,
+  "worst_examples": [
+    {
+      "image": "00034.png",
+      "text": "vision .",
+      "sha256": "4f32dd00f44e30784862c7e32382d758a1fa75ff169de403368daccafff786d3",
+      "prediction": "visionplay .",
+      "error": null,
+      "latency_ms": 481.3824170269072,
+      "cer": 0.5
+    },
+    {
+      "image": "00033.png",
+      "text": "him of his ugly battle-dress , to leave him for",
+      "sha256": "472f1334442233fd40abeeee1e837cc5204a66377b73552ead50ff75673a3e66",
+      "prediction": "When others might be able to leave him for",
+      "error": null,
+      "latency_ms": 982.6866670046002,
+      "cer": 0.48936170212765956
+    },
+    {
+      "image": "00013.png",
+      "text": "( B B C , 10.15 ) .",
+      "sha256": "c4e714785ad986d9f0bc602c0bdd0ae9568f2291f096b959a49bae7503bf1368",
+      "prediction": "CBE , 10.15 ) .",
+      "error": null,
+      "latency_ms": 900.3197499550879,
+      "cer": 0.3157894736842105
+    },
+    {
+      "image": "00090.png",
+      "text": "some markings would be used , although which , it is",
+      "sha256": "8c3e13c0bbdaa4a242c976e748c2766279355cf2bd531ee125de2475df411d64",
+      "prediction": "some workshops would be used , \" Ough which , it is",
+      "error": null,
+      "latency_ms": 1438.9611249789596,
+      "cer": 0.21153846153846154
+    },
+    {
+      "image": "00091.png",
+      "text": "impossible to say .",
+      "sha256": "5846a8b7221ee699b9ce3fab7305fae9504af52c05d6b0155131a9b2beecce88",
+      "prediction": "unpassible to say .",
+      "error": null,
+      "latency_ms": 730.6555419927463,
+      "cer": 0.15789473684210525
+    },
+    {
+      "image": "00065.png",
+      "text": "Fourth Gospel by explanations based on assumed textual dislocations . The",
+      "sha256": "4ceaf41d60f60c9fe8c077656b7cefd99e9342a2ec0d656b49ad00982fdc032f",
+      "prediction": "Forth Gospel by explanations based on assumed festival Moderations . The",
+      "error": null,
+      "latency_ms": 1457.929708994925,
+      "cer": 0.1506849315068493
+    },
+    {
+      "image": "00017.png",
+      "text": "playwright Arnold Wesker . \" Instead , Muggeridge's appointment",
+      "sha256": "9978df14e62a74e70028f69252bf09299f29d2735df2e6d05024d2db898137c0",
+      "prediction": "playwright Arnold Walker . \" Instead , Muggeridge's opportunity",
+      "error": null,
+      "latency_ms": 1509.318207972683,
+      "cer": 0.14285714285714285
+    },
+    {
+      "image": "00009.png",
+      "text": "Fay Compton stars in \" No Hiding Place \" (I T V , 9.35 p.m. ) .",
+      "sha256": "30cdea1c6ab4abc9943eb501cf6305c1a75a32531d61314b91ce54c15843853e",
+      "prediction": "Bay Compton stars in \" No. Hiding Place \" ( I.T.P. , 9.33 p.m. ) .",
+      "error": null,
+      "latency_ms": 2596.7142920708284,
+      "cer": 0.12698412698412698
+    },
+    {
+      "image": "00020.png",
+      "text": "parts of the mind not normally available without hypnosis are used .",
+      "sha256": "65760e9c39689b9f9f2635d8b554311777d555ac7948e6d6a9360299dfa1dad2",
+      "prediction": "parts at the wind not marginally available without hypnosis are used .",
+      "error": null,
+      "latency_ms": 1294.931665994227,
+      "cer": 0.11764705882352941
+    },
+    {
+      "image": "00014.png",
+      "text": "\" McNamara's Band , \" \" Greensleeves \" and \" English Rose . \"",
+      "sha256": "a6a2985e7d53e46d5bb89cf386547a002ffe3aeafc6b6840175c7fcda99fedf6",
+      "prediction": "\" Mr. Namara's band , \" \" Green sleeves \" and \" English base . \"",
+      "error": null,
+      "latency_ms": 1894.9166249949485,
+      "cer": 0.11475409836065574
+    },
+    {
+      "image": "00069.png",
+      "text": "accidentally damaged . An editor , who was not the author , made what he",
+      "sha256": "8ace6633f6faccf43a73062c4b3994c1094e8ae7f923228c04cfd2968b047d56",
+      "prediction": "accidentally damaged . In addition , who was not the another , made what he",
+      "error": null,
+      "latency_ms": 1735.9148330288008,
+      "cer": 0.1111111111111111
+    },
+    {
+      "image": "00061.png",
+      "text": "the Synoptics can be reasonably solved by paying due regard to the time and",
+      "sha256": "8a39e0c8d32024b3e904fd7def256841994d1da68db017219c085e2486d33089",
+      "prediction": "Mr. Symptoms can be reasonably solved by praying due regard to the time and",
+      "error": null,
+      "latency_ms": 1826.8499999539927,
+      "cer": 0.10666666666666667
+    },
+    {
+      "image": "00057.png",
+      "text": "and who is now being pluckily convivial",
+      "sha256": "263f9f357edbe7ded346e2124a1d6d1719409c6802f0bfb2072fa8d62ac3c93b",
+      "prediction": "and who is now being pluckily carnival",
+      "error": null,
+      "latency_ms": 1507.5223329477012,
+      "cer": 0.10256410256410256
+    },
+    {
+      "image": "00060.png",
+      "text": "ALSO present is a London journalist who",
+      "sha256": "7687e49761fbde38d9305671d325002846f68b2d9d1d815c99ce9327c21ec207",
+      "prediction": "Also present it a London journalist who",
+      "error": null,
+      "latency_ms": 895.958291948773,
+      "cer": 0.10256410256410256
+    },
+    {
+      "image": "00036.png",
+      "text": "C O believed him . Courtenay played the part with a gawky ,",
+      "sha256": "b2a65325874536e28de5c67b253f38ddfe1c6ffc75cff3cd26175808767b1ce4",
+      "prediction": "co believed him . Courtenay played the past with a gawley ,",
+      "error": null,
+      "latency_ms": 1427.0139579894021,
+      "cer": 0.1016949152542373
+    },
+    {
+      "image": "00050.png",
+      "text": "that in the race of the modern nations ,",
+      "sha256": "d2485c2b9d087affb49ab8965b0bc0493f903f559af5d129799b7083cd69d40a",
+      "prediction": "that in the house of the modern nations ,",
+      "error": null,
+      "latency_ms": 1277.414583018981,
+      "cer": 0.1
+    },
+    {
+      "image": "00083.png",
+      "text": "scholars who have compared the many manu-",
+      "sha256": "db27d16e514871437d4b4c5851911b3b21a23bec644857f7ed7a512168457567",
+      "prediction": "scholars who have compared the many man in -",
+      "error": null,
+      "latency_ms": 1187.247792026028,
+      "cer": 0.0975609756097561
+    },
+    {
+      "image": "00015.png",
+      "text": "of Rhodesia and Nyasaland ( 10.30 p.m. ) .",
+      "sha256": "a25836204b2b9c3f3e1039dbe70e4d8bb3e55cf07ee57aab1ede3e146e661824",
+      "prediction": "of Rhodesia and Nyasaland Co.30 p.m. ) .",
+      "error": null,
+      "latency_ms": 1590.1182499947026,
+      "cer": 0.09523809523809523
+    },
+    {
+      "image": "00012.png",
+      "text": "THREE people will be hypnotised in tonight's \" Lifeline \"",
+      "sha256": "ca9aa9b446ad70a12dd4dcd2723f1d937038afbc286f2a68398931aaf7bf81b5",
+      "prediction": "THREE people will be hypothesized in tonight's \" Lifeline \"",
+      "error": null,
+      "latency_ms": 1212.1077919146046,
+      "cer": 0.08771929824561403
+    },
+    {
+      "image": "00002.png",
+      "text": "CHRIS CHARLES , 39 , who lives in Stockton-on-Tees , is an accountant .",
+      "sha256": "e3f079f2a61a82263a6ec0137ab362d0f2082519cf14e9207905813bf27dc76c",
+      "prediction": "CHRIS CHARLES , 33 , who lives in Stockton - on - Tee's , is an accountant .",
+      "error": null,
+      "latency_ms": 2072.9452080558985,
+      "cer": 0.08450704225352113
+    }
+  ]
+}

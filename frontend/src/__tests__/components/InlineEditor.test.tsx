@@ -6,7 +6,7 @@ import { SAMPLE_MESSY_CURSIVE } from '@/lib/sampleDocuments';
 
 describe('InlineEditor Component', () => {
   it('renders line rows with confidence badges and inputs in structured mode', () => {
-    render(<InlineEditor page={SAMPLE_MESSY_CURSIVE.pages[0]} />);
+    render(<InlineEditor enableMedicalSuggestions page={SAMPLE_MESSY_CURSIVE.pages[0]} />);
 
     expect(screen.getByTestId('inline-editor-container')).toBeInTheDocument();
     expect(screen.getByTestId('tab-structured')).toBeInTheDocument();
@@ -19,7 +19,7 @@ describe('InlineEditor Component', () => {
 
   it('triggers onLineChange callback when typing in a line input', () => {
     const onLineChange = vi.fn();
-    render(<InlineEditor page={SAMPLE_MESSY_CURSIVE.pages[0]} onLineChange={onLineChange} />);
+    render(<InlineEditor enableMedicalSuggestions page={SAMPLE_MESSY_CURSIVE.pages[0]} onLineChange={onLineChange} />);
 
     const firstInput = screen.getByTestId('line-input-p1_l1');
     fireEvent.change(firstInput, { target: { value: 'Corrected line text here' } });
@@ -28,7 +28,7 @@ describe('InlineEditor Component', () => {
   });
 
   it('switches to raw plaintext editor tab', () => {
-    render(<InlineEditor page={SAMPLE_MESSY_CURSIVE.pages[0]} />);
+    render(<InlineEditor enableMedicalSuggestions page={SAMPLE_MESSY_CURSIVE.pages[0]} />);
 
     const rawTab = screen.getByTestId('tab-raw');
     fireEvent.click(rawTab);
@@ -40,7 +40,7 @@ describe('InlineEditor Component', () => {
   it('navigates to speed review tab and advances through uncertain words', () => {
     const onWordChange = vi.fn();
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={SAMPLE_MESSY_CURSIVE.pages[0]}
         onWordChange={onWordChange}
       />
@@ -74,7 +74,7 @@ describe('InlineEditor Component', () => {
     };
 
     render(
-      <InlineEditor
+      <InlineEditor enableMedicalSuggestions
         page={modifiedPage}
         onUndo={onUndo}
         onRedo={onRedo}
@@ -102,6 +102,7 @@ describe('InlineEditor Component', () => {
       page_number: 1,
       width: 800,
       height: 1000,
+      mean_confidence: 0.95,
       confidence: 0.95,
       full_text: 'Dr. Penelope Harrington Dick D.',
       lines: [
@@ -121,7 +122,7 @@ describe('InlineEditor Component', () => {
       ],
     };
 
-    render(<InlineEditor page={mockPage} />);
+    render(<InlineEditor enableMedicalSuggestions page={mockPage} />);
 
     const penelopeChip = screen.getByTestId('word-chip-w2');
     expect(penelopeChip).toHaveAttribute('data-proper-noun', 'true');

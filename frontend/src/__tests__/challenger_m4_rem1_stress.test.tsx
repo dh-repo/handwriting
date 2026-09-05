@@ -139,7 +139,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
   describe('Speed Review Input: Numerical Typing & Shortcut Isolation', () => {
     it('allows operator to actively type "500mg" without key 5 hijacking input', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_500mg"
           apiClientInstance={mockClient}
@@ -179,7 +179,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
 
     it('allows operator to actively type "10mg" without key 1 hijacking input', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_10mg"
           apiClientInstance={mockClient}
@@ -210,7 +210,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
 
     it('allows operator to actively type "1 tab" without key 1 hijacking input', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_1tab"
           apiClientInstance={mockClient}
@@ -243,7 +243,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
 
     it('allows Alt+1..5 to explicitly select suggestions even while typing', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_alt_select"
           apiClientInstance={mockClient}
@@ -271,7 +271,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
 
     it('investigates behavior when operator clears input to empty string and types number 1-5', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_empty_then_num"
           apiClientInstance={mockClient}
@@ -298,7 +298,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
 
     it('triggers quick-pick when operator presses 1-5 on untouched initial triage', async () => {
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_untouched_triage"
           apiClientInstance={mockClient}
@@ -328,7 +328,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
     it('debounces rapid typing with exactly 500ms trailing-edge delay', async () => {
       vi.useFakeTimers();
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_debounce"
           apiClientInstance={mockClient}
@@ -362,13 +362,13 @@ describe('Challenger M4 Remediation Stress Harness', () => {
 
       expect(mockSubmitFeedback).toHaveBeenCalledTimes(1);
       expect(mockSubmitFeedback.mock.calls[0][0].operator_correction).toBe('Debounce Test Edit 10');
-      expect(screen.getByTestId('feedback-status-line_1')).toHaveTextContent(/Flywheel Saved/i);
+      expect(screen.getByTestId('feedback-status-line_1')).toHaveTextContent(/Feedback submitted/i);
     });
 
     it('immediately dispatches on Enter and cancels pending 500ms debounce timer with zero duplicates', async () => {
       vi.useFakeTimers();
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_enter"
           apiClientInstance={mockClient}
@@ -406,7 +406,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
     it('immediately flushes on onBlur if debounce timer is active and cancels pending timer', async () => {
       vi.useFakeTimers();
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_blur"
           apiClientInstance={mockClient}
@@ -443,7 +443,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
     it('does not re-dispatch on onBlur if already synced via Enter or prior debounce timer', async () => {
       vi.useFakeTimers();
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_no_double_blur"
           apiClientInstance={mockClient}
@@ -476,7 +476,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
     it('validates canonical M1 ↔ M4 schema contract fidelity on dispatched payloads', async () => {
       vi.useFakeTimers();
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={createMockPage()}
           documentId="doc_stress_contract_payload"
           apiClientInstance={mockClient}
@@ -525,7 +525,7 @@ describe('Challenger M4 Remediation Stress Harness', () => {
       page.lines[0].is_edited = true;
 
       render(
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={page}
           documentId="doc_stress_revert_all"
           apiClientInstance={mockClient}

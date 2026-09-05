@@ -113,16 +113,10 @@ def test_recognize_all_formats(
     assert r4.status_code == 200
 
 
-def test_recognize_line_returns_text_ms_model_id(client: TestClient, sample_image_bytes: bytes) -> None:
-    resp = client.post(
-        "/v1/recognize-line",
-        files={"file": ("line.png", sample_image_bytes, "image/png")},
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "text" in body
-    assert "ms" in body
-    assert body["model_id"] in ("microsoft/trocr-base-handwritten", "microsoft/trocr-large-handwritten")
+def test_recognize_line_requires_a_real_model(client: TestClient, sample_image_bytes: bytes) -> None:
+    resp = client.post("/v1/recognize-line", files={"file": ("line.png", sample_image_bytes, "image/png")})
+    assert resp.status_code == 503
+    assert "text" not in resp.json()
 
 
 def test_decode_line_crop_uses_page_generate() -> None:
@@ -178,10 +172,9 @@ def test_recognize_turbo_query_option(client: TestClient, sample_image_bytes: by
         "/v1/recognize?turbo=true",
         files={"file": ("note.png", sample_image_bytes, "image/png")},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 422
     data = resp.json()
-    assert "document_id" in data
-    assert "pages" in data
+    assert "document_id" not in data
 
     resp_false = client.post(
         "/v1/recognize?turbo=false",

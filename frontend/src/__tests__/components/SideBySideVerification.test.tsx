@@ -64,7 +64,7 @@ describe('Side-by-Side Verification & Synchronized Hover / Confidence Highlighti
           onHoverLine={(lId) => setHoveredLineId(lId)}
           onHoverWord={(wId) => setHoveredWordId(wId)}
         />
-        <InlineEditor
+        <InlineEditor enableMedicalSuggestions
           page={testPage}
           selectedLineId={selectedLineId}
           selectedWordId={selectedWordId}

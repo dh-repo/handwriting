@@ -72,34 +72,19 @@ class InMemoryJobStore:
         return job_id
 
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+        self.expire_jobs()
         job = self._jobs.get(job_id)
         if job is None:
             return None
 
-        # Auto-advance for sync test environments if still queued/processing
-        if job["status"] in ("QUEUED", "PROCESSING"):
-            self._poll_counts[job_id] = self._poll_counts.get(job_id, 0) + 1
-            if self._poll_counts[job_id] == 1 and job["status"] == "QUEUED":
-                job["status"] = "PROCESSING"
-                job["progress"] = 0.5
-                job["updated_at"] = datetime.now(timezone.utc).isoformat()
-            elif self._poll_counts[job_id] >= 2 and job["result"] is None and job["error"] is None:
-                try:
-                    engine = get_engine()
-                    res = engine.recognize(
-                        job["file_bytes"],
-                        filename=job["filename"],
-                        options=job.get("options"),
-                    )
-                    job["status"] = "COMPLETED"
-                    job["progress"] = 1.0
-                    job["result"] = res
-                except Exception as e:
-                    job["status"] = "FAILED"
-                    job["progress"] = 0.0
-                    job["error"] = str(e)
-                job["updated_at"] = datetime.now(timezone.utc).isoformat()
         return job
+
+    def expire_jobs(self) -> None:
+        now = datetime.now(timezone.utc)
+        for key, job in list(self._jobs.items()):
+            if job["status"] in ("COMPLETED", "FAILED") and (now - datetime.fromisoformat(job["updated_at"])).total_seconds() >= self._retention:
+                del self._jobs[key]
+                self._poll_counts.pop(key, None)
 
     def update_job(
         self,
@@ -122,12 +107,14 @@ class InMemoryJobStore:
         if error is not None:
             job["error"] = error
         job["updated_at"] = now
+        if status in ("COMPLETED", "FAILED"):
+            job["file_bytes"] = b""
 
     async def execute_background_job(self, job_id: str) -> None:
         """Worker task processing document recognition under concurrency throttle."""
         async with self._semaphore:
             job = self._jobs.get(job_id)
-            if not job or job["status"] == "COMPLETED":
+            if not job or job["status"] != "QUEUED":
                 return
 
             self.update_job(job_id, status="PROCESSING", progress=0.2)
@@ -145,7 +132,7 @@ class InMemoryJobStore:
                 self.update_job(job_id, status="FAILED", progress=0.0, error=str(e))
 
 
-job_store = InMemoryJobStore()
+job_store = InMemoryJobStore(get_settings().MAX_CONCURRENT_JOBS, get_settings().JOB_RETENTION_SECONDS)
 
 
 @router.post("/jobs", response_model=JobStatusResponse)
@@ -158,7 +145,9 @@ async def submit_job(
     extract_words: bool = Query(default=True),
     dpi: int = Query(default=300),
     beam_width: int = Query(default=5, ge=1, le=16),
-    rescore: bool = Query(default=True),
+    rescore: bool = Query(default=False),
+    processing_mode: str = Query(default="local", pattern="^(local|cloud)$"),
+    turbo: Optional[bool] = Query(default=None),
     settings: Settings = Depends(get_settings),
 ) -> JobStatusResponse:
     """Submit document for asynchronous background handwriting recognition."""
@@ -173,6 +162,8 @@ async def submit_job(
         dpi=dpi,
         beam_width=beam_width,
         rescore=rescore,
+        processing_mode=processing_mode,
+        turbo=turbo,
     )
 
     if "application/json" in content_type:
@@ -249,38 +240,25 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
 
 async def _generate_sse_stream(job_id: str) -> AsyncIterator[str]:
     """Generate Server-Sent Events for job progress and completion."""
-    job = job_store._jobs.get(job_id)
-    if not job:
-        yield f"event: error\ndata: {json.dumps({'error': f'Job {job_id} not found'})}\n\n"
-        return
-
-    # Emit progress event
-    yield f"event: progress\ndata: {json.dumps({'job_id': job_id, 'status': 'PROCESSING', 'progress': 0.5})}\n\n"
-
-    # Check if already completed
-    if job["status"] == "COMPLETED" and job["result"]:
-        res_data = job["result"].model_dump() if hasattr(job["result"], "model_dump") else job["result"]
-        yield f"event: complete\ndata: {json.dumps(res_data)}\n\n"
-        return
-    elif job["status"] == "FAILED":
-        yield f"event: error\ndata: {json.dumps({'job_id': job_id, 'error': job['error']})}\n\n"
-        return
-
-    # Compute result if not completed yet
-    try:
-        engine = get_engine()
-        res = await asyncio.to_thread(
-            engine.recognize,
-            job["file_bytes"],
-            filename=job["filename"],
-            options=job.get("options"),
-        )
-        job_store.update_job(job_id, status="COMPLETED", progress=1.0, result=res)
-        res_data = res.model_dump() if hasattr(res, "model_dump") else res
-        yield f"event: complete\ndata: {json.dumps(res_data)}\n\n"
-    except Exception as e:
-        job_store.update_job(job_id, status="FAILED", progress=0.0, error=str(e))
-        yield f"event: error\ndata: {json.dumps({'job_id': job_id, 'error': str(e)})}\n\n"
+    last_state = None
+    while True:
+        job = job_store.get_job(job_id)
+        if not job:
+            yield f"event: error\ndata: {json.dumps({'error': 'Job expired or interrupted; submit again'})}\n\n"
+            return
+        if job["status"] == "COMPLETED":
+            result = job["result"]
+            data = result.model_dump() if hasattr(result, "model_dump") else result
+            yield f"event: complete\ndata: {json.dumps(data)}\n\n"
+            return
+        if job["status"] == "FAILED":
+            yield f"event: error\ndata: {json.dumps({'error': job['error']})}\n\n"
+            return
+        state = (job["status"], job["progress"])
+        if state != last_state:
+            yield f"event: progress\ndata: {json.dumps({'job_id': job_id, 'status': state[0], 'progress': state[1]})}\n\n"
+            last_state = state
+        await asyncio.sleep(0.25)
 
 
 @router.get("/jobs/{job_id}/stream")

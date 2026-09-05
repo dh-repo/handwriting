@@ -87,7 +87,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     x: number;
     y: number;
     text: string;
-    confidence: number;
+    confidence: number | null;
     lineIndex: number;
     wordIndex?: number;
     alternatives?: (WordCandidate | string)[];
@@ -300,14 +300,14 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               <span className="text-[11px] font-medium text-slate-300">Page {idx + 1}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ${
-                  p.mean_confidence >= 0.90
+                  (p.mean_confidence ?? -1) >= 0.90
                     ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                    : p.mean_confidence >= 0.70
+                    : (p.mean_confidence ?? -1) >= 0.70
                     ? "bg-amber-950 text-amber-300 border border-amber-800"
                     : "bg-rose-950 text-rose-300 border border-rose-800"
                 }`}
               >
-                {(p.mean_confidence * 100).toFixed(0)}%
+                {(p.mean_confidence == null ? "Unknown" : (p.mean_confidence * 100).toFixed(0))}%
               </span>
             </button>
           ))}
@@ -560,7 +560,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       fill={showConfidenceHeatmap ? colorStyle.fill : "rgba(99, 102, 241, 0.08)"}
                       stroke={stroke}
                       strokeWidth={isLineSelected ? 3 : isLineHovered || isSignatureCandidate ? 2.5 : 1.5}
-                      strokeDasharray={line.confidence < 0.70 ? "4 2" : undefined}
+                      strokeDasharray={(line.confidence ?? 0) < 0.70 ? "4 2" : undefined}
                       className="cursor-pointer transition-all duration-150"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -588,7 +588,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       line.words?.map((word: WordToken, wIdx: number) => {
                         const isWordSelected = selectedWordId === word.word_id;
                         const isWordHovered = hoveredWordId === word.word_id;
-                        const isLowConfidence = word.confidence < 0.85;
+                        const isLowConfidence = (word.confidence ?? 0) < 0.85;
                         const wordRect = bboxToSvgRect(word.bbox, docWidth, docHeight);
 
                         return (
@@ -716,14 +716,14 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 <span className="font-bold max-w-[200px] truncate">{tooltip.text}</span>
                 <span
                   className={`font-mono font-bold px-1.5 py-0.5 rounded-md text-[10px] ${
-                    tooltip.confidence >= 0.90
+                    (tooltip.confidence ?? -1) >= 0.90
                       ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                      : tooltip.confidence >= 0.70
+                      : (tooltip.confidence ?? -1) >= 0.70
                       ? "bg-amber-950 text-amber-300 border border-amber-800"
                       : "bg-rose-950 text-rose-300 border border-rose-800"
                   }`}
                 >
-                  {(tooltip.confidence * 100).toFixed(1)}%
+                  {(tooltip.confidence == null ? "Unknown" : (tooltip.confidence * 100).toFixed(1))}%
                 </span>
               </div>
 
@@ -733,7 +733,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   <span className="font-semibold text-cyan-400">Alternatives: </span>
                   {tooltip.alternatives.slice(0, 3).map((alt, aIdx) => {
                     const altText = typeof alt === "string" ? alt : alt.text;
-                    const altConf = typeof alt === "object" && alt.confidence !== undefined ? ` (${(alt.confidence * 100).toFixed(0)}%)` : "";
+                    const altConf = typeof alt === "object" && alt.confidence !== undefined ? ` (${(alt.confidence == null ? "Unknown" : (alt.confidence * 100).toFixed(0))}%)` : "";
                     return (
                       <span key={aIdx} className="font-mono text-slate-300">
                         {altText}

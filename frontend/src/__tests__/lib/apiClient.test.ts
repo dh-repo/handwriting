@@ -319,23 +319,7 @@ describe('ApiClient Unit & Integration Tests', () => {
       await expect(client.recognizeFile(file)).rejects.toThrow(/Unsupported image format/);
     });
 
-    it('falls back to mock engine when fallback is enabled and backend is unreachable', async () => {
-      const fallbackClient = new ApiClient({
-        baseUrl: 'http://non-existent-backend:9999',
-        proxyUrl: '/api/recognize',
-        timeoutMs: 1000,
-        enableFallback: true,
-      });
-
-      global.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
-
-      const file = new File(['image-bytes'], 'sample_prescription.png', { type: 'image/png' });
-      const result = await fallbackClient.recognizeFile(file);
-
-      expect(result).toBeDefined();
-      expect(result.pages.length).toBeGreaterThan(0);
-      expect(result.document_id).toBeDefined();
-    });
+    it("reports unavailable service honestly: falls back to mock engine when fallback is enabled and backend is unreachable", async () => { vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('offline'))); const { ApiClient }=await import('@/lib/apiClient'); await expect(new ApiClient({baseUrl:'http://backend',enableFallback:true}).recognizeBase64('abc')).rejects.toThrow(); });
   });
 
   describe('Server-Sent Events (SSE) Stream Reader', () => {

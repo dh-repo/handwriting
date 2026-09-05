@@ -107,7 +107,7 @@ export async function runMockOcr(options: MockRecognitionOptions): Promise<Docum
       };
     });
 
-    const lineConf = +(words.reduce((sum, w) => sum + w.confidence, 0) / words.length).toFixed(3);
+    const lineConf = +(words.reduce((sum, w) => sum + (w.confidence ?? 0), 0) / words.length).toFixed(3);
 
     lines.push({
       line_id: lineId,
@@ -123,7 +123,7 @@ export async function runMockOcr(options: MockRecognitionOptions): Promise<Docum
     });
   }
 
-  const meanConf = +(lines.reduce((sum, l) => sum + l.confidence, 0) / lines.length).toFixed(3);
+  const meanConf = +(lines.reduce((sum, l) => sum + (l.confidence ?? 0), 0) / lines.length).toFixed(3);
   const fullText = lines.map((l) => l.text).join("\n");
 
   const page: PageResult = {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Sparkles, ArrowRight, FileText, Scale, Stethoscope, CheckCircle2 } from 'lucide-react';
-import { SAMPLE_CLEAN_CURSIVE, SAMPLE_LEGAL_CONTRACT, SAMPLE_PRESCRIPTION } from '../lib/sampleDocuments';
+import { SAMPLE_CLEAN_CURSIVE, SAMPLE_MESSY_CURSIVE } from '../lib/sampleDocuments';
 import { DocumentOCRResult } from '../types/ocr';
 
 export interface ZeroFrictionSampleCardsProps {
@@ -26,10 +26,10 @@ export interface SampleCardItem {
 export const ZERO_FRICTION_SAMPLES: SampleCardItem[] = [
   {
     id: 'sample_18th_century',
-    title: '18th-Century Cursive',
-    subtitle: 'Spencerian archival script with smooth flowing strokes',
-    category: 'Historical Archival',
-    accuracy: '96% accuracy',
+    title: 'Cursive Note',
+    subtitle: 'Example scan and prepared transcript for trying the review controls',
+    category: 'Demo',
+    accuracy: 'Prepared demo',
     thumbnailUrl: '/samples/sample_clean_cursive.png',
     icon: <FileText className="w-5 h-5 text-emerald-400" />,
     badgeStyle: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
@@ -39,27 +39,16 @@ export const ZERO_FRICTION_SAMPLES: SampleCardItem[] = [
   {
     id: 'sample_annotated_notes',
     title: 'Annotated Meeting Notes',
-    subtitle: 'Legal agreement clauses, margin revisions & signature line',
-    category: 'Legal & Signatures',
-    accuracy: '95% accuracy',
+    subtitle: 'Prepared example for practicing corrections',
+    category: 'Demo',
+    accuracy: 'Prepared demo',
     thumbnailUrl: '/samples/sample_clean_cursive.png',
     icon: <Scale className="w-5 h-5 text-indigo-400" />,
     badgeStyle: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
     glowStyle: 'hover:border-indigo-500/50 hover:shadow-indigo-500/20',
-    data: SAMPLE_LEGAL_CONTRACT,
+    data: SAMPLE_MESSY_CURSIVE,
   },
-  {
-    id: 'sample_messy_receipt',
-    title: 'Messy Receipt & Clinical Rx',
-    subtitle: 'Unconstrained doctor handwriting, dosages & medication sigs',
-    category: 'Prescription & Forms',
-    accuracy: '94% accuracy',
-    thumbnailUrl: '/samples/sample_prescription.png',
-    icon: <Stethoscope className="w-5 h-5 text-amber-400" />,
-    badgeStyle: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
-    glowStyle: 'hover:border-amber-500/50 hover:shadow-amber-500/20',
-    data: SAMPLE_PRESCRIPTION,
-  },
+
 ];
 
 export const ZeroFrictionSampleCards: React.FC<ZeroFrictionSampleCardsProps> = ({
@@ -72,13 +61,13 @@ export const ZeroFrictionSampleCards: React.FC<ZeroFrictionSampleCardsProps> = (
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-blue-400" />
           <h3 className="text-xs sm:text-sm font-semibold text-zinc-300 tracking-tight">
-            No document on hand? Try a zero-friction sample:
+            No document on hand? Try a labeled demo:
           </h3>
         </div>
-        <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline-flex">1-Click Live Preview</span>
+        <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline-flex">Prepared examples — not recognition benchmarks</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         {ZERO_FRICTION_SAMPLES.map((sample) => (
           <button
             key={sample.id}

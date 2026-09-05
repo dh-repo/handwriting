@@ -1,3 +1,5 @@
+> Historical design/test notes. Current supported behavior and verification are documented in README.md and TEST_READY.md. Earlier readiness, accuracy, cloud-default, and automatic-learning claims below are superseded.
+
 # Vision Handwritten: Strategy v3
 
 **Document Version**: 3.0.0

@@ -53,10 +53,16 @@ LINE_MIN_DIM = 16
 
 @router.post("/recognize-line")
 async def recognize_line_crop(
+    turbo: Optional[bool] = Query(default=None),
+    processing_mode: str = Query(default="local", pattern="^(local|cloud)$"),
     file: UploadFile = File(...),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     """Line crop in, Unicode string out. No page layout."""
+    if turbo is True:
+        raise HTTPException(status_code=422, detail="turbo conflicts with local crop recognition")
+    if processing_mode != "local":
+        raise HTTPException(status_code=422, detail="Line crops support local recognition only; use document recognition for cloud")
     raw = await file.read()
     if len(raw) > LINE_MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="file larger than 10 MB")
@@ -68,14 +74,14 @@ async def recognize_line_crop(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="crop smaller than 16 px")
 
     engine = get_engine()
-    model_id = assert_shippable_checkpoint(settings.HTR_MODEL_ID or engine.model_name)
+    model_id = assert_shippable_checkpoint(engine.model_name)
     if engine.mode == "mock" or engine.model is None or engine.processor is None:
-        return {"text": "", "ms": 0.0, "model_id": model_id}
+        raise HTTPException(status_code=503, detail="Local recognition model is unavailable")
 
     t0 = time.perf_counter()
     text = await asyncio.to_thread(_decode_line_crop, engine, image)
     ms = (time.perf_counter() - t0) * 1000.0
-    return {"text": text, "ms": round(ms, 2), "model_id": model_id}
+    return {"text": text, "ms": round(ms, 2), "model_id": model_id, "processing_location": "local", "engine_used": "trocr"}
 
 
 def _decode_line_crop(engine: InferenceEngine, image: Image.Image) -> str:
@@ -93,7 +99,8 @@ async def _extract_recognition_inputs(
     beam_width: int,
     rescore: bool,
     adaptive: bool,
-    turbo: bool,
+    turbo: Optional[bool],
+    processing_mode: str,
     settings: Settings,
 ) -> Tuple[bytes, str, RecognitionOptions]:
     content_type = request.headers.get("content-type", "")
@@ -109,6 +116,7 @@ async def _extract_recognition_inputs(
         rescore=rescore,
         adaptive=adaptive,
         turbo=turbo,
+        processing_mode=processing_mode,
     )
 
     if "application/json" in content_type:
@@ -182,7 +190,8 @@ async def recognize_document(
     beam_width: int = Query(default=1, ge=1, le=16),
     rescore: bool = Query(default=False),
     adaptive: bool = Query(default=True),
-    turbo: bool = Query(default=True),
+    turbo: Optional[bool] = Query(default=None),
+    processing_mode: str = Query(default="local", pattern="^(local|cloud)$"),
     settings: Settings = Depends(get_settings),
 ) -> RecognitionResponse:
     """
@@ -192,7 +201,7 @@ async def recognize_document(
     engine = get_engine()
     file_bytes, filename, options = await _extract_recognition_inputs(
         request, file, deskew, enhance_contrast, binarization_method,
-        extract_words, dpi, beam_width, rescore, adaptive, turbo, settings
+        extract_words, dpi, beam_width, rescore, adaptive, turbo, processing_mode, settings
     )
 
     try:
@@ -227,7 +236,8 @@ async def recognize_document_stream(
     beam_width: int = Query(default=1, ge=1, le=16),
     rescore: bool = Query(default=False),
     adaptive: bool = Query(default=True),
-    turbo: bool = Query(default=True),
+    turbo: Optional[bool] = Query(default=None),
+    processing_mode: str = Query(default="local", pattern="^(local|cloud)$"),
     settings: Settings = Depends(get_settings),
 ) -> StreamingResponse:
     """
@@ -237,7 +247,7 @@ async def recognize_document_stream(
     engine = get_engine()
     file_bytes, filename, options = await _extract_recognition_inputs(
         request, file, deskew, enhance_contrast, binarization_method,
-        extract_words, dpi, beam_width, rescore, adaptive, turbo, settings
+        extract_words, dpi, beam_width, rescore, adaptive, turbo, processing_mode, settings
     )
 
     async def _event_generator() -> AsyncIterator[str]:
@@ -253,7 +263,7 @@ async def recognize_document_stream(
                 logger.exception("Streaming recognition worker failed: %s", err)
                 loop.call_soon_threadsafe(
                     queue.put_nowait,
-                    {"event": "error", "data": {"error": str(err)}},
+                    {"event": "error", "data": {"code": "recognition_failed", "error": "Recognition failed; partial results are incomplete"}},
                 )
                 loop.call_soon_threadsafe(queue.put_nowait, None)
 

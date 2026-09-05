@@ -43,7 +43,8 @@ def reset_backend_state() -> Generator[None, None, None]:
 def client() -> TestClient:
     """Provide FastAPI TestClient wired to real application instance."""
     app = create_app()
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture

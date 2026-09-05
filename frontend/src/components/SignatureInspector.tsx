@@ -94,7 +94,7 @@ export const SignatureInspector: React.FC<SignatureInspectorProps> = ({
                   {decisionLabel(decision)}
                 </span>
                 <span className="text-slate-300 shrink-0">
-                  {(sig.confidence * 100).toFixed(0)}% line conf
+                  {(sig.confidence == null ? "Unknown" : (sig.confidence * 100).toFixed(0))}% line conf
                 </span>
               </div>
 

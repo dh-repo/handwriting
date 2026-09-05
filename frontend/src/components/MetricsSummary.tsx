@@ -27,11 +27,11 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({
       if (line.words && line.words.length > 0) {
         totalWords += line.words.length;
         line.words.forEach((w) => {
-          if (w.confidence < 0.70) lowConfWords++;
+          if ((w.confidence ?? 0) < 0.70) lowConfWords++;
         });
       } else {
         totalWords += line.text.trim().split(/\s+/).filter(Boolean).length;
-        if (line.confidence < 0.70) lowConfWords++;
+        if ((line.confidence ?? 0) < 0.70) lowConfWords++;
       }
     });
   });
@@ -39,7 +39,7 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({
   const meanConfidence =
     document.mean_confidence ??
     document.overall_confidence ??
-    (document.pages.reduce((acc, p) => acc + p.mean_confidence, 0) / (document.pages.length || 1));
+    (document.pages.some(p => p.mean_confidence == null) ? null : document.pages.reduce((acc, p) => acc + (p.mean_confidence ?? 0), 0) / (document.pages.length || 1));
 
   const confidenceStyle = getConfidenceColor(meanConfidence);
 
@@ -59,7 +59,7 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({
             data-testid="metric-mean-confidence"
             className={`text-sm font-bold font-mono tracking-tight ${confidenceStyle.tailwindText}`}
           >
-            {(meanConfidence * 100).toFixed(1)}%
+            {(meanConfidence == null ? "Unknown" : (meanConfidence * 100).toFixed(1))}%
           </p>
         </div>
       </div>

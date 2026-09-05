@@ -65,6 +65,9 @@ class ExperienceReplayDataset(Dataset):
     ) -> None:
         self.feedback_manifest_path = Path(feedback_manifest_path) if feedback_manifest_path else None
         self.anchor_dir = Path(anchor_dir) if anchor_dir else None
+        if self.anchor_dir and (self.anchor_dir / "manifest.json").exists():
+            if json.loads((self.anchor_dir / "manifest.json").read_text()).get("purpose") == "evaluation_only":
+                raise ValueError("Frozen benchmark data cannot be used for training")
         self.processor = processor
         self.max_target_length = max_target_length
         self.augment = augment
@@ -154,6 +157,8 @@ class ExperienceReplayDataset(Dataset):
                 base64_crop = data.get("line_crop_base64")
                 sample_id = data.get("feedback_id") or data.get("sample_id") or f"fb_{line_idx:05d}"
 
+                if data.get("is_demo") or data.get("evaluation_only"):
+                    continue
                 resolved_path = self._resolve_image_file(crop_path_str, manifest_dir=manifest_dir)
 
                 samples.append(
@@ -243,7 +248,7 @@ class ExperienceReplayDataset(Dataset):
                 logger.warning("Failed decoding base64 image: %s", exc)
 
         # Fallback blank image
-        return Image.new("RGB", (384, 64), color=(255, 255, 255))
+        raise ValueError("Training sample has no readable real image")
 
     def __getitem__(self, idx: int) -> dict[str, Any]:
         if idx < 0 or idx >= len(self):

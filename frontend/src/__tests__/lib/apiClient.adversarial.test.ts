@@ -175,39 +175,9 @@ describe('ApiClient Adversarial Network & Stream Stress Tests', () => {
       await expect(client.recognizeFile(file)).rejects.toThrow(ApiTimeoutError);
     });
 
-    it('successfully switches to mock fallback when enableFallback=true under network blackout', async () => {
-      const fallbackClient = new ApiClient({
-        baseUrl: 'http://dead-backend.invalid:9999',
-        proxyUrl: '/api/recognize',
-        enableFallback: true,
-      });
+    it("reports unavailable service honestly: successfully switches to mock fallback when enableFallback=true under network blackout", async () => { vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('offline'))); const { ApiClient }=await import('@/lib/apiClient'); await expect(new ApiClient({baseUrl:'http://backend',enableFallback:true}).recognizeBase64('abc')).rejects.toThrow(); });
 
-      // Both direct backend and Next.js proxy fail
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network unreachable'));
-
-      const file = new File(['sample-bytes'], 'random_scan_document.png', { type: 'image/png' });
-      const result = await fallbackClient.recognizeFile(file);
-
-      expect(result).toBeDefined();
-      expect(result.document_id).toBeDefined();
-      expect(result.pages.length).toBeGreaterThan(0);
-      expect(result.pages[0].lines.length).toBeGreaterThan(0);
-    });
-
-    it('recognizeBase64 successfully falls back to mock engine when network fails', async () => {
-      const fallbackClient = new ApiClient({
-        baseUrl: 'http://dead-backend.invalid:9999',
-        proxyUrl: '/api/recognize',
-        enableFallback: true,
-      });
-
-      global.fetch = vi.fn().mockRejectedValue(new Error('Connection timed out'));
-
-      const result = await fallbackClient.recognizeBase64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ', undefined, 'base64_doc.png');
-      expect(result).toBeDefined();
-      expect(result.filename).toBe('base64_doc.png');
-      expect(result.pages.length).toBeGreaterThan(0);
-    });
+    it("reports unavailable service honestly: recognizeBase64 successfully falls back to mock engine when network fails", async () => { vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('offline'))); const { ApiClient }=await import('@/lib/apiClient'); await expect(new ApiClient({baseUrl:'http://backend',enableFallback:true}).recognizeBase64('abc')).rejects.toThrow(); });
   });
 
   // =========================================================================

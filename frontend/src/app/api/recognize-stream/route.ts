@@ -16,7 +16,8 @@ export async function POST(req: Request | NextRequest) {
     let beamWidth = '4';
     let rescore = 'false';
     let adaptive = 'true';
-    let turbo = 'true';
+    let turbo: string | undefined;
+    let processingMode = new URL(req.url).searchParams.get('processing_mode') || 'local';
 
     const contentType = req.headers?.get('content-type') || '';
 
@@ -28,6 +29,7 @@ export async function POST(req: Request | NextRequest) {
         filename = json.filename || filename;
         modelType = json.model_type || modelType;
         options = json.options || null;
+        processingMode = options?.processing_mode as string || processingMode;
         if (json.turbo !== undefined) turbo = String(json.turbo);
         if (options && options.turbo !== undefined) turbo = String(options.turbo);
       } catch {
@@ -51,6 +53,7 @@ export async function POST(req: Request | NextRequest) {
         if (typeof rescoreEntry === 'string' && rescoreEntry.length > 0) rescore = rescoreEntry;
         const adaptiveEntry = formData.get('adaptive');
         if (typeof adaptiveEntry === 'string' && adaptiveEntry.length > 0) adaptive = adaptiveEntry;
+        processingMode = String(formData.get('processing_mode') || processingMode);
         const turboEntry = formData.get('turbo');
         if (typeof turboEntry === 'string' && turboEntry.length > 0) turbo = turboEntry;
       } catch (formErr: unknown) {
@@ -60,7 +63,7 @@ export async function POST(req: Request | NextRequest) {
 
     // 1. If explicit sample ID requested, stream mock preset
     if (sampleId && SAMPLE_PRESETS[sampleId]) {
-      const presetData = structuredClone(SAMPLE_PRESETS[sampleId]);
+      const presetData = { ...structuredClone(SAMPLE_PRESETS[sampleId]), is_demo: true, engine_used: "demo" };
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         start(controller) {
@@ -120,14 +123,15 @@ export async function POST(req: Request | NextRequest) {
           beam_width: beamWidth,
           rescore,
           adaptive,
-          turbo,
+          processing_mode: processingMode,
+          ...(turbo !== undefined ? { turbo } : {}),
         }).toString();
 
         if (file) {
           const proxyFormData = new FormData();
           proxyFormData.append('file', file);
           proxyFormData.append('model_type', modelType);
-          proxyFormData.append('turbo', turbo);
+
 
           backendRes = await fetch(`${backendUrl}/v1/recognize/stream?${qs}`, {
             method: 'POST',
@@ -138,7 +142,7 @@ export async function POST(req: Request | NextRequest) {
           const payload = {
             file_base64: fileBase64,
             filename,
-            options: { ...(options || {}), turbo: turbo === 'true' },
+            options: { ...(options || {}), processing_mode: processingMode, ...(turbo !== undefined ? { turbo: turbo === 'true' } : {}) },
           };
           backendRes = await fetch(`${backendUrl}/v1/recognize/stream?${qs}`, {
             method: 'POST',
@@ -163,52 +167,7 @@ export async function POST(req: Request | NextRequest) {
       }
     }
 
-    // 4. Fallback: Mock engine streaming
-    const mockResult = await runMockOcr({
-      filename: file ? file.name : filename,
-      mimeType: file ? file.type : 'image/png',
-      fileSize: file ? file.size : fileBase64 ? Math.round(fileBase64.length * 0.75) : 1024,
-    });
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encoder.encode(
-            `event: metadata\ndata: ${JSON.stringify({
-              document_id: mockResult.document_id,
-              filename: mockResult.filename,
-              total_pages: mockResult.total_pages,
-              pages: mockResult.pages.map((p) => ({
-                page_number: p.page_number,
-                width: p.width,
-                height: p.height,
-                total_lines: p.lines.length,
-              })),
-            })}\n\n`
-          )
-        );
-        for (const page of mockResult.pages) {
-          for (const line of page.lines) {
-            controller.enqueue(
-              encoder.encode(
-                `event: line\ndata: ${JSON.stringify({ ...line, page_number: page.page_number })}\n\n`
-              )
-            );
-          }
-        }
-        controller.enqueue(encoder.encode(`event: complete\ndata: ${JSON.stringify(mockResult)}\n\n`));
-        controller.close();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-        'X-Recognition-Provider': 'mock-engine-stream',
-      },
-    });
+    return NextResponse.json({ error: 'Recognition service unavailable' }, { status: 503 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[API /api/recognize-stream] Uncaught error:', msg);

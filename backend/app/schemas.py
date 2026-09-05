@@ -7,7 +7,7 @@ from __future__ import annotations
 import math
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _validate_bbox_coordinates(v: List[float], label: str = "Bounding box") -> List[float]:
@@ -30,7 +30,7 @@ class WordBox(BaseModel):
 
     word_id: str = Field(..., description="Unique word identifier, e.g. 'p1_l1_w1'")
     text: str = Field(..., description="Transcribed token text")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Recognition confidence score in [0.0, 1.0]")
+    confidence: Optional[float] = Field(..., ge=0.0, le=1.0, description="Recognition confidence score in [0.0, 1.0]")
     bbox: List[float] = Field(..., description="Normalized bounding box [ymin, xmin, ymax, xmax] in [0.0, 1.0]")
     is_proper_noun: bool = Field(default=False, description="Whether token is recognized as a proper noun, name, or initial")
 
@@ -38,7 +38,9 @@ class WordBox(BaseModel):
 
     @field_validator("confidence")
     @classmethod
-    def check_confidence(cls, v: float) -> float:
+    def check_confidence(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
         if math.isnan(v) or math.isinf(v) or not (0.0 <= v <= 1.0):
             raise ValueError("confidence must be a valid float between 0.0 and 1.0")
         return v
@@ -54,7 +56,7 @@ class LineBox(BaseModel):
 
     line_id: str = Field(..., description="Unique line identifier, e.g. 'p1_l1'")
     text: str = Field(..., description="Transcribed line text")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Line recognition confidence in [0.0, 1.0]")
+    confidence: Optional[float] = Field(..., ge=0.0, le=1.0, description="Line recognition confidence in [0.0, 1.0]")
     bbox: List[float] = Field(..., description="Normalized bounding box [ymin, xmin, ymax, xmax] in [0.0, 1.0]")
     words: List[WordBox] = Field(default_factory=list, description="Word token crops within this line")
 
@@ -62,7 +64,9 @@ class LineBox(BaseModel):
 
     @field_validator("confidence")
     @classmethod
-    def check_confidence(cls, v: float) -> float:
+    def check_confidence(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
         if math.isnan(v) or math.isinf(v) or not (0.0 <= v <= 1.0):
             raise ValueError("confidence must be a valid float between 0.0 and 1.0")
         return v
@@ -76,11 +80,12 @@ class LineBox(BaseModel):
 class PageResult(BaseModel):
     """Page-level document transcription and layout segmentation."""
 
+    image_url: Optional[str] = None
     page_number: int = Field(..., ge=1, description="1-indexed page sequence number")
     width: int = Field(..., ge=1, description="Page width in pixels")
     height: int = Field(..., ge=1, description="Page height in pixels")
     full_text: str = Field(..., description="Newline-joined page text")
-    mean_confidence: float = Field(..., ge=0.0, le=1.0, description="Mean confidence score across all lines")
+    mean_confidence: Optional[float] = Field(..., ge=0.0, le=1.0, description="Mean confidence score across all lines")
     lines: List[LineBox] = Field(default_factory=list, description="Segmented lines on this page")
 
     model_config = ConfigDict(extra="ignore")
@@ -95,6 +100,10 @@ class RecognitionResponse(BaseModel):
     pages: List[PageResult] = Field(..., description="Transcribed page records")
     processing_time_ms: float = Field(..., ge=0.0, description="Total processing latency in milliseconds")
     preprocessing_flags: Optional[Dict[str, Any]] = Field(default=None, description="Preprocessing flags applied")
+    model_id: Optional[str] = None
+    processing_location: str = "local"
+    is_demo: bool = False
+    incomplete: bool = False
     engine_used: Optional[str] = Field(default="trocr", description="Engine used ('turbo-vlm' | 'trocr')")
 
     model_config = ConfigDict(extra="ignore")
@@ -171,7 +180,14 @@ class RecognitionOptions(BaseModel):
     beam_width: int = Field(default=1, ge=1, le=16, description="Beam search candidate width")
     rescore: bool = Field(default=False, description="Enable RxNorm beam rescoring")
     adaptive: bool = Field(default=True, description="Enable adaptive fast 2-pass decoding")
-    turbo: bool = Field(default=True, description="Enable Turbo VLM mode for sub-3s high-accuracy recognition")
+    processing_mode: str = Field(default="local", pattern="^(local|cloud)$")
+    turbo: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def validate_processing_mode(self):
+        if self.turbo is not None and self.turbo != (self.processing_mode == "cloud"):
+            raise ValueError("turbo conflicts with processing_mode; select processing_mode explicitly")
+        return self
 
     model_config = ConfigDict(extra="ignore")
 
@@ -227,11 +243,13 @@ class FeedbackCorrectionPayload(BaseModel):
         max_length=500,
         description="Verified operator correction text",
     )
-    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Line/word confidence score in [0.0, 1.0]")
+    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Line/word confidence score in [0.0, 1.0]")
     bbox: Optional[List[float]] = Field(default=None, description="Normalized bounding box [ymin, xmin, ymax, xmax]")
     word_id: Optional[str] = Field(default=None, description="Optional word identifier if word-level edit")
     line_crop_base64: Optional[str] = Field(default=None, description="Base64 encoded PNG/JPEG line crop image")
-    sync_confusion_matrix: bool = Field(default=True, description="Whether to dynamically update live confusion matrix")
+    submission_id: Optional[str] = Field(default=None, pattern="^[a-zA-Z0-9_-]{1,100}$")
+    is_demo: bool = False
+    sync_confusion_matrix: bool = Field(default=False, description="Whether to dynamically update live confusion matrix")
     timestamp: Optional[str] = Field(default=None, description="Optional ISO-8601 UTC timestamp")
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
@@ -245,7 +263,9 @@ class FeedbackCorrectionPayload(BaseModel):
 
     @field_validator("confidence")
     @classmethod
-    def check_confidence(cls, v: float) -> float:
+    def check_confidence(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
         if math.isnan(v) or math.isinf(v) or not (0.0 <= v <= 1.0):
             raise ValueError("confidence must be a valid float between 0.0 and 1.0")
         return v

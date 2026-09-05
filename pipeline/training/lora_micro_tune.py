@@ -99,7 +99,7 @@ def run_micro_tune(
     lora_dropout: float = 0.05,
     target_modules: Optional[List[str]] = None,
     bf16: bool = True,
-    merge_adapter: bool = True,
+    merge_adapter: bool = False,
     baseline_cer: Optional[float] = None,
     max_cer_regression: float = 0.05,
     lasa_vocab_dir: Union[str, Path] = "data/reference_handwriting/vocabularies",
@@ -126,7 +126,7 @@ def run_micro_tune(
     logger.info("Starting LoRA micro-tuning on device: %s (steps=%d, batch_size=%d)", resolved_device, steps, batch_size)
 
     output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path.mkdir(parents=True, exist_ok=False)
 
     # 1. Load Processor and Base Model
     if processor is None:
@@ -262,7 +262,7 @@ def run_micro_tune(
     model.eval()
     eval_refs: List[str] = []
     eval_hyps: List[str] = []
-    candidate_cer = baseline_cer if baseline_cer is not None else 0.040
+    candidate_cer = None
 
     val_path = Path(val_dir) if val_dir else None
     if val_path and (val_path / "labels.tsv").is_file():
@@ -333,7 +333,7 @@ def run_micro_tune(
     # 10. Merge and Export Checkpoint
     merged_dir = output_path / "best_model_merged"
     merged_dir_str = None
-    if ship_decision["promote"] and merge_adapter:
+    if merge_adapter:  # Export a candidate only; activation requires separate measured evaluation.
         logger.info("Promotion approved. Merging LoRA weights into standalone checkpoint...")
         if hasattr(model, "merge_and_unload"):
             merged_model = model.merge_and_unload()

@@ -53,3 +53,6 @@ frontend/.vercel/
 .vscode/
 *.swp
 *.swo
+
+# Local held-out images; provenance manifests and reports are versioned.
+benchmarks/**/*.png

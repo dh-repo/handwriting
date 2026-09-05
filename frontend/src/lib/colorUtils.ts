@@ -10,13 +10,13 @@ export interface ConfidenceColorStyle {
   tailwindText: string;
 }
 
-export function getConfidenceTier(confidence: number): ConfidenceTier {
-  if (confidence >= 0.90) return "high";
-  if (confidence >= 0.70) return "medium";
+export function getConfidenceTier(confidence: number | null): ConfidenceTier {
+  if (confidence != null && confidence >= 0.90) return "high";
+  if (confidence != null && confidence >= 0.70) return "medium";
   return "low";
 }
 
-export function getConfidenceColor(confidence: number): ConfidenceColorStyle {
+export function getConfidenceColor(confidence: number | null): ConfidenceColorStyle {
   const tier = getConfidenceTier(confidence);
 
   switch (tier) {

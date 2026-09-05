@@ -361,7 +361,7 @@ describe('Adversarial Stress Test Suite: Milestone 4 Frontend', () => {
         ],
       };
 
-      render(<InlineEditor page={highConfPage} />);
+      render(<InlineEditor enableMedicalSuggestions page={highConfPage} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       expect(speedTab).toHaveTextContent('Speed Review (0)');
@@ -424,7 +424,7 @@ describe('Adversarial Stress Test Suite: Milestone 4 Frontend', () => {
         ],
       };
 
-      render(<InlineEditor page={lowConfPage} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={lowConfPage} onWordChange={onWordChange} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       expect(speedTab).toHaveTextContent('Speed Review (3)');
@@ -622,7 +622,7 @@ describe('Adversarial Stress Test Suite: Milestone 4 Frontend', () => {
         ],
       };
 
-      render(<InlineEditor page={pageWithLowConf} />);
+      render(<InlineEditor enableMedicalSuggestions page={pageWithLowConf} />);
       fireEvent.click(screen.getByTestId('tab-speed-review'));
       expect(screen.getByTestId('speed-review-panel')).toBeInTheDocument();
 

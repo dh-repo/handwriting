@@ -30,7 +30,7 @@ def test_health_endpoint_200(client: TestClient) -> None:
     assert "loaded_models" in data
     assert isinstance(data["loaded_models"], list)
     assert "rescorer_active" in data
-    assert data["rescorer_active"] is True
+    assert data["rescorer_active"] is False
 
 
 def test_openapi_spec_paths(client: TestClient) -> None:

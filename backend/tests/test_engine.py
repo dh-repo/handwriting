@@ -127,7 +127,7 @@ def test_engine_singleton_lifecycle() -> None:
 
 def test_engine_rescorer_initialization() -> None:
     """Verify BeamRescorer is initialized with RxNorm lexicon and default parameters."""
-    engine = InferenceEngine(execution_mode="mock")
+    engine = InferenceEngine(execution_mode="mock", enable_rescorer=True)
     assert engine.enable_rescorer is True
     assert engine.beam_width == 4
     assert engine.rescorer is not None
@@ -146,6 +146,7 @@ def test_engine_rescorer_parameter_customization() -> None:
     """Verify custom rescorer weights and parameters are correctly passed."""
     engine = InferenceEngine(
         execution_mode="mock",
+        enable_rescorer=True,
         beam_width=8,
         rescorer_weight=2.0,
         context_weight=1.2,
@@ -166,14 +167,9 @@ def test_engine_rescorer_parameter_customization() -> None:
     assert engine.rescorer.max_safe_mg == 2500.0
 
 
-def test_engine_polymorphic_loading_fallback() -> None:
-    """Verify nonexistent model path falls back cleanly to mock mode without raising."""
-    engine = InferenceEngine(
-        execution_mode="cpu",
-        model_name_or_path="nonexistent/checkpoint/path/that/does/not/exist",
-    )
-    assert engine.mode == "mock"
-    assert engine.model is None
+def test_engine_missing_checkpoint_fails():
+    with pytest.raises(RuntimeError, match="could not be loaded"):
+        InferenceEngine(execution_mode="cpu", model_name_or_path="nonexistent/checkpoint/path/that/does/not/exist")
 
 
 def test_sliver_bbox_and_page_echo() -> None:

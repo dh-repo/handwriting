@@ -35,6 +35,7 @@ import {
 
 export interface InlineEditorProps {
   page: PageResult;
+  enableMedicalSuggestions?: boolean;
   documentId?: string;
   onPageUpdate?: (updatedPage: PageResult) => void;
   selectedLineId?: string | null;
@@ -62,7 +63,7 @@ export interface InlineEditorProps {
 
 export const InlineEditor: React.FC<InlineEditorProps> = ({
   page,
-  documentId,
+  enableMedicalSuggestions = false,  documentId,
   onPageUpdate,
   selectedLineId,
   selectedWordId,
@@ -140,7 +141,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             /^[A-Z]\.?$/.test(word.text || '')
         );
         // Include words below general threshold OR proper nouns below high-confidence safety threshold (0.90)
-        if (word.confidence < confidenceThreshold || (isProper && word.confidence < 0.90)) {
+        if (!word.reviewed && (word.confidence == null || (word.confidence ?? 0) < confidenceThreshold || (isProper && (word.confidence ?? 0) < 0.90))) {
           queue.push({
             page_index: page.page_number - 1,
             line_id: line.line_id,
@@ -172,11 +173,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       onSelectWord?.(activeWord.word_id, activeWord.line_id);
 
       // Search medical lexicon for top suggestions
-      const results = searchMedicalLexicon({
+      const results: AutocompleteSuggestion[] = enableMedicalSuggestions ? searchMedicalLexicon({
         query: activeWord.text,
         maxResults: 5,
         enableFuzzy: true,
-      });
+      }) : [];
       setSpeedSuggestions(results);
 
       setTimeout(() => speedInputRef.current?.focus(), 50);
@@ -186,11 +187,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   // Update autocomplete suggestions when editing a word in structured mode
   useEffect(() => {
     if (editingWordId && editingWordText.trim().length > 0) {
-      const results = searchMedicalLexicon({
+      const results: AutocompleteSuggestion[] = enableMedicalSuggestions ? searchMedicalLexicon({
         query: editingWordText,
         maxResults: 6,
         enableFuzzy: true,
-      });
+      }) : [];
       setSuggestions(results);
       setSelectedSuggestionIndex(0);
       setShowPopover(results.length > 0);
@@ -208,7 +209,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       }
 
       const line = page.lines.find((l) => l.line_id === lineId);
-      if (!line) return;
+      if (!line || documentId === "demo") return;
 
       const currentText =
         textOverride !== undefined
@@ -263,11 +264,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       word_id?: string;
       original_text: string;
       corrected_text: string;
-      confidence?: number;
+      confidence?: number | null;
       bbox?: [number, number, number, number];
     }) => {
       const { line_id, word_id, original_text, corrected_text, confidence, bbox } = args;
-      if (original_text === corrected_text) return;
+      if (original_text === corrected_text || documentId === "demo") return;
 
       setFeedbackStatusMap((prev) => ({ ...prev, [line_id]: 'syncing' }));
 
@@ -482,7 +483,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
           >
             <Check className="w-3 h-3 text-emerald-500" />
-            Flywheel Saved
+            Feedback submitted
           </span>
         );
       case 'error':
@@ -663,17 +664,17 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       >
         <div className="flex items-center gap-3">
           <span>
-            Confidence:{' '}
+            Model score:{' '}
             <strong
               className={
-                page.mean_confidence >= 0.90
+                (page.mean_confidence ?? -1) >= 0.90
                   ? 'text-emerald-400'
-                  : page.mean_confidence >= 0.70
+                  : (page.mean_confidence ?? -1) >= 0.70
                   ? 'text-amber-400'
                   : 'text-rose-400'
               }
             >
-              {(page.mean_confidence * 100).toFixed(1)}%
+              {(page.mean_confidence == null ? "Unknown" : (page.mean_confidence * 100).toFixed(1))}%
             </strong>
           </span>
           <span className="text-zinc-600">•</span>
@@ -725,7 +726,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                       <span
                         className={`text-[11px] font-mono font-medium px-1.5 py-0.5 rounded border ${colorStyle.badgeBg} ${colorStyle.badgeBorder} ${colorStyle.tailwindText}`}
                       >
-                        {(line.confidence * 100).toFixed(0)}%
+                        {(line.confidence == null ? "Unknown" : (line.confidence * 100).toFixed(0))}%
                       </span>
                       {line.is_edited && (
                         <span
@@ -770,14 +771,14 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                       {line.words.map((word: WordToken) => {
                         const isWordSelected = selectedWordId === word.word_id;
                         const isWordHovered = hoveredWordId === word.word_id;
-                        const isLowConfidence = word.confidence < 0.85;
+                        const isLowConfidence = (word.confidence ?? 0) < 0.85;
                         const isEditingThisWord = editingWordId === word.word_id;
                         const isProperNoun = Boolean(
                           word.is_proper_noun ||
                             /^[A-Z][a-zA-Z'\-]*\.?$/.test(word.text || '') ||
                             /^[A-Z]\.?$/.test(word.text || '')
                         );
-                        const isUncertainProperNoun = isProperNoun && word.confidence < 0.90;
+                        const isUncertainProperNoun = isProperNoun && (word.confidence ?? 0) < 0.90;
 
                         return (
                           <div key={word.word_id} className="relative inline-block">
@@ -877,10 +878,10 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                                 }`}
                                 title={
                                   isUncertainProperNoun
-                                    ? `Unverified proper noun / name: ${(word.confidence * 100).toFixed(0)}% confidence • Click to verify exact spelling`
+                                    ? `Unverified proper noun / name: ${(word.confidence == null ? "Unknown" : (word.confidence * 100).toFixed(0))}% confidence • Click to verify exact spelling`
                                     : isLowConfidence
-                                    ? `Low confidence token: ${(word.confidence * 100).toFixed(0)}% • Click to correct`
-                                    : `${(word.confidence * 100).toFixed(0)}% confidence`
+                                    ? `Low confidence token: ${(word.confidence == null ? "Unknown" : (word.confidence * 100).toFixed(0))}% • Click to correct`
+                                    : `${(word.confidence == null ? "Unknown" : (word.confidence * 100).toFixed(0))}% confidence`
                                 }
                               >
                                 <span className="inline-flex items-center gap-1">
@@ -1028,7 +1029,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
                     Reviewing Uncertain Word <strong>{speedIndex + 1}</strong> of <strong>{speedQueue.length}</strong>
                   </span>
                   <span className="px-2 py-0.5 rounded-full font-mono font-bold bg-rose-950/60 text-rose-300 border border-rose-800/60 text-[11px]">
-                    {(speedQueue[speedIndex].confidence * 100).toFixed(1)}% Conf
+                    {(speedQueue[speedIndex].confidence == null ? "Unknown" : (speedQueue[speedIndex].confidence! * 100).toFixed(1))}% Conf
                   </span>
                 </div>
 

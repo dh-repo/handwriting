@@ -6,16 +6,16 @@ const siteUrl = 'https://ca-frontend-playground.jollysand-1dc47ca9.eastus2.azure
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'Handwriting OCR & Prescription AI Workspace',
+  title: 'Handwriting Transcription & Review',
   description:
-    'End-to-end handwriting recognition for messy cursive, medical prescriptions, and multi-page documents on Microsoft Azure Container Apps and Apple Silicon MPS.',
+    'Local-first handwriting transcription with human review, device-local saving, and explicit opt-in cloud recognition.',
   alternates: {
     canonical: siteUrl,
   },
   openGraph: {
-    title: 'Handwriting OCR & Prescription AI Workspace',
+    title: 'Handwriting Transcription & Review',
     description:
-      'End-to-end handwriting recognition for messy cursive, medical prescriptions, and multi-page documents on Microsoft Azure Container Apps and Apple Silicon MPS.',
+      'Local-first handwriting transcription with human review, device-local saving, and explicit opt-in cloud recognition.',
     url: siteUrl,
     siteName: 'Handwriting OCR AI Platform',
     type: 'website',

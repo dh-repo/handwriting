@@ -34,7 +34,7 @@ export const DiagnosticsHUD: React.FC<DiagnosticsHUDProps> = ({
     0
   );
   const meanConfidence =
-    document.pages.reduce((acc, p) => acc + p.mean_confidence, 0) / (document.pages.length || 1);
+    document.pages.some(p => p.mean_confidence == null) ? null : document.pages.reduce((acc, p) => acc + (p.mean_confidence ?? 0), 0) / (document.pages.length || 1);
 
   return (
     <div
@@ -101,7 +101,7 @@ export const DiagnosticsHUD: React.FC<DiagnosticsHUDProps> = ({
           <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800">
             <span className="text-[10px] uppercase font-mono text-slate-400 block">Mean Confidence</span>
             <span className="text-lg font-mono font-extrabold text-emerald-400">
-              {(meanConfidence * 100).toFixed(1)}%
+              {(meanConfidence == null ? "Unknown" : (meanConfidence * 100).toFixed(1))}%
             </span>
           </div>
 

@@ -36,7 +36,7 @@ describe('StagingQueue Component', () => {
 
   it('renders staging items with file names, page counts, and total payload size', () => {
     render(
-      <StagingQueue
+      <StagingQueue generalOnly={false}
         items={mockItems}
         config={defaultConfig}
         onConfigChange={() => {}}
@@ -62,7 +62,7 @@ describe('StagingQueue Component', () => {
   it('allows changing batch configuration execution parameters', () => {
     const onConfigChange = vi.fn();
     render(
-      <StagingQueue
+      <StagingQueue generalOnly={false}
         items={mockItems}
         config={defaultConfig}
         onConfigChange={onConfigChange}
@@ -101,7 +101,7 @@ describe('StagingQueue Component', () => {
 
   it('renders granular parallel progress meters when processing is active', () => {
     render(
-      <StagingQueue
+      <StagingQueue generalOnly={false}
         items={mockItems}
         config={defaultConfig}
         onConfigChange={() => {}}
@@ -127,7 +127,7 @@ describe('StagingQueue Component', () => {
     const onClearQueue = vi.fn();
 
     render(
-      <StagingQueue
+      <StagingQueue generalOnly={false}
         items={mockItems}
         config={defaultConfig}
         onConfigChange={() => {}}

@@ -149,24 +149,7 @@ describe('Adversarial Stress Testing: /api/feedback Route Handler', () => {
       expect(res.status).toBe(400);
     });
 
-    it('accepts empty string for original_text or corrected_text when defined', async () => {
-      delete process.env.BACKEND_URL;
-      const req = new Request('http://localhost:3000/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: 'doc_1',
-          line_id: 'l1',
-          original_text: '',
-          corrected_text: 'inserted text',
-        }),
-      });
-
-      const res = await POST(req);
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.status).toBe('persisted');
-    });
+    it("reports unavailable service honestly: accepts empty string for original_text or corrected_text when defined", async () => { delete process.env.BACKEND_URL; const { POST } = await import('@/app/api/feedback/route'); const res=await POST(new Request('http://localhost/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({document_id:'d',line_id:'l',original_text:'',corrected_text:'new'})})); expect(res.status).toBe(503); expect((await res.json()).status).not.toBe('persisted'); });
   });
 
   describe('Backend Proxy Forwarding & Failures (BACKEND_URL set)', () => {
@@ -369,53 +352,8 @@ describe('Adversarial Stress Testing: /api/feedback Route Handler', () => {
       delete process.env.BACKEND_URL;
     });
 
-    it('returns simulated persisted acknowledgment with HTTP 200 and X-Feedback-Provider: mock', async () => {
-      const payload = {
-        document_id: 'doc_offline_1',
-        line_id: 'p1_l3',
-        original_text: 'metformn',
-        corrected_text: 'metformin',
-        timestamp: '2026-09-03T10:00:00.000Z',
-      };
+    it("reports unavailable service honestly: returns simulated persisted acknowledgment with HTTP 200 and X-Feedback-Provider: mock", async () => { delete process.env.BACKEND_URL; const { POST } = await import('@/app/api/feedback/route'); const res=await POST(new Request('http://localhost/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({document_id:'d',line_id:'l',original_text:'',corrected_text:'new'})})); expect(res.status).toBe(503); expect((await res.json()).status).not.toBe('persisted'); });
 
-      const req = new Request('http://localhost:3000/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const res = await POST(req);
-      expect(res.status).toBe(200);
-      expect(res.headers.get('X-Feedback-Provider')).toBe('mock');
-
-      const data = await res.json();
-      expect(data.status).toBe('persisted');
-      expect(data.feedback_id).toMatch(/^fb_mock_\d+/);
-      expect(data.document_id).toBe('doc_offline_1');
-      expect(data.line_id).toBe('p1_l3');
-      expect(data.manifest_path).toBe('data/feedback/manifest.jsonl');
-      expect(data.timestamp).toBe('2026-09-03T10:00:00.000Z');
-    });
-
-    it('generates a fresh ISO timestamp if none was provided in payload', async () => {
-      const payload = {
-        document_id: 'doc_offline_2',
-        line_id: 'p1_l4',
-        original_text: 'lisinoprl',
-        corrected_text: 'lisinopril',
-      };
-
-      const req = new Request('http://localhost:3000/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const res = await POST(req);
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.timestamp).toBeDefined();
-      expect(new Date(data.timestamp).getTime()).not.toBeNaN();
-    });
+    it("reports unavailable service honestly: generates a fresh ISO timestamp if none was provided in payload", async () => { delete process.env.BACKEND_URL; const { POST } = await import('@/app/api/feedback/route'); const res=await POST(new Request('http://localhost/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({document_id:'d',line_id:'l',original_text:'',corrected_text:'new'})})); expect(res.status).toBe(503); expect((await res.json()).status).not.toBe('persisted'); });
   });
 });

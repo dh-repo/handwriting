@@ -79,6 +79,10 @@ class LineCropDataset(Dataset):
         transform: Optional[Callable[[Image.Image], Image.Image]] = None,
     ) -> None:
         self.split_dir = Path(split_dir)
+        if is_train and (self.split_dir / "manifest.json").exists():
+            import json
+            if json.loads((self.split_dir / "manifest.json").read_text()).get("purpose") == "evaluation_only":
+                raise ValueError("Frozen benchmark data cannot be used for training")
         self.processor = processor
         self.max_target_length = max_target_length
         self.is_train = is_train

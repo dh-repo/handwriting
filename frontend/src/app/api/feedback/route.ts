@@ -103,21 +103,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Simulated persisted response when running without backend
-    return NextResponse.json(
-      {
-        status: 'persisted',
-        feedback_id: `fb_mock_${Date.now()}`,
-        document_id: body.document_id,
-        line_id: body.line_id,
-        manifest_path: 'data/feedback/manifest.jsonl',
-        timestamp: body.timestamp || new Date().toISOString(),
-      },
-      {
-        status: 200,
-        headers: { 'X-Feedback-Provider': 'mock' },
-      }
-    );
+    return NextResponse.json({ error: 'Feedback service is not configured; correction not submitted' }, { status: 503 });
   } catch (err: unknown) {
     return NextResponse.json(
       {

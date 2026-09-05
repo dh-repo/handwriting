@@ -16,19 +16,20 @@ export type PolygonPoint = [number, number]; // [x, y] in normalized [0, 1] coor
 
 export interface WordCandidate {
   text: string;
-  confidence: number;
+  confidence: number | null;
 }
 
 export interface WordToken {
   word_id: string;
   text: string;
   original_text?: string;
-  confidence: number; // 0.0 to 1.0
+  confidence: number | null; // 0.0 to 1.0
   bbox: BoundingBoxTuple; // [ymin, xmin, ymax, xmax]
   polygon?: PolygonPoint[];
   alternatives?: (WordCandidate | string)[];
   candidate_tokens?: WordCandidate[];
   is_low_confidence?: boolean;
+  reviewed?: boolean;
   is_edited?: boolean;
   is_proper_noun?: boolean;
 }
@@ -39,10 +40,11 @@ export interface LineItem {
   line_number?: number;
   text: string;
   original_text?: string;
-  confidence: number; // 0.0 to 1.0
+  confidence: number | null; // 0.0 to 1.0
   bbox: BoundingBoxTuple; // [ymin, xmin, ymax, xmax]
   polygon?: PolygonPoint[];
   words: WordToken[];
+  reviewed?: boolean;
   is_edited?: boolean;
 }
 
@@ -51,8 +53,8 @@ export interface PageResult {
   width: number;
   height: number;
   full_text: string;
-  mean_confidence: number;
-  confidence?: number;
+  mean_confidence: number | null;
+  confidence?: number | null;
   lines: LineItem[];
   image_url?: string;
   image_data_url?: string;
@@ -60,14 +62,20 @@ export interface PageResult {
 }
 
 export interface DocumentOCRResult {
+  is_demo?: boolean;
+  incomplete?: boolean;
+  model_id?: string;
+  processing_location?: string;
+  active_review_ms?: number;
+  original_key?: string;
   document_id: string;
   filename: string;
   mime_type?: string;
   total_pages: number;
   pages: PageResult[];
   full_text?: string;
-  mean_confidence?: number;
-  overall_confidence?: number;
+  mean_confidence?: number | null;
+  overall_confidence?: number | null;
   processing_time_ms: number;
   model_version?: string;
   preprocessing_flags?: Record<string, unknown>;
@@ -98,7 +106,7 @@ export interface LowConfidenceWordItem {
   word_id: string;
   text: string;
   original_text: string;
-  confidence: number;
+  confidence: number | null;
   bbox: BoundingBoxTuple;
   page_image_url?: string;
   alternatives?: (WordCandidate | string)[];
@@ -110,6 +118,7 @@ export type ExportFormat = 'json' | 'txt' | 'csv';
 export type ConfidenceTier = 'high' | 'medium' | 'low';
 
 export interface RecognitionOptions {
+  processing_mode?: "local" | "cloud";
   deskew?: boolean;
   enhance_contrast?: boolean;
   binarization_method?: 'sauvola' | 'otsu' | 'none' | string;
@@ -191,6 +200,8 @@ export interface SSEEvent<T = unknown> {
 export type StreamingEvent = SSEEvent;
 
 export interface FeedbackSubmissionRequest {
+  submission_id?: string;
+  is_demo?: boolean;
   document_id: string;
   page_number?: number;
   line_id: string;
@@ -199,7 +210,7 @@ export interface FeedbackSubmissionRequest {
   operator_correction?: string;
   original_text?: string;
   corrected_text?: string;
-  confidence?: number;
+  confidence?: number | null;
   bbox?: BoundingBoxTuple; // [ymin, xmin, ymax, xmax]
   line_crop_base64?: string; // data:image/png;base64,...
   timestamp?: string; // ISO-8601 UTC

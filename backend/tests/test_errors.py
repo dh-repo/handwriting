@@ -78,7 +78,7 @@ def test_unhandled_exception_sanitization(sample_image_bytes: bytes) -> None:
         "/v1/recognize",
         files={"file": ("test.png", sample_image_bytes, "image/png")},
     )
-    assert resp.status_code == 500
+    assert resp.status_code == 503
     data = resp.json()
     assert "error" in data
     # Ensure raw secret path / stack trace is not exposed

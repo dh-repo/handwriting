@@ -24,7 +24,7 @@ def test_default_settings() -> None:
     assert settings.USE_FP16 is False
     assert settings.DEFAULT_DPI == 300
     assert settings.MAX_IMAGE_SIZE_MB >= 25
-    assert settings.ENABLE_RESCORER is True
+    assert settings.ENABLE_RESCORER is False
     assert settings.BEAM_WIDTH == 4
     assert settings.NUM_RETURN_SEQUENCES == 5
     assert settings.VOCAB_DIR == "data/reference_handwriting/vocabularies"

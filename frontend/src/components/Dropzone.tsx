@@ -544,7 +544,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
                 Drop your handwriting image or PDF here
               </h2>
               <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto">
-                High-accuracy neural transcription for historical cursive, receipts, and clinical notes
+                Transcribe general handwriting, then review and correct the result
               </p>
             </div>
 

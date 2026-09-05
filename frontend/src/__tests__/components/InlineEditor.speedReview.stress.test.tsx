@@ -46,7 +46,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
         line_number: l + 1,
         text: words.map((w) => w.text).join(' '),
         original_text: words.map((w) => w.text).join(' '),
-        confidence: words.reduce((sum, w) => sum + w.confidence, 0) / (words.length || 1),
+        confidence: words.reduce((sum, w) => sum + (w.confidence ?? 0), 0) / (words.length || 1),
         bbox: [0.1 + l * 0.05, 0.1, 0.14 + l * 0.05, 0.9],
         polygon: bboxToPolygon([0.1 + l * 0.05, 0.1, 0.14 + l * 0.05, 0.9]),
         words,
@@ -57,7 +57,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
       page_number: 1,
       width: 1200,
       height: 1600,
-      mean_confidence: lines.reduce((sum, l) => sum + l.confidence, 0) / (lines.length || 1),
+      mean_confidence: lines.reduce((sum, l) => sum + (l.confidence ?? 0), 0) / (lines.length || 1),
       full_text: lines.map((l) => l.text).join('\n'),
       lines,
     };
@@ -66,7 +66,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
   describe('1. Boundary Conditions: Zero and High Volume Queue', () => {
     it('handles 0 low-confidence tokens cleanly with empty state', () => {
       const cleanDoc = createSyntheticDocumentPage(10, 0.0); // all high confidence
-      render(<InlineEditor page={cleanDoc} />);
+      render(<InlineEditor enableMedicalSuggestions page={cleanDoc} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       expect(speedTab).toHaveTextContent('Speed Review (0)');
@@ -82,7 +82,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
 
     it('populates queue for 80 low-confidence tokens and tracks index progression', () => {
       const largeDoc = createSyntheticDocumentPage(80, 1.0);
-      render(<InlineEditor page={largeDoc} />);
+      render(<InlineEditor enableMedicalSuggestions page={largeDoc} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       expect(speedTab).toHaveTextContent('Speed Review (80)');
@@ -99,7 +99,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
       const onWordChange = vi.fn();
       const doc = createSyntheticDocumentPage(6, 1.0);
 
-      render(<InlineEditor page={doc} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={doc} onWordChange={onWordChange} />);
 
       // Switch to Speed Review tab
       fireEvent.click(screen.getByTestId('tab-speed-review'));
@@ -150,7 +150,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
       const onWordChange = vi.fn();
       const doc = createSyntheticDocumentPage(5, 1.0);
 
-      render(<InlineEditor page={doc} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={doc} onWordChange={onWordChange} />);
 
       fireEvent.click(screen.getByTestId('tab-speed-review'));
       const acceptBtn = screen.getByTestId('btn-speed-accept');
@@ -170,7 +170,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
       const onWordChange = vi.fn();
       const doc = createSyntheticDocumentPage(3, 1.0);
 
-      render(<InlineEditor page={doc} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={doc} onWordChange={onWordChange} />);
 
       // Click word chip
       const chip = screen.getByTestId('word-chip-w_tok_0');
@@ -197,7 +197,7 @@ describe('InlineEditor Speed Review Queue & Keyboard Interaction Stress Suite', 
       const onPageUpdate = vi.fn();
       const doc = createSyntheticDocumentPage(4, 0.0);
 
-      render(<InlineEditor page={doc} onPageUpdate={onPageUpdate} />);
+      render(<InlineEditor enableMedicalSuggestions page={doc} onPageUpdate={onPageUpdate} />);
 
       fireEvent.click(screen.getByTestId('tab-raw'));
       const textarea = screen.getByTestId('raw-textarea');

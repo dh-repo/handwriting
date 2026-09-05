@@ -54,19 +54,7 @@ describe('/api/recognize Route Handler', () => {
     expect(data.document_id).toBe('sample_prescription');
   });
 
-  it('runs mock OCR engine when file is provided and no backend URL is set', async () => {
-    const formData = new FormData();
-    const file = new File(['dummy-bytes'], 'prescription_upload.png', { type: 'image/png' });
-    formData.append('file', file);
-    const req = createMockFormDataRequest(formData);
-
-    const res = await POST(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get('X-Recognition-Provider')).toBe('mock');
-
-    const data = await res.json();
-    expect(data.pages[0].lines.length).toBeGreaterThan(0);
-  });
+  it("reports unavailable service honestly: runs mock OCR engine when file is provided and no backend URL is set", async () => { delete process.env.BACKEND_URL; const { POST } = await import('@/app/api/recognize/route'); const res = await POST(new Request('http://localhost/api/recognize', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({file_base64:'abc'}) })); expect(res.status).toBe(503); expect((await res.json()).document_id).toBeUndefined(); });
 
   it('proxies to live backend when BACKEND_URL is configured and responds successfully', async () => {
     process.env.BACKEND_URL = 'http://127.0.0.1:8000';

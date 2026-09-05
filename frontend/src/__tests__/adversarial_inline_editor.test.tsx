@@ -46,7 +46,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
         line_number: l + 1,
         text: words.map((w) => w.text).join(' '),
         original_text: words.map((w) => w.text).join(' '),
-        confidence: words.reduce((acc, w) => acc + w.confidence, 0) / (words.length || 1),
+        confidence: words.reduce((acc, w) => acc + (w.confidence ?? 0), 0) / (words.length || 1),
         bbox: [0.1 + l * 0.05, 0.1, 0.14 + l * 0.05, 0.9],
         polygon: bboxToPolygon([0.1 + l * 0.05, 0.1, 0.14 + l * 0.05, 0.9]),
         words,
@@ -57,7 +57,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
       page_number: 1,
       width: 1200,
       height: 1600,
-      mean_confidence: lines.reduce((acc, l) => acc + l.confidence, 0) / (lines.length || 1),
+      mean_confidence: lines.reduce((acc, l) => acc + (l.confidence ?? 0), 0) / (lines.length || 1),
       full_text: lines.map((l) => l.text).join('\n'),
       lines,
     };
@@ -69,7 +69,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
   describe('1. Zero (0) Low Confidence Tokens Boundary', () => {
     it('renders empty state "All Words Verified!" when document has 0 low-confidence tokens', () => {
       const pristinePage = createSyntheticPageWithTokens(20, 0.0); // 0% low conf
-      render(<InlineEditor page={pristinePage} />);
+      render(<InlineEditor enableMedicalSuggestions page={pristinePage} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       expect(speedTab).toHaveTextContent('Speed Review (0)');
@@ -91,7 +91,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
   describe('2. Massive 100+ Low Confidence Tokens Queue Stress', () => {
     it('initializes and manages queue with 120 low-confidence tokens', () => {
       const massivePage = createSyntheticPageWithTokens(120, 1.0);
-      render(<InlineEditor page={massivePage} />);
+      render(<InlineEditor enableMedicalSuggestions page={massivePage} />);
 
       const speedTab = screen.getByTestId('tab-speed-review');
       expect(speedTab).toHaveTextContent('Speed Review (120)');
@@ -107,7 +107,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
       const onWordChange = vi.fn();
       const testPage = createSyntheticPageWithTokens(10, 1.0);
 
-      render(<InlineEditor page={testPage} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={testPage} onWordChange={onWordChange} />);
 
       fireEvent.click(screen.getByTestId('tab-speed-review'));
       const input = screen.getByTestId('speed-review-input');
@@ -157,7 +157,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
       const onWordChange = vi.fn();
       const largePage = createSyntheticPageWithTokens(100, 1.0);
 
-      render(<InlineEditor page={largePage} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={largePage} onWordChange={onWordChange} />);
 
       fireEvent.click(screen.getByTestId('tab-speed-review'));
       const input = screen.getByTestId('speed-review-input');
@@ -182,7 +182,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
       const onWordChange = vi.fn();
       const page = createSyntheticPageWithTokens(5, 1.0);
 
-      render(<InlineEditor page={page} onWordChange={onWordChange} />);
+      render(<InlineEditor enableMedicalSuggestions page={page} onWordChange={onWordChange} />);
 
       // Click word chip to edit
       const wordChip = screen.getByTestId('word-chip-w_synth_0');
@@ -207,7 +207,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
 
     it('dismisses autocomplete popover on Escape key without submitting change', async () => {
       const page = createSyntheticPageWithTokens(5, 1.0);
-      render(<InlineEditor page={page} />);
+      render(<InlineEditor enableMedicalSuggestions page={page} />);
 
       const wordChip = screen.getByTestId('word-chip-w_synth_0');
       fireEvent.click(wordChip);
@@ -230,7 +230,7 @@ describe('Adversarial InlineEditor & Speed Review Queue Stress Tests', () => {
       const onPageUpdate = vi.fn();
       const page = createSyntheticPageWithTokens(6, 0.0);
 
-      render(<InlineEditor page={page} onPageUpdate={onPageUpdate} />);
+      render(<InlineEditor enableMedicalSuggestions page={page} onPageUpdate={onPageUpdate} />);
 
       const rawTab = screen.getByTestId('tab-raw');
       fireEvent.click(rawTab);

@@ -4,22 +4,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { ZeroFrictionSampleCards } from '@/components/ZeroFrictionSampleCards';
 
 describe('ZeroFrictionSampleCards Component', () => {
-  it('renders 3 sample cards with titles, accuracy metrics, and descriptions', () => {
+  it('labels prepared general examples without accuracy claims', () => {
     render(<ZeroFrictionSampleCards onSelectSample={() => {}} />);
-
-    expect(screen.getByTestId('zero-friction-samples-container')).toBeInTheDocument();
-
-    // 1. 18th-century cursive
-    expect(screen.getByText(/18th-Century Cursive/i)).toBeInTheDocument();
-    expect(screen.getByText(/96% accuracy/i)).toBeInTheDocument();
-
-    // 2. Annotated meeting notes
-    expect(screen.getByText(/Annotated Meeting Notes/i)).toBeInTheDocument();
-    expect(screen.getByText(/95% accuracy/i)).toBeInTheDocument();
-
-    // 3. Messy receipt & clinical rx
-    expect(screen.getByText(/Messy Receipt & Clinical Rx/i)).toBeInTheDocument();
-    expect(screen.getByText(/94% accuracy/i)).toBeInTheDocument();
+    expect(screen.getByText('Cursive Note')).toBeInTheDocument();
+    expect(screen.getByText('Annotated Meeting Notes')).toBeInTheDocument();
+    expect(screen.getAllByText('Prepared demo')).toHaveLength(2);
+    expect(screen.queryByText(/% accuracy/)).toBeNull();
   });
 
   it('triggers onSelectSample callback with preset data when card is clicked', () => {

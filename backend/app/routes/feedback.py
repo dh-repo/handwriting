@@ -5,6 +5,9 @@ line crop persistence, and dynamic confusion matrix recalibration.
 """
 
 from __future__ import annotations
+import asyncio
+import hashlib
+import uuid
 import base64
 from datetime import datetime, timezone
 import fcntl
@@ -210,11 +213,17 @@ def _save_line_crop(
             detail="Line crop dimensions exceed maximum bounds.",
         )
 
+    from pipeline.evaluation.holdout import is_holdout_image
+    if is_holdout_image(image):
+        raise HTTPException(status_code=422, detail="Frozen evaluation images cannot enter the feedback collection")
     crops_dir.mkdir(parents=True, exist_ok=True)
     local_crop_path = crops_dir / f"{feedback_id}.png"
 
     try:
-        image.save(local_crop_path, format="PNG")
+        with local_crop_path.open("wb") as crop_file:
+            image.save(crop_file, format="PNG")
+            crop_file.flush()
+            os.fsync(crop_file.fileno())
     except Exception as exc:
         logger.error(f"Failed to save line crop to {local_crop_path}: {exc}")
         raise HTTPException(
@@ -312,84 +321,37 @@ def _trigger_dynamic_confusion_update(
     return updates
 
 
-@router.post("/feedback", response_model=FeedbackResponse, status_code=status.HTTP_200_OK)
-async def submit_feedback(
-    payload: FeedbackCorrectionPayload,
-    settings: Settings = Depends(get_settings),
-) -> FeedbackResponse:
-    """
-    Ingest human operator corrections from the Darkroom UI.
+@router.post("/feedback", response_model=FeedbackResponse)
+async def submit_feedback(payload: FeedbackCorrectionPayload, settings: Settings = Depends(get_settings)) -> FeedbackResponse:
+    if payload.is_demo:
+        raise HTTPException(status_code=422, detail="Demo results cannot be used for learning")
+    return await asyncio.to_thread(_persist_correction, payload, settings)
 
-    - Validates correction payload and bounding boxes.
-    - Decodes and persists line crop image (PNG) locally and to Azure Blob Storage if configured.
-    - Atomically appends feedback metadata to append-only JSONL manifest (locally + Azure Blob).
-    - Dynamically adapts live confusion matrix substitution/ligature costs.
-    """
-    ts_now = datetime.now(timezone.utc)
-    ts_str = ts_now.strftime("%Y%m%d_%H%M%S")
-    feedback_id = f"fb_{ts_str}_{uuid.uuid4().hex[:8]}"
-    timestamp = payload.timestamp or ts_now.isoformat()
 
-    azure_sink = _get_azure_sink(settings)
-
-    # 1. Line crop storage (local + Azure Blob if configured)
-    crop_path: Optional[str] = None
-    if payload.line_crop_base64:
-        crops_dir = Path(settings.FEEDBACK_CROPS_DIR)
-        crop_path = _save_line_crop(
-            payload.line_crop_base64,
-            feedback_id,
-            crops_dir,
-            azure_sink=azure_sink,
-            storage_mode=settings.FEEDBACK_STORAGE_BACKEND,
-        )
-
-    # 2. Dynamic confusion matrix adaptation hook
-    confusion_pairs_updated: List[ConfusionUpdateRecord] = []
-    if payload.sync_confusion_matrix:
-        confusion_pairs_updated = _trigger_dynamic_confusion_update(
-            original_prediction=payload.original_prediction,
-            operator_correction=payload.operator_correction,
-            learning_rate=settings.CONFUSION_LEARNING_RATE,
-        )
-
-    # 3. Build manifest record
-    manifest_path = Path(settings.FEEDBACK_MANIFEST_PATH)
-    record = {
-        "feedback_id": feedback_id,
-        "document_id": payload.document_id,
-        "page_number": payload.page_number,
-        "line_id": payload.line_id,
-        "word_id": payload.word_id,
-        "original_prediction": payload.original_prediction,
-        "operator_correction": payload.operator_correction,
-        "confidence": payload.confidence,
-        "bbox": payload.bbox,
-        "image_crop_path": crop_path,
-        "timestamp": timestamp,
-        "alignment_operations": [u.model_dump() for u in confusion_pairs_updated],
-    }
-
-    # 4. Atomic append to JSONL manifest (local + Azure Blob if configured)
-    azure_manifest_url = _append_to_manifest(
-        manifest_path,
-        record,
-        azure_sink=azure_sink,
-        storage_mode=settings.FEEDBACK_STORAGE_BACKEND,
-    )
-
-    reported_manifest_path = azure_manifest_url or str(manifest_path)
-
-    return FeedbackResponse(
-        feedback_id=feedback_id,
-        document_id=payload.document_id,
-        line_id=payload.line_id,
-        status="persisted",
-        manifest_path=reported_manifest_path,
-        crop_path=crop_path,
-        confusion_pairs_updated=confusion_pairs_updated,
-        timestamp=timestamp,
-    )
+def _persist_correction(payload: FeedbackCorrectionPayload, settings: Settings) -> FeedbackResponse:
+    manifest = Path(settings.FEEDBACK_MANIFEST_PATH)
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    feedback_id = payload.submission_id or f"fb_{uuid.uuid4().hex}"
+    fingerprint = hashlib.sha256(json.dumps(payload.model_dump(exclude={"timestamp"}), sort_keys=True).encode()).hexdigest()
+    with open(str(manifest) + ".lock", "a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        if manifest.exists():
+            for raw in manifest.read_text().splitlines():
+                record = json.loads(raw)
+                if record.get("feedback_id") == feedback_id:
+                    if record.get("fingerprint") != fingerprint:
+                        raise HTTPException(status_code=409, detail="Submission ID already belongs to another correction")
+                    return FeedbackResponse(**record["response"])
+        crop_path = None
+        if payload.line_crop_base64:
+            crop_path = _save_line_crop(payload.line_crop_base64, feedback_id, Path(settings.FEEDBACK_CROPS_DIR), azure_sink=None, storage_mode="local")
+        response = FeedbackResponse(feedback_id=feedback_id, document_id=payload.document_id, line_id=payload.line_id,
+            manifest_path=str(manifest), crop_path=crop_path, timestamp=datetime.now(timezone.utc).isoformat())
+        record = {**payload.model_dump(), "feedback_id": feedback_id, "fingerprint": fingerprint,
+                  "image_crop_path": crop_path, "response": response.model_dump()}
+        record.pop("line_crop_base64", None)
+        _append_to_manifest(manifest, record, azure_sink=None, storage_mode="local")
+        return response
 
 
 @router.get("/feedback/stats", response_model=FeedbackStatsResponse)

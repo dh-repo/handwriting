@@ -53,7 +53,7 @@ export function findSignatureCandidates(page: PageResult): SignatureCandidate[] 
     candidates.push({
       lineId: line.line_id,
       text: line.text,
-      confidence: line.confidence,
+      confidence: line.confidence ?? 0,
       kind: classify(line.text),
       reviewRequired: true,
     });
